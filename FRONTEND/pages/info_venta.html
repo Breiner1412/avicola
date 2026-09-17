@@ -1,0 +1,63 @@
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-2">
+                    <span><i class="ti ti-shopping-cart text-dark h3"></i></span>
+                    <p class="mb-0 fs-5 text-dark">Información de la venta</p>
+                </div>
+                <div class="d-flex align-items-center gap-3 mt-3" id="info-venta-container">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" style="margin-top: 15px;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div>
+                    <h4 class="card-title fs-5 text-dark mb-4">Detalle de la Venta</h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-sm mb-0 text-nowrap align-middle">
+                        <thead class="table-light fw-bold">
+                            <tr>
+                                <th scope="col" class="fw-semibold">Tipo</th>
+                                <th scope="col" class="fw-semibold">Producto</th>
+                                <th scope="col" class="fw-semibold">Cantidad</th>
+                                <th scope="col" class="fw-semibold">Precio Unit.</th>
+                                <th scope="col" class="fw-semibold">Descuento (pesos)</th>
+                                <th scope="col" class="fw-semibold">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="info-venta-table-body">
+                            
+                        </tbody>
+                    </table>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1 fw-semibold">Total de descuentos:</p>
+                        <p class="mb-1 text-success fw-semibold">Total pagado:</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <p id="tot-descuento" class="mb-1 fw-semibold"></p>
+                        <p id="tot-venta" class="text-success fw-semibold"></p>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <button data-page="ventas" id="btn-volver" class="btn btn-success d-flex align-items-center">
+                        Atrás
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- end row -->

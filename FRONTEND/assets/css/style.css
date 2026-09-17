@@ -1,0 +1,19 @@
+.form-check-input:checked {
+  background-color: green !important;
+  border-color: green !important;
+}
+
+.nav-tabs .nav-link {
+  color: #5cb377;
+}
+
+.nav-tabs .nav-link:hover {
+  color: #218838;
+  border-color: #dee2e6 #dee2e6 #dee2e6;
+}
+
+.nav-tabs .nav-link.active {
+  color: #155724;
+  background-color: #fff;
+  border-color: #dee2e6 #dee2e6 #fff;
+}

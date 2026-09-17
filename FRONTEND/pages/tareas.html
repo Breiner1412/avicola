@@ -1,0 +1,175 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-md-flex align-items-center">
+                    <div>
+                        <h4 class="card-title">Tareas</h4>
+                    </div>
+                    <div class="ms-auto mt-3 mt-md-0">
+                      <div class="col-auto">
+                        <div class="page-utilities">
+                          <div class="row g-2 justify-content-start justify-content-md-end align-items-center">
+                            <div class="col-auto">
+                              <input id="search-input" class="form-control form-control-sm app-search-input" placeholder="Buscar descripción..." />
+                            </div>
+                            <div class="col-auto">
+                              <select class="form-select w-auto"id="filter-estado">
+                                <option selected value="all">Todos los estados</option>
+                                <option value="Asignada">Asignada</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En proceso">En proceso</option>
+                                <option value="Completada">Completada</option>
+                                <option value="Cancelada">Cancelada</option>
+                              </select>
+                            </div>
+                            <div class="col-auto">
+                              <input type="date" id="filter-fecha-inicio" class="form-control form-control-sm app-datepicker" title="Fecha inicio" />
+                            </div>
+                            <div class="col-auto">
+                              <input type="date" id="filter-fecha-fin" class="form-control form-control-sm app-datepicker" title="Fecha fin" />
+                            </div>
+                            <div class="col-auto">
+                              <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#create-tarea-modal"
+                                  id="btn-open-create-user"><i class="fa fa-plus me-1"></i> <span class="d-none d-md-inline">Agregar</span></button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+                <div class="table-responsive mt-4">
+                    <table class="table table-striped table-hover table-sm mb-0 text-nowrap align-middle">
+                        <thead>
+                            <tr>
+                                <th class="desaparecer">Id tarea</th>
+                                <th class="desaparecer">Documento</th>
+                                <th class="desaparecer">Nombre</th>
+                                <th class="">Descripción</th>
+                                <th class="">Fecha/hora inicio</th>
+                                <th class="">Fecha/hora fin</th>
+                                <th class="">Estado</th>
+                                <th class="">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tareas-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <nav class="app-pagination mt-3" id="pagination-container">
+          <ul class="pagination justify-content-center" id="pagination-list"></ul>
+        </nav>
+    </div>
+</div>
+
+<!-- MODAL CREAR -->
+<div class="modal fade" id="create-tarea-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content app-modal-content">
+      <form id="create-tarea-form">
+        <div class="modal-header app-modal-header">
+          <h5 class="modal-title">Agregar Tarea</h5>
+          <button type="button" class="btn-close app-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body app-modal-body">
+          <div class="mb-3">
+            <label for="create-id_usuario" class="form-label">Usuario</label>
+          <select id="create-id_usuario" class="form-select app-select" required>
+            <option value="">Seleccione un usuario</option>
+          </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="create-descripcion" class="form-label">Descripción</label>
+            <input type="text" class="form-control app-input" id="create-descripcion" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="create-fecha_hora_init" class="form-label">Fecha / Hora Inicio</label>
+            <input type="datetime-local" id="create-fecha_hora_init" class="form-control app-input" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="create-fecha_hora_fin" class="form-label">Fecha / Hora Fin</label>
+            <input type="datetime-local" id="create-fecha_hora_fin" class="form-control app-input">
+          </div>
+
+          <div class="mb-3">
+            <label for="create-estado" class="form-label">Estado</label>
+            <select id="create-estado" class="form-select app-select" required>
+              <option value="Asignada">Asignada</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="En proceso">En proceso</option>
+              <option value="Completada">Completada</option>
+              <option value="Cancelada">Cancelada</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer app-modal-footer">
+          <button type="button" class="btn app-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Agregar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal fade" id="edit-tarea-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content app-modal-content">
+      <form id="edit-tarea-form">
+        <div class="modal-header app-modal-header">
+          <h5 class="modal-title">Editar Tarea</h5>
+          <button type="button" class="btn-close app-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body app-modal-body">
+          <input type="hidden" id="edit-id_tarea" />
+
+          <div class="mb-3">
+            <label for="edit-id_usuario" class="form-label" id="id_usuario_modal">Usuario</label>
+            <select id="edit-id_usuario" class="form-select app-select" disabled>
+              <option value="">Seleccione un usuario</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="edit-descripcion" class="form-label">Descripción</label>
+            <input type="text" class="form-control app-input" id="edit-descripcion" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="edit-fecha_hora_init" class="form-label">Fecha / Hora Inicio</label>
+            <input type="datetime-local" id="edit-fecha_hora_init" class="form-control app-input" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="edit-fecha_hora_fin" class="form-label">Fecha / Hora Fin</label>
+            <input type="datetime-local" id="edit-fecha_hora_fin" class="form-control app-input">
+          </div>
+
+          <div class="mb-3">
+            <label for="edit-estado" class="form-label">Estado</label>
+            <select id="edit-estado" class="form-select app-select" required>
+              <option value="Asignada">Asignada</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="En proceso">En proceso</option>
+              <option value="Completada">Completada</option>
+              <option value="Cancelada">Cancelada</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer app-modal-footer">
+          <button type="button" class="btn app-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

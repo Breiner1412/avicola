@@ -1,0 +1,65 @@
+name: avisena-v2
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-avisena}
+      MYSQL_USER: ${DB_USER:-avisena}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
+    volumes:
+      - db_datos:/var/lib/mysql
+    ports:
+      - "127.0.0.1:${DB_PUERTO_HOST:-3308}:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      REDIS_URL: redis://cache:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PUERTO_HOST:-8000}:8000"
+
+  web:
+    build:
+      context: ./web
+      args:
+        API_INTERNA: http://api:8000
+    restart: unless-stopped
+    environment:
+      API_INTERNA: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PUERTO_HOST:-3000}:3000"
+
+volumes:
+  db_datos:

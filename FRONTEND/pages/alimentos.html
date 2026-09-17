@@ -1,0 +1,247 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+
+        <!-- ===================================================== -->
+        <!-- ENCABEZADO PRINCIPAL -->
+        <!-- ===================================================== -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
+
+          <h4 class="card-title m-0">Alimentos</h4>
+
+          <div class="d-flex flex-wrap justify-content-end gap-2">
+
+            <!-- Botón Agregar -->
+            <button type="button" class="btn btn-sm btn-success flex-fill"
+              data-bs-toggle="modal"
+              data-action="create"  
+              data-bs-target="#create-alimento-modal">
+              <i class="fa fa-plus me-1"></i>Agregar alimento
+            </button>
+
+            <a id="consumo_alimento" class="btn btn-outline-primary me-2 btn-sm text-nowrap">
+              <i class="fa-solid fa-utensils"></i> Ir a consumo
+            </a>
+            <!-- Botón Exportar -->
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary me-2 btn-sm text-nowrap dropdown-toggle"
+                id="export-btn" data-bs-toggle="dropdown">
+                <i class="fa fa-file-export me-1"></i>Exportar
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item export-format" href="#" data-format="csv">Exportar CSV</a></li>
+                <li><a class="dropdown-item export-format" href="#" data-format="excel">Exportar Excel</a></li>
+                <li><a class="dropdown-item export-format" href="#" data-format="pdf">Exportar PDF</a></li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+
+          <!-- Buscar -->
+          <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+            <div class="input-group">
+              <span class="input-group-text bg-success text-white"><i class="fas fa-search"></i></span>
+              <input type="text" id="search-alimentos" class="form-control" placeholder="Buscar alimento">
+            </div>
+          </div>
+
+          <!-- Fecha Inicio -->
+          <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+            <div class="input-group">
+              <span class="input-group-text">Inicio</span>
+              <input type="date" id="fecha-inicio" class="form-control">
+            </div>
+          </div>
+
+          <!-- Fecha Fin -->
+          <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+            <div class="input-group">
+              <span class="input-group-text">Fin</span>
+              <input type="date" id="fecha-fin" class="form-control">
+            </div>
+          </div>
+         <!-- Botón Filtrar -->
+          <div class="col-6 col-sm-auto d-grid d-sm-inline">
+            <button class="btn btn-sm btn-success flex-fill px-3" id="btn-apply-date-filter">
+              <i class="fas fa-filter me-1"></i> Filtrar
+            </button>
+          </div>
+
+          <!-- Botón Limpiar -->
+          <div class="col-6 col-sm-auto d-grid d-sm-inline">
+            <button class="btn btn btn-sm btn-secondary flex-fill px-3" id="btn_clear_filters">
+              <i class="fas fa-times-circle me-1"></i> Limpiar
+            </button>
+          </div>
+
+
+        <!-- ===================================================== -->
+        <!-- TABLA -->
+        <!-- ===================================================== -->
+        <div class="table-responsive mt-3">
+          <table class="table table-hover table-striped table-sm text-nowrap align-middle">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Cantidad (kg)</th>
+                <th>Fecha ingreso</th>
+                <th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="alimentos-table-body"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGINACIÓN -->
+<nav class="mt-3" aria-label="Page navigation">
+  <ul id="pagination" class="pagination justify-content-center"></ul>
+</nav>
+
+
+<!-- ===================================================== -->
+<!-- MODAL EDITAR -->
+<!-- ===================================================== -->
+<div class="modal fade" id="edit-alimento-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Editar alimento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="edit-alimento-form">
+          <input type="hidden" id="edit-alimento-id">
+
+          <div class="mb-3">
+            <label class="form-label">Nombre alimento</label>
+            <input type="text" class="form-control" id="edit-nombre_alimento" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cantidad (kg)</label>
+            <input type="number" class="form-control" id="edit-cantidad_alimento" required>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success">Guardar cambios</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================== -->
+<!-- MODAL CREAR -->
+<!-- ===================================================== -->
+<div class="modal fade" id="create-alimento-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h1 class="modal-title fs-5">Crear alimento</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="create-alimento-form">
+
+          <div class="mb-3">
+            <label class="form-label">Nombre alimento</label>
+            <input type="text" class="form-control" id="create-nombre_alimento" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cantidad (kg)</label>
+            <input type="number" class="form-control" id="create-cantidad_alimento" required>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Crear alimento</button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================== -->
+<!-- MODAL CREAR CONSUMO -->
+<!-- ===================================================== -->
+<div class="modal fade" id="createConsumoFromAlimentoModal" tabindex="-1" aria-labelledby="createConsumoFromAlimentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="createConsumoFromAlimentoModalLabel">Registrar Consumo de Alimento</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-consumo-from-alimento-form">
+                    <input type="hidden" id="consumo-id-alimento">
+                    
+                    <div class="mb-3">
+                        <label for="consumo-fecha" class="form-label">Fecha de Registro</label>
+                        <input type="date" class="form-control" id="consumo-fecha" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Alimento</label>
+                        <input type="text" class="form-control" id="consumo-alimento-display" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="consumo-id-galpon" class="form-label">Galpón</label>
+                        <select id="consumo-id-galpon" class="form-select" required>
+                            <option value="" disabled selected>Seleccione un galpón</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="consumo-cantidad-alimento" class="form-label">Cantidad de Alimento (Kg)</label>
+                        <input type="number" class="form-control" id="consumo-cantidad-alimento" required 
+                               min="1" step="0.01" placeholder="Ingrese la cantidad en kilogramos">
+                        <div id="consumo-cantidad-disponible" class="form-text">
+                            <i class="fa-solid fa-info-circle text-success"></i> 
+                            <span id="consumo-cantidad-max-text"></span>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            Registrar Consumo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+  .select2-dropdown.custom-dropdown .select2-results__options {
+    max-height: 100px !important;
+    overflow-y: auto !important;
+  }
+
+  .modal .select2-container {
+    width: 100% !important;
+  }
+</style>
+

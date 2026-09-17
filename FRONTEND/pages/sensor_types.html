@@ -1,0 +1,118 @@
+<!-- Row 2 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h4 class="card-title mb-0">Tipos de Sensores</h4>
+                    </div>
+                    <div class="col-auto">
+                        <div class="d-flex gap-2 flex-wrap justify-content-end">
+                            <button class="btn btn-outline-primary btn-sm text-nowrap" onclick="loadContent('registro_sensores')">
+                                <i class="fa fa-arrow-left me-1"></i>
+                                <span class="d-none d-sm-inline">Volver a Registros</span>
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#create-sensor-type-modal"><i class="fa fa-plus me-1"></i><span class="d-none d-sm-inline">Agregar</span></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros: nueva fila separada, alineada a la derecha en pantallas grandes y apilada en móvil -->
+                <div class="row mt-3 g-2 justify-content-end">
+                    <div class="col-12 col-sm-auto">
+                        <select id="filter-sensor-type-estado"
+                            class="form-select form-select-sm rounded border-secondary shadow-sm bg-white"
+                            style="min-width:160px;">
+                            <option value="all">Todos</option>
+                            <option value="active">Activos</option>
+                            <option value="inactive">Inactivos</option>
+                        </select>
+                    </div>
+                </div>
+                    <div class="table-responsive mt-4">
+                        <table class="table table-striped table-hover table-sm mb-0 text-nowrap align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="">Nombre</th>
+                                <th scope="col" class="">Modelo</th>
+                                <th scope="col" class="">Descripción</th>
+                                <th scope="col" class="">Estado</th>
+                                <th scope="col" class=" accion">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sensor-types-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Tipo de Sensor -->
+<div class="modal fade" id="edit-sensor-type-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Tipo de Sensor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-sensor-type-form">
+                    <input type="hidden" id="edit-type-id">
+                    <div class="mb-3">
+                        <label for="edit-type-nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="edit-type-nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-type-modelo" class="form-label">Modelo</label>
+                        <input type="text" class="form-control" id="edit-type-modelo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-type-descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="edit-type-descripcion" rows="3" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Tipo de Sensor -->
+<div class="modal fade" id="create-sensor-type-modal" tabindex="-1" aria-labelledby="createSensorTypeModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="createSensorTypeModalLabel">Agregar tipo de sensor</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-sensor-type-form">
+                    <div class="mb-3">
+                        <label for="create-type-nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="create-type-nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create-type-modelo" class="form-label">Modelo</label>
+                        <input type="text" class="form-control" id="create-type-modelo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create-type-descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="create-type-descripcion" rows="3" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Agregar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

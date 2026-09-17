@@ -1,0 +1,93 @@
+<!--  Row 1 -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-md-flex align-items-center">
+          <div>
+            <h4 class="card-title m-0">Categorias Inventario</h4>
+          </div>
+          <div class="ms-auto mt-3 mt-md-0">
+            <!-- Shortcut to Inventory + Button trigger modal -->
+            <button id="btn-ir-inventario" type="button" class="btn btn-outline-primary me-2" data-page="inventario">
+              Ver Inventario
+            </button>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
+             + Agregar Categoria
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive mt-4">
+          <table class="table table-striped table-hover table-sm mb-0 text-nowrap align-middle">
+            <thead>
+              <tr>
+                <th scope="col" class="">Nombre</th>
+                <th scope="col" class="">Descripcion</th>
+                <th class="">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cat-inv-table-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> <!-- end row -->
+
+
+<div class="modal fade" id="edit-cat-inv-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Categoria</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-cat-inv-form">
+          <input type="hidden" id="edit-cat-inv-id">
+
+          <div class="mb-3">
+            <label for="edit-name-cat-inv" class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="edit-name-cat-inv">
+          </div>
+          <div class="mb-3">
+            <label for="edit-des-cat-inv" class="form-label">Descripcion</label>
+            <input type="text" class="form-control" id="edit-des-cat-inv">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Crear Categoria</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="create-cat-inv-form">
+          <div class="mb-3">
+            <label for="create-name-cat-inv" class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="create-name-cat-inv" required>
+          </div>
+          <div class="mb-3">
+            <label for="create-des-cat-inv" class="form-label">Descripcion</label>
+            <input type="text" class="form-control" id="create-des-cat-inv" required>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success">Crear Categoria</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,118 @@
+<!--  Row 1 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+              <div class="d-md-flex align-items-center">
+              <div>
+                  <h4 class="card-title m-0">Galpones</h4>
+              </div>
+              <div class="d-flex align-items-center ms-auto gap-2 mt-3 mt-md-0">
+                  <select id="filtro-galpones" class="form-select form-select-sm rounded border-secondary shadow-sm bg-white me-2" 
+                  style="width: auto; display: inline-block;">
+                    <option value="all">Todos</option>
+                    <option value="active">Activos</option>
+                    <option value="inactive">Inactivos</option>
+                  </select>
+                  <!-- Button trigger modal -->
+                  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#create-shed-modal" data-required-module="galpones" data-required-action="crear"><i class="fa fa-plus me-1"></i><span class="d-none d-sm-inline">Agregar</span></button>
+              </div>
+              </div>
+              <div class="table-responsive mt-4">
+                <table class="table table-striped table-hover table-sm mb-0 text-nowrap align-middle">
+                    <thead>
+                    <tr>
+                        <th class="">Finca</th>
+                        <th class="">Nombre</th>
+                        <th class="">Capacidad</th>
+                        <th class="">Cantidad actual</th>
+                        <th class="">Estado</th>
+                        <th class=" text-end" data-action="edit">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody id="sheds-table-body">
+                    </tbody>
+                </table>
+              </div>
+          </div>
+        </div>
+    </div>
+</div> <!-- end row -->
+
+
+<div class="modal fade" id="edit-shed-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Galpón</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-shed-form">
+          <input type="hidden" id="edit-shed-id">
+
+          <div class="mb-3">
+            <label for="edit-nombre_finca" class="form-label">Finca</label>
+            <select id="edit-nombre_finca" class="form-select form-select-sm rounded border-secondary shadow-sm bg-white">
+                <option value="">Selecciona una finca</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="edit-nombre-galpon" class="form-label">Nombre Galpón</label>
+            <input type="text" class="form-control" id="edit-nombre-galpon">
+          </div>
+          <div class="mb-3">
+            <label for="edit-capacidad" class="form-label">Capacidad</label>
+            <input type="number" class="form-control" id="edit-capacidad">
+          </div>
+          <div class="mb-3">
+            <label for="edit-cant-actual" class="form-label">Cantidad Actual</label>
+            <input type="number" class="form-control" id="edit-cant-actual">
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="create-shed-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Agregar galpón</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="create-shed-form">
+          <div class="mb-3">
+            <label for="create-nombre_finca" class="form-label">Finca</label>
+            <select id="create-nombre_finca" class="form-select form-select-sm rounded border-secondary shadow-sm bg-white" required>
+                <option value="">Seleccione una finca</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="create-nombre-galpon" class="form-label">Nombre galpón</label>
+            <input type="text" class="form-control" id="create-nombre-galpon" required>
+          </div>
+          <div class="mb-3">
+            <label for="create-capacidad" class="form-label">Capacidad</label>
+            <input type="number" class="form-control" id="create-capacidad" required>
+          </div>
+          <div class="mb-3">
+            <label for="create-cant-actual" class="form-label">Cantidad actual</label>
+            <input type="number" class="form-control" id="create-cant-actual" required>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success">Agregar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

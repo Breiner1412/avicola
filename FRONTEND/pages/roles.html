@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Roles</title>
+
+  <!-- Bootstrap CSS -->
+<style>
+    .form-check-input:checked {
+      background-color: green ;
+      border-color: green;
+    }
+    .btn-success{
+      color: black;
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="card-title">Gestión de Roles</h4>
+             <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-success flex-fill" data-bs-toggle="modal" data-action="create" 
+                  data-bs-target="#create-rol-modal">
+                  <i class="fa fa-plus me-1"></i><span class="d-none d-sm-inline">Agregar</span></button>
+              </div>
+          </div>
+          <!-- TABLA -->
+          <table class="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th>Nombre del Rol</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="roles-table-body">
+              <tr>
+                <td colspan="5" class="text-center text-muted">Cargando...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CREAR -->
+  <div class="modal fade" id="create-rol-modal" tabindex="-1">
+    <div class="modal-dialog">
+      <form id="create-rol-form" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Agregar Rol</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre del Rol</label>
+            <input type="text" id="create-nombre-rol" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea id="create-descripcion" class="form-control" rows="3" required></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Agregar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+</body>
+
+</html>

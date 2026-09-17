@@ -1,0 +1,54 @@
+# AVISENA - entorno local completo
+#   1. cp .env.example .env   (y cambia las contraseñas)
+#   2. docker compose up -d --build
+#   3. Abre http://localhost:8080   (API/Swagger: http://localhost:8000/docs)
+name: avisena
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-avisena}
+      MYSQL_USER: ${DB_USER:-avisena}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Bogota
+    volumes:
+      - db_data:/var/lib/mysql
+      # Solo se ejecutan la primera vez (con el volumen vacío)
+      - ./BACKEND/database:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${DB_PORT_HOST:-3307}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  api:
+    build: ./BACKEND
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      TZ: America/Bogota
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PORT_HOST:-8000}:8000"
+
+  web:
+    build: ./FRONTEND
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT_HOST:-8080}:80"
+
+volumes:
+  db_data:

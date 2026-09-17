@@ -1,0 +1,64 @@
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: raiz123
+          MYSQL_DATABASE: avisena
+          MYSQL_USER: avisena
+          MYSQL_PASSWORD: clave123
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -praiz123"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: avisena
+      DB_PASSWORD: clave123
+      DB_NAME: avisena
+      JWT_SECRET: clave-de-pruebas-larga-1234567890abcdefghij
+      ADMIN_EMAIL: admin@avisena.com
+      ADMIN_PASSWORD: Admin12345
+      REDIS_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar dependencias
+        working-directory: api
+        run: pip install -r requirements-dev.txt
+      - name: Migraciones y datos iniciales
+        working-directory: api
+        run: |
+          alembic upgrade head
+          python -m app.semilla
+      - name: Pruebas
+        working-directory: api
+        run: python -m pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar dependencias
+        working-directory: web
+        run: npm ci
+      - name: Compilar
+        working-directory: web
+        run: npm run build
