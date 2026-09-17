@@ -32,6 +32,17 @@ from app.modelos.inventario import (
 )
 from app.modelos.organizacion import Cuenta, Finca, Galpon
 from app.modelos.registro import Auditoria
+from app.modelos.ventas import (
+    MetodoPago,
+    Precio,
+    ProductoVenta,
+    PuntoVenta,
+    TurnoCaja,
+    UsuarioPuntoVenta,
+    Venta,
+    VentaDetalle,
+    VentaPago,
+)
 
 __all__ = [
     "Base",
@@ -63,4 +74,13 @@ __all__ = [
     "Pesaje",
     "ConsumoAlimento",
     "AplicacionSanitaria",
+    "PuntoVenta",
+    "UsuarioPuntoVenta",
+    "MetodoPago",
+    "ProductoVenta",
+    "Precio",
+    "TurnoCaja",
+    "Venta",
+    "VentaDetalle",
+    "VentaPago",
 ]

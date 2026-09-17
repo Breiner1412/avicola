@@ -12,7 +12,15 @@ import sys
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.catalogo import CATEGORIAS_ARTICULO, MODULOS, PERMISOS, RAZAS, ROLES, TIPOS_HUEVO
+from app.core.catalogo import (
+    CATEGORIAS_ARTICULO,
+    METODOS_PAGO,
+    MODULOS,
+    PERMISOS,
+    RAZAS,
+    ROLES,
+    TIPOS_HUEVO,
+)
 from app.core.config import config
 from app.core.db import SesionLocal
 from app.core.seguridad import cifrar_clave
@@ -20,6 +28,7 @@ from app.modelos.acceso import Modulo, Permiso, Rol, Usuario
 from app.modelos.aves import Raza, TipoHuevo
 from app.modelos.inventario import Bodega, CategoriaArticulo
 from app.modelos.organizacion import Cuenta, Finca
+from app.modelos.ventas import MetodoPago
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("semilla")
@@ -103,6 +112,15 @@ def sembrar_aves(db: Session) -> None:
     db.flush()
 
 
+def sembrar_pagos(db: Session) -> None:
+    """Formas de pago del sistema."""
+    existentes = {m.nombre for m in db.scalars(select(MetodoPago).where(MetodoPago.cuenta_id.is_(None))).all()}
+    for nombre, efectivo in METODOS_PAGO:
+        if nombre not in existentes:
+            db.add(MetodoPago(cuenta_id=None, nombre=nombre, es_efectivo=efectivo))
+    db.flush()
+
+
 def sembrar_admin(db: Session, roles: dict[str, Rol], reiniciar: bool) -> Usuario:
     email = config.admin_email.lower()
     usuario = db.scalars(select(Usuario).where(Usuario.email == email)).first()
@@ -156,6 +174,7 @@ def principal(reiniciar_admin: bool = False, forzar_permisos: bool = False) -> N
         sembrar_permisos(db, roles, modulos, forzar_permisos)
         sembrar_categorias(db)
         sembrar_aves(db)
+        sembrar_pagos(db)
         sembrar_admin(db, roles, reiniciar_admin)
         sembrar_cuenta_demo(db, roles)
         db.commit()

@@ -32,6 +32,14 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
     ],
   },
   {
+    titulo: "Ventas",
+    enlaces: [
+      { modulo: "ventas", etiqueta: "Caja", ruta: "/caja", icono: "caja" },
+      { modulo: "productos_venta", etiqueta: "Productos y precios", ruta: "/productos-venta", icono: "producto" },
+      { modulo: "puntos_venta", etiqueta: "Puntos de venta", ruta: "/puntos-venta", icono: "tienda" },
+    ],
+  },
+  {
     titulo: "Sistema",
     enlaces: [
       { modulo: "auditoria", etiqueta: "Registro de cambios", ruta: "/auditoria", icono: "registro" },

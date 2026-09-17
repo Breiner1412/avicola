@@ -345,3 +345,108 @@ export type BalanceLote = {
   costo_por_ave: number;
   conversion_alimenticia: number | null;
 };
+
+// --- Ventas ---
+export type PuntoVenta = {
+  id: number;
+  cuenta_id: number;
+  finca_id: number | null;
+  codigo: string;
+  nombre: string;
+  direccion: string | null;
+  prefijo: string;
+  consecutivo: number;
+  activo: boolean;
+  es_central: boolean;
+};
+
+export type ProductoVenta = {
+  id: number;
+  cuenta_id: number;
+  nombre: string;
+  clase: "huevo" | "ave_descarte" | "ave_engorde" | "otro";
+  tipo_huevo_id: number | null;
+  tipo_huevo: string | null;
+  presentacion: "unidad" | "docena" | "medio_panal" | "panal" | "kg";
+  factor: number;
+  cobro_por: "unidad" | "kg";
+  orden: number;
+  activo: boolean;
+  precio: number | null;
+  disponible: number | null;
+};
+
+export type PrecioHistorial = {
+  id: number;
+  producto_id: number;
+  punto_venta_id: number | null;
+  precio: number;
+  desde: string;
+  hasta: string | null;
+  usuario_nombre: string | null;
+};
+
+export type MetodoPago = { id: number; nombre: string; es_efectivo: boolean };
+
+export type Turno = {
+  id: number;
+  punto_venta_id: number;
+  punto_venta_nombre: string;
+  usuario_id: number;
+  usuario_nombre: string | null;
+  estado: "abierto" | "cerrado";
+  base_inicial: number;
+  abierto_en: string;
+  cerrado_en: string | null;
+  ventas: number;
+  total_vendido: number;
+  total_efectivo: number;
+  esperado_en_caja: number;
+  efectivo_contado: number | null;
+  diferencia: number | null;
+  observaciones: string | null;
+};
+
+export type DetalleVenta = {
+  id: number;
+  producto_id: number;
+  descripcion: string;
+  clase: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  unidades: number;
+  peso_kg: number | null;
+  lote_id: number | null;
+};
+
+export type Venta = {
+  id: number;
+  numero: string;
+  punto_venta_id: number;
+  punto_venta_nombre: string;
+  turno_id: number | null;
+  fecha: string;
+  subtotal: number;
+  descuento: number;
+  total: number;
+  estado: "activa" | "anulada";
+  observaciones: string | null;
+  usuario_nombre: string | null;
+  anulada_en: string | null;
+  anulada_por: string | null;
+  motivo_anulacion: string | null;
+  creado_en: string;
+  detalles: DetalleVenta[];
+  pagos: { metodo_pago_id: number; metodo_nombre: string; es_efectivo: boolean; monto: number; referencia: string | null }[];
+};
+
+export type ResumenVentas = {
+  ventas: number;
+  total: number;
+  efectivo: number;
+  otros_medios: number;
+  anuladas: number;
+  huevos_vendidos: number;
+  aves_vendidas: number;
+};

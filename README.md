@@ -158,6 +158,28 @@ el rol no puede usar.
 
 ---
 
+## Ventas
+
+- **Puntos de venta:** uno por finca y/o uno central. Cada punto numera sus ventas
+  aparte (`PV1-000123`).
+- **Productos:** huevos por unidad, docena (12), medio panal (15) o panal (30); gallinas
+  de descarte por unidad; aves de engorde por kilo. Cada producto guarda **historial de
+  precios**: al cambiar el precio, el anterior queda con su fecha de fin.
+- **Caja:** el cajero abre la caja con una base, vende, y al cerrar cuenta el efectivo;
+  el sistema muestra lo que deberia haber y la diferencia. Sin caja abierta no se vende.
+- **La venta descuenta lo que sale:** los huevos salen del stock de la finca y las aves
+  salen del lote (las de descarte de su bolsa de salvamento, las de engorde de las aves
+  en produccion), con su movimiento de aves y la ocupacion del galpon al dia.
+- **Descuentos:** el cajero, el operario y el supervisor tienen un tope en porcentaje que
+  configura la cuenta (10% de fabrica); el administrador no tiene tope.
+- **Anular:** la venta nunca se borra. Al anularla se devuelven los huevos y las aves, y
+  queda con el motivo, quien la anulo y a que hora. **El cajero solo puede anular ventas
+  de su turno abierto**; el administrador puede anular cualquiera.
+- **Formas de pago:** efectivo, transferencia, tarjeta o credito, y una venta puede
+  pagarse con varias a la vez. Los pagos deben sumar exactamente el total.
+
+---
+
 ## Pruebas
 
 ```bash
@@ -169,8 +191,8 @@ python -m pytest -q
 Las pruebas cubren el inicio de sesion, el cambio de contrasena, los permisos por rol,
 la eleccion de finca, los galpones, el inventario completo (entradas, salidas, traslados,
 ajustes y anulaciones), los lotes de aves (mortalidad, descarte, produccion, alimento,
-pesajes y sanidad) y el registro de cambios; y —lo mas importante— que **una cuenta no
-pueda ver ni tocar los datos de otra**.
+pesajes y sanidad), las ventas (caja, descuentos, pagos y anulaciones) y el registro de
+cambios; y —lo mas importante— que **una cuenta no pueda ver ni tocar los datos de otra**.
 
 ---
 

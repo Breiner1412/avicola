@@ -24,6 +24,7 @@ from app.rutas import (
     roles,
     sanidad,
     usuarios,
+    ventas,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -85,7 +86,7 @@ async def error_general(peticion: Request, error: Exception):
 
 for modulo in (
     auth, panel, cuentas, fincas, galpones, usuarios, roles,
-    inventario, movimientos, aves, produccion, sanidad, registro,
+    inventario, movimientos, aves, produccion, sanidad, ventas, registro,
 ):
     app.include_router(modulo.router, prefix=PREFIJO)
 

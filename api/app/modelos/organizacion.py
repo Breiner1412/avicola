@@ -26,6 +26,8 @@ class Cuenta(Base, Marcas):
     email_contacto: Mapped[str | None] = mapped_column(String(150))
     telefono: Mapped[str | None] = mapped_column(String(30))
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Tope de descuento que puede dar un cajero en una venta (en porcentaje)
+    descuento_maximo: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
 
     fincas: Mapped[list["Finca"]] = relationship(back_populates="cuenta", cascade="all, delete-orphan")
     usuarios: Mapped[list["Usuario"]] = relationship(back_populates="cuenta")

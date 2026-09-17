@@ -152,3 +152,12 @@ TIPOS_HUEVO: list[tuple[str, int, bool]] = [
     ("Sucio", 90, False),
     ("Roto", 100, False),
 ]
+
+
+# Formas de pago que trae el sistema: (nombre, es efectivo)
+METODOS_PAGO: list[tuple[str, bool]] = [
+    ("Efectivo", True),
+    ("Transferencia", False),
+    ("Tarjeta", False),
+    ("Credito", False),
+]
