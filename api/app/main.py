@@ -10,7 +10,18 @@ from sqlalchemy import text
 
 from app.core.config import config
 from app.core.db import motor
-from app.rutas import auth, cuentas, fincas, galpones, panel, registro, roles, usuarios
+from app.rutas import (
+    auth,
+    cuentas,
+    fincas,
+    galpones,
+    inventario,
+    movimientos,
+    panel,
+    registro,
+    roles,
+    usuarios,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 log = logging.getLogger("avisena")
@@ -69,7 +80,7 @@ async def error_general(peticion: Request, error: Exception):
     )
 
 
-for modulo in (auth, panel, cuentas, fincas, galpones, usuarios, roles, registro):
+for modulo in (auth, panel, cuentas, fincas, galpones, usuarios, roles, inventario, movimientos, registro):
     app.include_router(modulo.router, prefix=PREFIJO)
 
 

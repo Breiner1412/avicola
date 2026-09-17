@@ -113,3 +113,17 @@ PERMISOS: dict[str, dict[str, str]] = {
 }
 
 ACCIONES = {"v": "ver", "c": "crear", "e": "editar", "b": "borrar"}
+
+
+# Categorias de articulos que trae el sistema (las cuentas pueden agregar las suyas)
+# (nombre, clase)
+CATEGORIAS_ARTICULO: list[tuple[str, str]] = [
+    ("Alimento", "alimento"),
+    ("Vacunas", "vacuna"),
+    ("Medicamentos", "medicamento"),
+    ("Herramientas", "herramienta"),
+    ("Repuestos", "repuesto"),
+    ("Insumos de aseo", "insumo"),
+    ("Materiales", "insumo"),
+    ("Otros", "otro"),
+]

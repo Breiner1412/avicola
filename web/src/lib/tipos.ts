@@ -114,3 +114,101 @@ export type Resumen = {
   ocupacion: number;
   solo_lectura: boolean;
 };
+
+// --- Inventario ---
+export type Bodega = {
+  id: number;
+  cuenta_id: number;
+  finca_id: number | null;
+  codigo: string;
+  nombre: string;
+  ubicacion: string | null;
+  activo: boolean;
+  es_central: boolean;
+};
+
+export type CategoriaArticulo = {
+  id: number;
+  cuenta_id: number | null;
+  nombre: string;
+  clase: string;
+};
+
+export type Articulo = {
+  id: number;
+  cuenta_id: number;
+  categoria_id: number;
+  categoria_nombre: string;
+  clase: string;
+  codigo: string;
+  nombre: string;
+  unidad: string;
+  kg_por_bulto: number | null;
+  stock_minimo: number;
+  observaciones: string | null;
+  activo: boolean;
+  existencia_total: number;
+  bajo_minimo: boolean;
+};
+
+export type Proveedor = {
+  id: number;
+  cuenta_id: number;
+  nombre: string;
+  documento: string | null;
+  telefono: string | null;
+  email: string | null;
+  direccion: string | null;
+  activo: boolean;
+};
+
+export type Existencia = {
+  bodega_id: number;
+  bodega_nombre: string;
+  articulo_id: number;
+  articulo_codigo: string;
+  articulo_nombre: string;
+  unidad: string;
+  cantidad: number;
+  costo_promedio: number;
+  stock_minimo: number;
+  bajo_minimo: boolean;
+};
+
+export type TipoMovimiento = "entrada" | "salida" | "traslado" | "ajuste";
+
+export type ItemMovimiento = {
+  id: number;
+  articulo_id: number;
+  articulo_codigo: string;
+  articulo_nombre: string;
+  unidad: string;
+  cantidad: number;
+  cantidad_aplicada: number;
+  costo_unitario: number;
+  lote: string | null;
+  vencimiento: string | null;
+};
+
+export type Movimiento = {
+  id: number;
+  tipo: TipoMovimiento;
+  fecha: string;
+  bodega_id: number;
+  bodega_nombre: string;
+  bodega_destino_id: number | null;
+  bodega_destino_nombre: string | null;
+  proveedor_id: number | null;
+  proveedor_nombre: string | null;
+  motivo: string | null;
+  documento: string | null;
+  observaciones: string | null;
+  total: number;
+  usuario_nombre: string | null;
+  anulado: boolean;
+  anulado_en: string | null;
+  anulado_por: string | null;
+  motivo_anulacion: string | null;
+  creado_en: string;
+  items: ItemMovimiento[];
+};

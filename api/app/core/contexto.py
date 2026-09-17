@@ -25,6 +25,9 @@ class Contexto:
     solo_lectura: bool
     ip: str | None
     sesion_id: int | None = None
+    # Cuenta sobre la que se esta trabajando (la del usuario o, para el rol de
+    # plataforma, la duena de la finca elegida)
+    cuenta_activa_id: int | None = None
 
     @property
     def es_plataforma(self) -> bool:
@@ -99,11 +102,12 @@ def contexto_actual(
             raise datos_invalidos("La finca indicada no es valida") from exc
 
     solo_lectura = False
+    cuenta_activa_id = usuario.cuenta_id
     if finca_id is not None:
-        permitidas = {f.id: lectura for f, lectura in fincas_del_usuario(db, usuario)}
+        permitidas = {f.id: (lectura, f.cuenta_id) for f, lectura in fincas_del_usuario(db, usuario)}
         if finca_id not in permitidas:
             raise sin_permiso("No tienes acceso a esa finca")
-        solo_lectura = permitidas[finca_id]
+        solo_lectura, cuenta_activa_id = permitidas[finca_id]
 
     return Contexto(
         usuario=usuario,
@@ -113,6 +117,7 @@ def contexto_actual(
         solo_lectura=solo_lectura,
         ip=ip_de(peticion),
         sesion_id=int(sesion_id) if sesion_id else None,
+        cuenta_activa_id=cuenta_activa_id,
     )
 
 

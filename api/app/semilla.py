@@ -12,11 +12,12 @@ import sys
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.catalogo import MODULOS, PERMISOS, ROLES
+from app.core.catalogo import CATEGORIAS_ARTICULO, MODULOS, PERMISOS, ROLES
 from app.core.config import config
 from app.core.db import SesionLocal
 from app.core.seguridad import cifrar_clave
 from app.modelos.acceso import Modulo, Permiso, Rol, Usuario
+from app.modelos.inventario import Bodega, CategoriaArticulo
 from app.modelos.organizacion import Cuenta, Finca
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -76,6 +77,17 @@ def sembrar_permisos(db: Session, roles: dict[str, Rol], modulos: dict[str, Modu
     db.flush()
 
 
+def sembrar_categorias(db: Session) -> None:
+    """Categorias de articulos del sistema, compartidas por todas las cuentas."""
+    existentes = {
+        c.nombre for c in db.scalars(select(CategoriaArticulo).where(CategoriaArticulo.cuenta_id.is_(None))).all()
+    }
+    for nombre, clase in CATEGORIAS_ARTICULO:
+        if nombre not in existentes:
+            db.add(CategoriaArticulo(cuenta_id=None, nombre=nombre, clase=clase))
+    db.flush()
+
+
 def sembrar_admin(db: Session, roles: dict[str, Rol], reiniciar: bool) -> Usuario:
     email = config.admin_email.lower()
     usuario = db.scalars(select(Usuario).where(Usuario.email == email)).first()
@@ -115,7 +127,11 @@ def sembrar_cuenta_demo(db: Session, roles: dict[str, Rol]) -> None:
     finca = Finca(cuenta_id=cuenta.id, codigo="F1", nombre=config.finca_demo, activo=True)
     db.add(finca)
     db.flush()
-    log.info("Cuenta '%s' y finca '%s' creadas", cuenta.nombre, finca.nombre)
+
+    db.add(Bodega(cuenta_id=cuenta.id, finca_id=None, codigo="BC", nombre="Bodega central"))
+    db.add(Bodega(cuenta_id=cuenta.id, finca_id=finca.id, codigo="B1", nombre=f"Bodega {finca.nombre}"))
+    db.flush()
+    log.info("Cuenta '%s', finca '%s' y sus bodegas creadas", cuenta.nombre, finca.nombre)
 
 
 def principal(reiniciar_admin: bool = False, forzar_permisos: bool = False) -> None:
@@ -123,6 +139,7 @@ def principal(reiniciar_admin: bool = False, forzar_permisos: bool = False) -> N
         modulos = sembrar_modulos(db)
         roles = sembrar_roles(db)
         sembrar_permisos(db, roles, modulos, forzar_permisos)
+        sembrar_categorias(db)
         sembrar_admin(db, roles, reiniciar_admin)
         sembrar_cuenta_demo(db, roles)
         db.commit()

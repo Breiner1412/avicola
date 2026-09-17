@@ -27,6 +27,8 @@ docker compose -f docker-compose.v2.yml up -d --build
 #    API y documentacion: http://localhost:8000/docs
 ```
 
+> Detén primero la version 1 (`docker compose down`): las dos usan el puerto 8000 de la API.
+
 Entra con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env`. La primera vez el sistema
 crea los modulos, los roles, los permisos, el usuario de plataforma y una cuenta con
 una finca de ejemplo para poder empezar.
@@ -76,7 +78,7 @@ AVISENA/
 │   │   ├── modelos/          # tablas (SQLAlchemy)
 │   │   ├── esquemas/         # validacion de datos que entran y salen
 │   │   ├── servicios/        # reglas de negocio (sesiones, alcance por finca)
-│   │   ├── rutas/            # endpoints por modulo
+│   │   ├── rutas/            # endpoints por modulo (sesion, fincas, inventario, ...)
 │   │   └── semilla.py        # datos iniciales
 │   ├── migraciones/          # Alembic
 │   └── tests/                # pruebas de extremo a extremo
@@ -114,6 +116,23 @@ el rol no puede usar.
 
 ---
 
+## Inventario
+
+- **Bodegas:** una central para toda la cuenta (sin finca) y las que quieras por finca.
+  Cada quien ve la bodega de su finca activa y las centrales.
+- **Articulos:** alimento, vacunas, medicamentos, herramientas, repuestos e insumos, con
+  su unidad (kg, unidad, litro, bulto, dosis, metro), los kilos por bulto cuando aplica y
+  la cantidad minima que deberia haber.
+- **Movimientos:** entrada (compra), salida (consumo, perdida, dano), traslado entre
+  bodegas y ajuste por conteo fisico. La existencia nunca queda en negativo: si no hay
+  suficiente, la operacion no se guarda.
+- **Anular en vez de borrar:** un movimiento equivocado se anula con su motivo, las
+  existencias vuelven como estaban y el movimiento sigue en la lista.
+- **Costo promedio:** cada entrada recalcula el costo promedio del articulo en esa bodega.
+- **Alerta:** los articulos por debajo de su minimo salen marcados en la lista.
+
+---
+
 ## Pruebas
 
 ```bash
@@ -123,8 +142,9 @@ python -m pytest -q
 ```
 
 Las pruebas cubren el inicio de sesion, el cambio de contrasena, los permisos por rol,
-la eleccion de finca, los galpones, el registro de cambios y —lo mas importante— que
-**una cuenta no pueda ver ni tocar los datos de otra**.
+la eleccion de finca, los galpones, el inventario completo (entradas, salidas, traslados,
+ajustes y anulaciones) y el registro de cambios; y —lo mas importante— que **una cuenta no
+pueda ver ni tocar los datos de otra**.
 
 ---
 
@@ -137,6 +157,20 @@ la eleccion de finca, los galpones, el registro de cambios y —lo mas important
 - **Nunca subas el archivo `.env` al repositorio.**
 
 ---
+
+## Subirlo a GitHub
+
+```bash
+git init
+git add .
+git commit -m "AVISENA v2: cuentas, fincas, usuarios y permisos"
+git branch -M main
+git remote add origin https://github.com/USUARIO/REPOSITORIO.git
+git push -u origin main
+```
+
+El `.gitignore` ya deja por fuera el `.env`, `node_modules/`, `.next/` y los archivos
+temporales de Python. **Revisa que `BACKEND/.env` no quede en el commit.**
 
 ## Version 1 (carpetas BACKEND/ y FRONTEND/)
 

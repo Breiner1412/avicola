@@ -15,6 +15,15 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
     ],
   },
   {
+    titulo: "Inventario",
+    enlaces: [
+      { modulo: "bodegas", etiqueta: "Bodegas", ruta: "/bodegas", icono: "bodega" },
+      { modulo: "articulos", etiqueta: "Articulos", ruta: "/articulos", icono: "articulo" },
+      { modulo: "movimientos_inventario", etiqueta: "Entradas y salidas", ruta: "/movimientos", icono: "movimiento" },
+      { modulo: "proveedores", etiqueta: "Proveedores", ruta: "/proveedores", icono: "proveedor" },
+    ],
+  },
+  {
     titulo: "Sistema",
     enlaces: [
       { modulo: "auditoria", etiqueta: "Registro de cambios", ruta: "/auditoria", icono: "registro" },

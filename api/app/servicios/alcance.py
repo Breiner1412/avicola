@@ -8,6 +8,13 @@ from app.core.errores import no_encontrado, sin_permiso
 from app.modelos.organizacion import Finca, Galpon
 
 
+def cuenta_filtro(ctx: Contexto) -> int | None:
+    """Cuenta por la que se deben filtrar las consultas (None = sin filtro)."""
+    if not ctx.es_plataforma:
+        return ctx.cuenta_id
+    return ctx.cuenta_activa_id
+
+
 def ids_fincas_visibles(db: Session, ctx: Contexto) -> list[int]:
     return [f.id for f, _ in fincas_del_usuario(db, ctx.usuario)]
 
@@ -41,11 +48,17 @@ def galpon_de(db: Session, ctx: Contexto, galpon_id: int) -> Galpon:
 
 
 def cuenta_objetivo(ctx: Contexto, cuenta_id: int | None) -> int:
-    """La cuenta sobre la que se trabaja: la propia, o la indicada si es plataforma."""
+    """La cuenta sobre la que se trabaja.
+
+    Para un usuario normal es la suya. El rol de plataforma puede indicarla, o
+    se toma la de la finca que tenga elegida.
+    """
     if ctx.es_plataforma:
-        if cuenta_id is None:
-            raise sin_permiso("Indica la cuenta sobre la que quieres trabajar")
-        return cuenta_id
+        if cuenta_id is not None:
+            return cuenta_id
+        if ctx.cuenta_activa_id is not None:
+            return ctx.cuenta_activa_id
+        raise sin_permiso("Elige primero la finca o la cuenta sobre la que quieres trabajar")
     if cuenta_id is not None and cuenta_id != ctx.cuenta_id:
         raise sin_permiso("No puedes trabajar sobre otra cuenta")
     if ctx.cuenta_id is None:
