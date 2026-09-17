@@ -127,3 +127,28 @@ CATEGORIAS_ARTICULO: list[tuple[str, str]] = [
     ("Materiales", "insumo"),
     ("Otros", "otro"),
 ]
+
+
+# Razas que trae el sistema (cada cuenta puede agregar las suyas)
+# (nombre, proposito)
+RAZAS: list[tuple[str, str]] = [
+    ("Hy-Line Brown", "postura"),
+    ("Lohmann Brown", "postura"),
+    ("Isa Brown", "postura"),
+    ("Bovans Brown", "postura"),
+    ("Criolla", "postura"),
+    ("Ross 308", "engorde"),
+    ("Cobb 500", "engorde"),
+    ("Hubbard", "engorde"),
+]
+
+# Tipos de huevo: (nombre, orden, se vende)
+TIPOS_HUEVO: list[tuple[str, int, bool]] = [
+    ("Super", 10, True),
+    ("AAA", 20, True),
+    ("AA", 30, True),
+    ("A", 40, True),
+    ("B", 50, True),
+    ("Sucio", 90, False),
+    ("Roto", 100, False),
+]

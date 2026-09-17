@@ -133,6 +133,31 @@ el rol no puede usar.
 
 ---
 
+## Aves
+
+- **Lotes:** cada grupo de aves que entra a un galpon, con su raza, proposito (postura,
+  engorde o levante), edad, cuantas entraron y cuanto costo cada una. La ocupacion del
+  galpon se actualiza sola y no deja pasar de la capacidad.
+- **Movimientos:** mortalidad, descarte, fuga, robo, venta, consumo, regalo, ingreso de
+  mas aves y traslado a otro galpon. Un movimiento mal registrado se anula y las aves
+  vuelven al lote.
+- **Descarte:** las gallinas que dejan de producir salen del conteo de produccion y
+  quedan guardadas como aves de descarte (salvamento) para venderlas despues; siguen
+  ocupando el galpon hasta que salgan.
+- **Produccion de huevos:** recoleccion del dia por lote y tipo (Super, AAA, AA, A, B,
+  sucios y rotos). Volver a registrar el mismo dia corrige lo anterior sin duplicar. Los
+  tipos que se venden entran al **stock de huevos** de la finca.
+- **Alimento:** lo que se le entrega a cada lote sale de una bodega, queda en el kardex y
+  suma al costo del lote.
+- **Pesajes:** se pesa una muestra y el sistema calcula el peso promedio por ave.
+- **Vacunas y tratamientos:** fecha, lote o galpon, producto, lote del producto, dosis,
+  via, aves tratadas y proximo refuerzo. Si se indica el producto y la bodega, tambien se
+  descuenta del inventario.
+- **Balance del lote:** aves, mortalidad, alimento consumido (kg, kg por ave y costo),
+  huevos y porcentaje de postura, peso promedio, conversion alimenticia y costo por ave.
+
+---
+
 ## Pruebas
 
 ```bash
@@ -143,7 +168,8 @@ python -m pytest -q
 
 Las pruebas cubren el inicio de sesion, el cambio de contrasena, los permisos por rol,
 la eleccion de finca, los galpones, el inventario completo (entradas, salidas, traslados,
-ajustes y anulaciones) y el registro de cambios; y —lo mas importante— que **una cuenta no
+ajustes y anulaciones), los lotes de aves (mortalidad, descarte, produccion, alimento,
+pesajes y sanidad) y el registro de cambios; y —lo mas importante— que **una cuenta no
 pueda ver ni tocar los datos de otra**.
 
 ---

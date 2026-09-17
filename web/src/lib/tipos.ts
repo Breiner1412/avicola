@@ -212,3 +212,136 @@ export type Movimiento = {
   creado_en: string;
   items: ItemMovimiento[];
 };
+
+// --- Aves ---
+export type Raza = { id: number; cuenta_id: number | null; nombre: string; proposito: string };
+
+export type Lote = {
+  id: number;
+  cuenta_id: number;
+  finca_id: number;
+  galpon_id: number;
+  galpon_nombre: string;
+  raza_id: number | null;
+  raza_nombre: string | null;
+  codigo: string;
+  proposito: "postura" | "engorde" | "levante";
+  fecha_ingreso: string;
+  edad_dias: number;
+  edad_semanas: number;
+  aves_iniciales: number;
+  aves_actuales: number;
+  aves_descarte: number;
+  mortalidad: number;
+  mortalidad_porcentaje: number;
+  costo_ave: number;
+  estado: "activo" | "cerrado";
+  fecha_cierre: string | null;
+  observaciones: string | null;
+};
+
+export type MovimientoAves = {
+  id: number;
+  lote_id: number;
+  lote_codigo: string;
+  fecha: string;
+  tipo: string;
+  cantidad: number;
+  galpon_destino_id: number | null;
+  peso_kg: number | null;
+  motivo: string | null;
+  observaciones: string | null;
+  usuario_nombre: string | null;
+  anulado: boolean;
+  anulado_por: string | null;
+  motivo_anulacion: string | null;
+  creado_en: string;
+};
+
+export type TipoHuevo = { id: number; cuenta_id: number | null; nombre: string; orden: number; comercial: boolean };
+
+export type ProduccionDia = {
+  fecha: string;
+  lote_id: number;
+  lote_codigo: string;
+  aves: number;
+  total: number;
+  comercial: number;
+  porcentaje_postura: number;
+  detalles: Record<string, number>;
+};
+
+export type StockHuevos = {
+  tipo_huevo_id: number;
+  tipo: string;
+  comercial: boolean;
+  cantidad: number;
+  panales: number;
+};
+
+export type Pesaje = {
+  id: number;
+  lote_id: number;
+  fecha: string;
+  aves_muestra: number;
+  peso_total_kg: number;
+  peso_promedio_kg: number;
+  edad_dias: number | null;
+  observaciones: string | null;
+  usuario_nombre: string | null;
+};
+
+export type ConsumoAlimento = {
+  id: number;
+  lote_id: number;
+  fecha: string;
+  articulo_id: number;
+  articulo_nombre: string;
+  unidad: string;
+  bodega_id: number;
+  cantidad: number;
+  costo: number;
+  observaciones: string | null;
+  usuario_nombre: string | null;
+};
+
+export type Sanidad = {
+  id: number;
+  fecha: string;
+  tipo: string;
+  producto: string;
+  lote_id: number | null;
+  lote_codigo: string | null;
+  galpon_id: number | null;
+  galpon_nombre: string | null;
+  articulo_id: number | null;
+  cantidad_usada: number | null;
+  lote_producto: string | null;
+  dosis: string | null;
+  via: string;
+  aves_tratadas: number | null;
+  responsable: string | null;
+  proximo_refuerzo: string | null;
+  observaciones: string | null;
+  usuario_nombre: string | null;
+  creado_en: string;
+};
+
+export type BalanceLote = {
+  lote: Lote;
+  dias_en_granja: number;
+  alimento_kg: number;
+  alimento_costo: number;
+  alimento_por_ave_kg: number;
+  huevos_total: number;
+  huevos_comerciales: number;
+  huevos_por_dia: number;
+  porcentaje_postura: number;
+  peso_promedio_kg: number | null;
+  peso_fecha: string | null;
+  costo_aves: number;
+  costo_sanidad: number;
+  costo_total: number;
+  costo_por_ave: number;
+  conversion_alimenticia: number | null;
+};

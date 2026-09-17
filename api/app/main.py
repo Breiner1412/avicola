@@ -12,14 +12,17 @@ from app.core.config import config
 from app.core.db import motor
 from app.rutas import (
     auth,
+    aves,
     cuentas,
     fincas,
     galpones,
     inventario,
     movimientos,
     panel,
+    produccion,
     registro,
     roles,
+    sanidad,
     usuarios,
 )
 
@@ -80,7 +83,10 @@ async def error_general(peticion: Request, error: Exception):
     )
 
 
-for modulo in (auth, panel, cuentas, fincas, galpones, usuarios, roles, inventario, movimientos, registro):
+for modulo in (
+    auth, panel, cuentas, fincas, galpones, usuarios, roles,
+    inventario, movimientos, aves, produccion, sanidad, registro,
+):
     app.include_router(modulo.router, prefix=PREFIJO)
 
 

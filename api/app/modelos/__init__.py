@@ -9,6 +9,17 @@ from app.modelos.acceso import (
     Usuario,
     UsuarioFinca,
 )
+from app.modelos.aves import (
+    AplicacionSanitaria,
+    ConsumoAlimento,
+    Lote,
+    MovimientoAves,
+    Pesaje,
+    ProduccionHuevos,
+    Raza,
+    StockHuevos,
+    TipoHuevo,
+)
 from app.modelos.base import Base, Marcas
 from app.modelos.inventario import (
     Articulo,
@@ -43,4 +54,13 @@ __all__ = [
     "Existencia",
     "MovimientoInventario",
     "MovimientoItem",
+    "Raza",
+    "Lote",
+    "MovimientoAves",
+    "TipoHuevo",
+    "ProduccionHuevos",
+    "StockHuevos",
+    "Pesaje",
+    "ConsumoAlimento",
+    "AplicacionSanitaria",
 ]

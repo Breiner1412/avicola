@@ -12,11 +12,12 @@ import sys
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.catalogo import CATEGORIAS_ARTICULO, MODULOS, PERMISOS, ROLES
+from app.core.catalogo import CATEGORIAS_ARTICULO, MODULOS, PERMISOS, RAZAS, ROLES, TIPOS_HUEVO
 from app.core.config import config
 from app.core.db import SesionLocal
 from app.core.seguridad import cifrar_clave
 from app.modelos.acceso import Modulo, Permiso, Rol, Usuario
+from app.modelos.aves import Raza, TipoHuevo
 from app.modelos.inventario import Bodega, CategoriaArticulo
 from app.modelos.organizacion import Cuenta, Finca
 
@@ -88,6 +89,20 @@ def sembrar_categorias(db: Session) -> None:
     db.flush()
 
 
+def sembrar_aves(db: Session) -> None:
+    """Razas y tipos de huevo del sistema, compartidos por todas las cuentas."""
+    razas = {r.nombre for r in db.scalars(select(Raza).where(Raza.cuenta_id.is_(None))).all()}
+    for nombre, proposito in RAZAS:
+        if nombre not in razas:
+            db.add(Raza(cuenta_id=None, nombre=nombre, proposito=proposito))
+
+    tipos = {t.nombre for t in db.scalars(select(TipoHuevo).where(TipoHuevo.cuenta_id.is_(None))).all()}
+    for nombre, orden, comercial in TIPOS_HUEVO:
+        if nombre not in tipos:
+            db.add(TipoHuevo(cuenta_id=None, nombre=nombre, orden=orden, comercial=comercial))
+    db.flush()
+
+
 def sembrar_admin(db: Session, roles: dict[str, Rol], reiniciar: bool) -> Usuario:
     email = config.admin_email.lower()
     usuario = db.scalars(select(Usuario).where(Usuario.email == email)).first()
@@ -140,6 +155,7 @@ def principal(reiniciar_admin: bool = False, forzar_permisos: bool = False) -> N
         roles = sembrar_roles(db)
         sembrar_permisos(db, roles, modulos, forzar_permisos)
         sembrar_categorias(db)
+        sembrar_aves(db)
         sembrar_admin(db, roles, reiniciar_admin)
         sembrar_cuenta_demo(db, roles)
         db.commit()

@@ -15,6 +15,14 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
     ],
   },
   {
+    titulo: "Aves",
+    enlaces: [
+      { modulo: "lotes", etiqueta: "Lotes", ruta: "/lotes", icono: "lote" },
+      { modulo: "produccion", etiqueta: "Produccion de huevos", ruta: "/produccion", icono: "huevo" },
+      { modulo: "sanidad", etiqueta: "Vacunas y tratamientos", ruta: "/sanidad", icono: "vacuna" },
+    ],
+  },
+  {
     titulo: "Inventario",
     enlaces: [
       { modulo: "bodegas", etiqueta: "Bodegas", ruta: "/bodegas", icono: "bodega" },
