@@ -211,7 +211,7 @@ export default function Caja() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
           <Tarjeta titulo="Productos">
             {!productos || productos.length === 0 ? (
               <Vacio>No hay productos configurados. Creálos en Productos y precios.</Vacio>
@@ -224,7 +224,7 @@ export default function Caja() {
                     disabled={producto.precio === null}
                     className="rounded-xl border border-slate-200 p-3 text-left transition hover:border-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
                   >
-                    <span className="block font-medium text-slate-800">{producto.nombre}</span>
+                    <span className="block break-words font-medium text-slate-800">{producto.nombre}</span>
                     <span className="block text-xs text-slate-500">
                       {NOMBRE_PRESENTACION[producto.presentacion]}
                       {producto.disponible !== null && producto.disponible !== undefined
@@ -280,7 +280,7 @@ export default function Caja() {
           </Tarjeta>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Tarjeta titulo="Venta actual">
             {lineas.length === 0 ? (
               <Vacio>Toca un producto para agregarlo.</Vacio>

@@ -12,7 +12,7 @@ export default function MiCuenta() {
     <>
       <h1 className="text-xl font-semibold text-slate-800">Mi cuenta</h1>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <Tarjeta titulo="Mis datos">
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">

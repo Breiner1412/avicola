@@ -504,3 +504,93 @@ export type Importacion = {
   revertida_en: string | null;
   revertida_por: string | null;
 };
+
+// --- Tareas y novedades ---
+export type Tarea = {
+  id: number;
+  finca_id: number;
+  titulo: string;
+  descripcion: string | null;
+  prioridad: "baja" | "media" | "alta";
+  estado: "pendiente" | "en_proceso" | "hecha" | "cancelada";
+  fecha: string;
+  hora: string | null;
+  asignado_a: number | null;
+  asignado_nombre: string | null;
+  galpon_id: number | null;
+  lote_id: number | null;
+  rutina_id: number | null;
+  creado_por: string | null;
+  terminada_en: string | null;
+  terminada_por: string | null;
+  notas: string | null;
+  creado_en: string;
+};
+
+export type Rutina = {
+  id: number;
+  finca_id: number;
+  titulo: string;
+  descripcion: string | null;
+  frecuencia: "diaria" | "semanal" | "mensual";
+  dias_semana: number[] | null;
+  dia_mes: number | null;
+  hora: string | null;
+  prioridad: "baja" | "media" | "alta";
+  asignado_a: number | null;
+  galpon_id: number | null;
+  activo: boolean;
+  ultima_generacion: string | null;
+};
+
+export type Novedad = {
+  id: number;
+  finca_id: number;
+  fecha: string;
+  categoria: string;
+  subtipo: string | null;
+  titulo: string;
+  descripcion: string | null;
+  gravedad: "baja" | "media" | "alta";
+  estado: "abierta" | "en_proceso" | "cerrada";
+  galpon_id: number | null;
+  lote_id: number | null;
+  aves_afectadas: number;
+  costo_estimado: number;
+  acciones: string | null;
+  reportado_por: string | null;
+  cerrada_en: string | null;
+  cerrada_por: string | null;
+  creado_en: string;
+};
+
+export type ResumenReporte = {
+  desde: string;
+  hasta: string;
+  dias: number;
+  produccion: {
+    huevos: number;
+    promedio_diario: number;
+    dias_con_registro: number;
+    por_tipo: { tipo: string; cantidad: number }[];
+  };
+  aves: {
+    vivas: number;
+    descarte: number;
+    muertes: number;
+    descartadas: number;
+    vendidas: number;
+    mortalidad_porcentaje: number;
+  };
+  alimento: { kg: number; costo: number; kg_por_ave: number };
+  ventas: {
+    cantidad: number;
+    total: number;
+    efectivo: number;
+    otros_medios: number;
+    anuladas: number;
+    por_clase: { clase: string; total: number }[];
+  };
+  inventario: { bajo_minimo: { articulo: string; unidad: string; hay: number; minimo: number }[] };
+  trabajo: { tareas_pendientes: number; novedades_abiertas: number };
+};

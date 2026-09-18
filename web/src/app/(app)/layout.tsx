@@ -85,12 +85,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      {menuAbierto ? (
+        <button
+          aria-label="Cerrar el menu"
+          onClick={() => setMenuAbierto(false)}
+          className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+        />
+      ) : null}
+
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-emerald-900 text-emerald-50 transition-transform lg:static lg:translate-x-0 ${
           menuAbierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center px-5 text-lg font-bold tracking-tight">AVISENA</div>
+        <div className="flex h-16 items-center justify-between px-5">
+          <span className="text-lg font-bold tracking-tight">AVISENA</span>
+          <button
+            onClick={() => setMenuAbierto(false)}
+            aria-label="Cerrar el menu"
+            className="rounded p-2 text-emerald-200 hover:bg-emerald-800 lg:hidden"
+          >
+            ✕
+          </button>
+        </div>
         <nav className="space-y-6 px-3 py-4">
           {grupos.map((grupo) => (
             <div key={grupo.titulo}>
@@ -170,7 +187,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 space-y-5 p-4 lg:p-6">{children}</main>
+        <main className="flex-1 space-y-5 p-4 pb-16 lg:p-6">{children}</main>
       </div>
     </div>
   );

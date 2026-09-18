@@ -203,6 +203,31 @@ Fechas, numeros con puntos o comas (`1.234,56`) y unidades escritas de varias fo
 
 ---
 
+## Tareas, novedades y reportes
+
+- **Tareas:** lo que hay que hacer cada dia, con prioridad, hora y responsable. El
+  operario y el cajero solo ven **sus** tareas y solo cambian su estado; el supervisor y
+  el administrador las crean, asignan y reasignan.
+- **Rutinas:** una tarea que se repite (todos los dias, ciertos dias de la semana o una
+  vez al mes). Con un boton se generan las tareas del dia, y no se duplican si ya estaban.
+- **Novedades:** lo que se sale de lo normal —danos de infraestructura, clima, plagas,
+  cortes de luz o agua, robos, problemas de salud del lote— con su categoria, un tipo en
+  las palabras de cada finca, gravedad, costo estimado y que se hizo. Se cierran cuando
+  quedan resueltas. Si murieron aves, se descuentan del lote en el mismo registro.
+- **Reportes:** produccion de huevos y su promedio, ventas por producto y forma de pago,
+  aves vivas y mortalidad, alimento consumido con su costo, articulos bajo el minimo y
+  lo que falta por hacer. Todo por el periodo que se elija y **descargable en CSV** para
+  abrirlo en Excel.
+
+## Desde el celular
+
+La aplicacion se usa igual desde el telefono: el menu se abre y se cierra con un toque y
+las pantallas se acomodan a la pantalla pequena. Ademas se puede **instalar como una app**
+("Agregar a la pantalla de inicio"): tiene su icono, su nombre y abre sin la barra del
+navegador.
+
+---
+
 ## Pruebas
 
 ```bash
@@ -215,8 +240,9 @@ Las pruebas cubren el inicio de sesion, el cambio de contrasena, los permisos po
 la eleccion de finca, los galpones, el inventario completo (entradas, salidas, traslados,
 ajustes y anulaciones), los lotes de aves (mortalidad, descarte, produccion, alimento,
 pesajes y sanidad), las ventas (caja, descuentos, pagos y anulaciones), la importacion
-desde Excel (lectura, validacion, carga y deshacer) y el registro de cambios; y —lo mas
-importante— que **una cuenta no pueda ver ni tocar los datos de otra**.
+desde Excel (lectura, validacion, carga y deshacer), las tareas y novedades, los reportes
+y el registro de cambios; y —lo mas importante— que **una cuenta no pueda ver ni tocar los
+datos de otra**.
 
 ---
 

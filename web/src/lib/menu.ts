@@ -23,6 +23,14 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
     ],
   },
   {
+    titulo: "Operacion",
+    enlaces: [
+      { modulo: "tareas", etiqueta: "Tareas", ruta: "/tareas", icono: "tarea" },
+      { modulo: "novedades", etiqueta: "Novedades", ruta: "/novedades", icono: "novedad" },
+      { modulo: "reportes", etiqueta: "Reportes", ruta: "/reportes", icono: "reporte" },
+    ],
+  },
+  {
     titulo: "Inventario",
     enlaces: [
       { modulo: "bodegas", etiqueta: "Bodegas", ruta: "/bodegas", icono: "bodega" },
