@@ -31,6 +31,7 @@ from app.modelos.inventario import (
     Proveedor,
 )
 from app.modelos.organizacion import Cuenta, Finca, Galpon
+from app.modelos.importacion import FilaImportacion, Importacion, PlantillaImportacion
 from app.modelos.registro import Auditoria
 from app.modelos.ventas import (
     MetodoPago,
@@ -83,4 +84,7 @@ __all__ = [
     "Venta",
     "VentaDetalle",
     "VentaPago",
+    "Importacion",
+    "FilaImportacion",
+    "PlantillaImportacion",
 ]

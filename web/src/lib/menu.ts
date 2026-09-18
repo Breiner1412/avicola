@@ -42,6 +42,7 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
   {
     titulo: "Sistema",
     enlaces: [
+      { modulo: "importacion", etiqueta: "Importar desde Excel", ruta: "/importar", icono: "excel" },
       { modulo: "auditoria", etiqueta: "Registro de cambios", ruta: "/auditoria", icono: "registro" },
       { modulo: "cuentas", etiqueta: "Cuentas", ruta: "/cuentas", icono: "cuenta" },
     ],

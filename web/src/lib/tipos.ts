@@ -450,3 +450,57 @@ export type ResumenVentas = {
   huevos_vendidos: number;
   aves_vendidas: number;
 };
+
+// --- Importacion ---
+export type CampoImportacion = { clave: string; etiqueta: string; obligatorio: boolean };
+
+export type TipoImportacion = { clave: string; etiqueta: string; campos: CampoImportacion[] };
+
+export type PlantillaImportacion = {
+  id: number;
+  tipo: string;
+  nombre: string;
+  mapeo: Record<string, string>;
+  usuario_nombre: string | null;
+  creado_en: string;
+};
+
+export type AnalisisImportacion = {
+  id: number;
+  tipo: string;
+  etiqueta_tipo: string;
+  archivo: string;
+  hoja: string | null;
+  columnas: string[];
+  filas_totales: number;
+  vista_previa: Record<string, unknown>[];
+  mapeo_sugerido: Record<string, string>;
+  campos: CampoImportacion[];
+  plantillas: PlantillaImportacion[];
+};
+
+export type ValidacionImportacion = {
+  filas_totales: number;
+  filas_ok: number;
+  filas_error: number;
+  errores: { numero: number; error: string }[];
+  vista_previa: Record<string, unknown>[];
+};
+
+export type Importacion = {
+  id: number;
+  tipo: string;
+  etiqueta_tipo: string;
+  archivo: string;
+  hoja: string | null;
+  estado: "pendiente" | "aplicada" | "revertida";
+  filas_totales: number;
+  filas_ok: number;
+  filas_error: number;
+  resumen: Record<string, unknown> | null;
+  usuario_nombre: string | null;
+  creado_en: string;
+  aplicada_en: string | null;
+  revertida_en: string | null;
+  revertida_por: string | null;
+};

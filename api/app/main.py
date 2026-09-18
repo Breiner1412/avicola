@@ -16,6 +16,7 @@ from app.rutas import (
     cuentas,
     fincas,
     galpones,
+    importacion,
     inventario,
     movimientos,
     panel,
@@ -86,7 +87,7 @@ async def error_general(peticion: Request, error: Exception):
 
 for modulo in (
     auth, panel, cuentas, fincas, galpones, usuarios, roles,
-    inventario, movimientos, aves, produccion, sanidad, ventas, registro,
+    inventario, movimientos, aves, produccion, sanidad, ventas, importacion, registro,
 ):
     app.include_router(modulo.router, prefix=PREFIJO)
 

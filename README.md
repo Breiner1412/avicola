@@ -180,6 +180,29 @@ el rol no puede usar.
 
 ---
 
+## Importar desde Excel
+
+No hay un formato obligatorio: se sube el archivo como lo maneje cada quien.
+
+1. **Se sube** un `.xlsx` o un `.csv` (hasta 5 MB y 5000 filas) y se dice que contiene:
+   articulos, entrada de inventario, proveedores, vacunas o produccion de huevos.
+2. **El sistema lee las columnas** —salta los titulos sueltos de arriba, reconoce el
+   encabezado y entiende nombres distintos (`CÓDIGO`, `DESCRIPCIÓN DEL PRODUCTO`,
+   `VR UNITARIO`, `UND`...), incluso con tildes y mayusculas.
+3. **Se emparejan las columnas** con lo que pide el sistema; lo que se reconocio ya viene
+   marcado. Ese emparejamiento se puede **guardar como plantilla** para el mismo formato.
+4. **Se revisa antes de guardar:** muestra cuantas filas quedan listas y cuales tienen
+   problemas, con el motivo de cada una. Nada se guarda en este paso.
+5. **Se guarda** y queda en el historial.
+6. **Se puede deshacer:** las entradas de inventario se anulan, la produccion vuelve a
+   restarse del stock y lo demas se borra; los articulos creados por la importacion
+   quedan desactivados.
+
+Fechas, numeros con puntos o comas (`1.234,56`) y unidades escritas de varias formas
+(`kg`, `kilos`, `und`, `bultos`) se entienden automaticamente.
+
+---
+
 ## Pruebas
 
 ```bash
@@ -191,8 +214,9 @@ python -m pytest -q
 Las pruebas cubren el inicio de sesion, el cambio de contrasena, los permisos por rol,
 la eleccion de finca, los galpones, el inventario completo (entradas, salidas, traslados,
 ajustes y anulaciones), los lotes de aves (mortalidad, descarte, produccion, alimento,
-pesajes y sanidad), las ventas (caja, descuentos, pagos y anulaciones) y el registro de
-cambios; y —lo mas importante— que **una cuenta no pueda ver ni tocar los datos de otra**.
+pesajes y sanidad), las ventas (caja, descuentos, pagos y anulaciones), la importacion
+desde Excel (lectura, validacion, carga y deshacer) y el registro de cambios; y —lo mas
+importante— que **una cuenta no pueda ver ni tocar los datos de otra**.
 
 ---
 
