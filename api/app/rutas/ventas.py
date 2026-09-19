@@ -12,6 +12,8 @@ from app.core.db import obtener_db
 from app.core.errores import conflicto, datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.comunes import Mensaje, Pagina
 from app.esquemas.ventas import (
+    AjustesVentas,
+    AjustesVentasActualizar,
     AbrirTurno,
     AnularVenta,
     CerrarTurno,
@@ -554,6 +556,41 @@ def resumen(
     )
 
 
+# --- Ajustes de ventas de la cuenta ---
+@router.get("/ventas/ajustes", response_model=AjustesVentas, summary="Tope de descuento de la cuenta")
+def ver_ajustes(db: Session = Depends(obtener_db), ctx: Contexto = Depends(requiere("ventas", "ver"))):
+    from app.modelos.organizacion import Cuenta
+    from app.servicios.ventas import CON_TOPE
+
+    cuenta = db.get(Cuenta, cuenta_objetivo(ctx, None))
+    if cuenta is None:
+        raise no_encontrado("La cuenta no existe")
+    return AjustesVentas(descuento_maximo=int(cuenta.descuento_maximo or 0), tengo_tope=ctx.rol in CON_TOPE)
+
+
+@router.patch("/ventas/ajustes", response_model=AjustesVentas, summary="Cambiar el tope de descuento")
+def cambiar_ajustes(
+    datos: AjustesVentasActualizar,
+    db: Session = Depends(obtener_db),
+    ctx: Contexto = Depends(requiere("puntos_venta", "editar")),
+):
+    from app.modelos.organizacion import Cuenta
+    from app.servicios.ventas import CON_TOPE
+
+    cuenta = db.get(Cuenta, cuenta_objetivo(ctx, None))
+    if cuenta is None:
+        raise no_encontrado("La cuenta no existe")
+    antes = int(cuenta.descuento_maximo or 0)
+    cuenta.descuento_maximo = datos.descuento_maximo
+    registrar(
+        db, ctx, "editar", "cuentas", cuenta.id,
+        f"Cambio el tope de descuento de {antes}% a {datos.descuento_maximo}%",
+        {"antes": antes, "ahora": datos.descuento_maximo},
+    )
+    db.commit()
+    return AjustesVentas(descuento_maximo=datos.descuento_maximo, tengo_tope=ctx.rol in CON_TOPE)
+
+
 @router.get("/ventas/{venta_id}", response_model=VentaSalida, summary="Ver una venta")
 def ver_venta(venta_id: int, db: Session = Depends(obtener_db), ctx: Contexto = Depends(requiere("ventas", "ver"))):
     return _venta_salida(_venta_de(db, ctx, venta_id))
@@ -587,3 +624,4 @@ def borrar(
     db.delete(venta)
     db.commit()
     return Mensaje(mensaje="Venta borrada")
+

@@ -6,6 +6,7 @@ import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Articulo, CategoriaArticulo } from "@/lib/tipos";
 import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 const UNIDADES = ["unidad", "kg", "litro", "bulto", "dosis", "metro"];
 const CLASES = ["", "alimento", "vacuna", "medicamento", "herramienta", "repuesto", "insumo", "otro"];
@@ -21,6 +22,7 @@ const VACIO = {
 };
 
 export default function Articulos() {
+  const { confirmar } = useDialogos();
   const { puede } = useSesion();
   const [buscar, setBuscar] = useState("");
   const [clase, setClase] = useState("");
@@ -102,12 +104,18 @@ export default function Articulos() {
   }
 
   async function desactivar(articulo: Articulo) {
-    if (!confirm(`Desactivar ${articulo.nombre}?`)) return;
+    const seguro = await confirmar({
+      titulo: `Desactivar ${articulo.nombre}`,
+      mensaje: "Deja de aparecer en las entradas y salidas. Su historial se conserva.",
+      aceptar: "Desactivar",
+      peligro: true,
+    });
+    if (!seguro) return;
     try {
       await api(`/articulos/${articulo.id}`, { metodo: "DELETE" });
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 

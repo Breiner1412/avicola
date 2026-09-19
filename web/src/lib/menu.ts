@@ -3,15 +3,9 @@ export type Enlace = { modulo: string; etiqueta: string; ruta: string; icono: st
 export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
   {
     titulo: "General",
-    enlaces: [{ modulo: "panel", etiqueta: "Panel", ruta: "/panel", icono: "inicio" }],
-  },
-  {
-    titulo: "Organizacion",
     enlaces: [
-      { modulo: "fincas", etiqueta: "Fincas", ruta: "/fincas", icono: "finca" },
-      { modulo: "galpones", etiqueta: "Galpones", ruta: "/galpones", icono: "galpon" },
-      { modulo: "usuarios", etiqueta: "Usuarios", ruta: "/usuarios", icono: "usuario" },
-      { modulo: "roles", etiqueta: "Roles y permisos", ruta: "/roles", icono: "llave" },
+      { modulo: "panel", etiqueta: "Panel", ruta: "/panel", icono: "inicio" },
+      { modulo: "panel", etiqueta: "Avisos", ruta: "/alertas", icono: "campana" },
     ],
   },
   {
@@ -20,6 +14,7 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
       { modulo: "lotes", etiqueta: "Lotes", ruta: "/lotes", icono: "lote" },
       { modulo: "produccion", etiqueta: "Produccion de huevos", ruta: "/produccion", icono: "huevo" },
       { modulo: "sanidad", etiqueta: "Vacunas y tratamientos", ruta: "/sanidad", icono: "vacuna" },
+      { modulo: "sensores", etiqueta: "Sensores", ruta: "/sensores", icono: "sensor" },
     ],
   },
   {
@@ -45,6 +40,15 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
       { modulo: "ventas", etiqueta: "Caja", ruta: "/caja", icono: "caja" },
       { modulo: "productos_venta", etiqueta: "Productos y precios", ruta: "/productos-venta", icono: "producto" },
       { modulo: "puntos_venta", etiqueta: "Puntos de venta", ruta: "/puntos-venta", icono: "tienda" },
+    ],
+  },
+  {
+    titulo: "Organizacion",
+    enlaces: [
+      { modulo: "fincas", etiqueta: "Fincas", ruta: "/fincas", icono: "finca" },
+      { modulo: "galpones", etiqueta: "Galpones", ruta: "/galpones", icono: "galpon" },
+      { modulo: "usuarios", etiqueta: "Usuarios", ruta: "/usuarios", icono: "usuario" },
+      { modulo: "roles", etiqueta: "Roles y permisos", ruta: "/roles", icono: "llave" },
     ],
   },
   {

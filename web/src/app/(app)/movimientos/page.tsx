@@ -5,7 +5,21 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Articulo, Bodega, Movimiento, Pagina, Proveedor, TipoMovimiento } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tabla,
+  Tarjeta,
+  Vacio,
+} from "@/componentes/ui";
+import { fecha, hoy } from "@/lib/formato";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 type Linea = { articulo_id: string; cantidad: string; costo_unitario: string; lote: string; vencimiento: string };
 
@@ -20,11 +34,8 @@ const TIPOS: { valor: TipoMovimiento; texto: string; ayuda: string }[] = [
 
 const MOTIVOS_SALIDA = ["consumo", "uso en finca", "perdida", "dano", "vencido", "prestamo", "otro"];
 
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export default function Movimientos() {
+  const { pedirTexto } = useDialogos();
   const { sesion, puede } = useSesion();
   const [tipo, setTipo] = useState("");
   const [bodegaFiltro, setBodegaFiltro] = useState("");
@@ -127,13 +138,20 @@ export default function Movimientos() {
   }
 
   async function anular(movimiento: Movimiento) {
-    const motivo = prompt("Por que se anula este movimiento?");
-    if (!motivo || motivo.trim().length < 3) return;
+    const motivo = await pedirTexto({
+      titulo: "Anular el movimiento",
+      mensaje: "Las existencias vuelven a quedar como estaban. El movimiento queda en el historial como anulado.",
+      etiqueta: "Por que se anula?",
+      aceptar: "Anular",
+      peligro: true,
+      requerido: true,
+    });
+    if (!motivo || motivo.length < 3) return;
     try {
-      await api(`/movimientos/${movimiento.id}/anular`, { metodo: "POST", cuerpo: { motivo: motivo.trim() } });
+      await api(`/movimientos/${movimiento.id}/anular`, { metodo: "POST", cuerpo: { motivo } });
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -197,7 +215,7 @@ export default function Movimientos() {
               {datos.datos.map((movimiento) => (
                 <Fragment key={movimiento.id}>
                   <tr className={movimiento.anulado ? "bg-slate-50 text-slate-400" : "hover:bg-slate-50"}>
-                    <td className="whitespace-nowrap px-3 py-2">{movimiento.fecha}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{fecha(movimiento.fecha)}</td>
                     <td className="px-3 py-2 capitalize">
                       {movimiento.tipo}
                       {movimiento.anulado ? (
@@ -211,7 +229,9 @@ export default function Movimientos() {
                       {movimiento.bodega_destino_nombre ? ` → ${movimiento.bodega_destino_nombre}` : ""}
                     </td>
                     <td className="px-3 py-2">{movimiento.items.length}</td>
-                    <td className="px-3 py-2">{movimiento.total ? `$${movimiento.total.toLocaleString("es-CO")}` : "-"}</td>
+                    <td className="px-3 py-2">
+                      {movimiento.total ? `$${movimiento.total.toLocaleString("es-CO")}` : "-"}
+                    </td>
                     <td className="px-3 py-2 text-xs text-slate-500">{movimiento.usuario_nombre ?? "-"}</td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex justify-end gap-2">
@@ -265,19 +285,14 @@ export default function Movimientos() {
               ))}
             </Tabla>
 
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
-              <span>
-                {datos.total} movimiento(s) · pagina {datos.pagina} de {paginas}
-              </span>
-              <div className="flex gap-2">
-                <Boton tono="suave" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-                  Anterior
-                </Boton>
-                <Boton tono="suave" disabled={pagina >= paginas} onClick={() => setPagina((p) => p + 1)}>
-                  Siguiente
-                </Boton>
-              </div>
-            </div>
+            <Paginador
+              pagina={pagina}
+              paginas={paginas}
+              total={datos.total}
+              porPagina={datos.tamano}
+              setPagina={setPagina}
+              nombre="movimientos"
+            />
           </>
         )}
       </Tarjeta>
@@ -462,7 +477,11 @@ export default function Movimientos() {
               </div>
             ))}
 
-            <Boton type="button" tono="suave" onClick={() => setLineas((actuales) => [...actuales, { ...LINEA_VACIA }])}>
+            <Boton
+              type="button"
+              tono="suave"
+              onClick={() => setLineas((actuales) => [...actuales, { ...LINEA_VACIA }])}
+            >
               Agregar otro articulo
             </Boton>
           </div>

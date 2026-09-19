@@ -5,7 +5,21 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Galpon, Lote, Novedad } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tarjeta,
+  Vacio,
+  usePaginas,
+} from "@/componentes/ui";
+import { fecha, hoy } from "@/lib/formato";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 const CATEGORIAS = [
   { valor: "infraestructura", texto: "Infraestructura (danos, techos, cercas)" },
@@ -26,10 +40,6 @@ const GRAVEDADES = [
 const TONO: Record<string, "rojo" | "azul" | "gris"> = { alta: "rojo", media: "azul", baja: "gris" };
 const moneda = (valor: number) => `$${Math.round(valor).toLocaleString("es-CO")}`;
 
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 const VACIO = {
   fecha: hoy(),
   categoria: "infraestructura",
@@ -46,6 +56,7 @@ const VACIO = {
 };
 
 export default function Novedades() {
+  const { pedirTexto } = useDialogos();
   const { sesion, puede } = useSesion();
   const finca = sesion?.finca_activa?.id ?? 0;
   const [recargas, setRecargas] = useState(0);
@@ -60,6 +71,7 @@ export default function Novedades() {
   const { datos, cargando, error, recargar } = useDatos<Novedad[]>(ruta, `${finca}-${ruta}-${recargas}`);
   const { datos: galpones } = useDatos<Galpon[]>("/galpones", finca);
   const { datos: lotes } = useDatos<Lote[]>("/lotes?solo_activos=true", finca);
+  const pagNovedades = usePaginas(datos, 10, ruta);
 
   const [abierto, setAbierto] = useState(false);
   const [formulario, setFormulario] = useState(VACIO);
@@ -100,14 +112,23 @@ export default function Novedades() {
   }
 
   async function cerrar(novedad: Novedad) {
-    const acciones = prompt("Que se hizo para resolverlo?", novedad.acciones ?? "");
+    const acciones = await pedirTexto({
+      titulo: "Cerrar la novedad",
+      mensaje: novedad.titulo,
+      etiqueta: "Que se hizo para resolverlo?",
+      valor: novedad.acciones ?? "",
+      placeholder: "Ej: se cambio la teja rota",
+      aceptar: "Cerrar novedad",
+      largo: true,
+    });
     if (acciones === null) return;
     try {
       await api(`/novedades/${novedad.id}/cerrar`, { metodo: "POST", cuerpo: { acciones: acciones || null } });
       setRecargas((n) => n + 1);
       await recargar();
+      avisar.bien("Novedad cerrada");
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -116,9 +137,7 @@ export default function Novedades() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-800">Novedades</h1>
-          <p className="text-sm text-slate-500">
-            Lo que se sale de lo normal: danos, clima, servicios, plagas o robos
-          </p>
+          <p className="text-sm text-slate-500">Lo que se sale de lo normal: danos, clima, servicios, plagas o robos</p>
         </div>
         {puede("novedades", "crear") ? <Boton onClick={() => setAbierto(true)}>Reportar novedad</Boton> : null}
       </div>
@@ -152,7 +171,7 @@ export default function Novedades() {
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2 [&>*]:min-w-0">
-        {(datos ?? []).map((novedad) => (
+        {pagNovedades.visibles.map((novedad) => (
           <div
             key={novedad.id}
             className={`rounded-xl border bg-white p-4 shadow-sm ${
@@ -163,7 +182,7 @@ export default function Novedades() {
               <div>
                 <p className="font-medium text-slate-800">{novedad.titulo}</p>
                 <p className="text-xs text-slate-500">
-                  {novedad.fecha} · {CATEGORIAS.find((c) => c.valor === novedad.categoria)?.valor ?? novedad.categoria}
+                  {fecha(novedad.fecha)} · {CATEGORIAS.find((c) => c.valor === novedad.categoria)?.texto.split(" (")[0] ?? novedad.categoria}
                   {novedad.subtipo ? ` · ${novedad.subtipo}` : ""}
                   {novedad.reportado_por ? ` · ${novedad.reportado_por}` : ""}
                 </p>
@@ -185,9 +204,7 @@ export default function Novedades() {
               {novedad.costo_estimado ? <span>Costo estimado {moneda(novedad.costo_estimado)}</span> : null}
             </div>
 
-            {novedad.acciones ? (
-              <p className="mt-2 text-xs text-slate-600">Se hizo: {novedad.acciones}</p>
-            ) : null}
+            {novedad.acciones ? <p className="mt-2 text-xs text-slate-600">Se hizo: {novedad.acciones}</p> : null}
             {novedad.cerrada_por ? (
               <p className="mt-1 text-xs text-emerald-700">Cerrada por {novedad.cerrada_por}</p>
             ) : null}
@@ -202,6 +219,7 @@ export default function Novedades() {
           </div>
         ))}
       </div>
+      <Paginador {...pagNovedades} nombre="novedades" />
 
       <Modal titulo="Reportar una novedad" abierto={abierto} onCerrar={() => setAbierto(false)}>
         <form onSubmit={guardar} className="space-y-4">

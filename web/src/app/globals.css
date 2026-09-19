@@ -12,3 +12,19 @@ body {
 :focus-visible {
   @apply outline-2 outline-offset-2 outline-emerald-600;
 }
+
+/* Barra de desplazamiento discreta en el menu */
+.menu-lateral {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(6 95 70 / 0.9) transparent;
+}
+.menu-lateral::-webkit-scrollbar {
+  width: 6px;
+}
+.menu-lateral::-webkit-scrollbar-thumb {
+  background: rgb(6 95 70 / 0.9);
+  border-radius: 999px;
+}
+.menu-lateral::-webkit-scrollbar-track {
+  background: transparent;
+}

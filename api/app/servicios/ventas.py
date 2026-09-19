@@ -1,7 +1,7 @@
 """Reglas de la caja y de las ventas."""
 
 from datetime import date, datetime, timezone
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -319,13 +319,20 @@ def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja,
             )
         )
 
-    descuento = dec(datos.descuento)
+    cuenta = db.get(Cuenta, punto.cuenta_id)
+    tope = int(cuenta.descuento_maximo or 0) if cuenta else 0
+
+    if datos.descuento_porcentaje is not None:
+        porcentaje = dec(datos.descuento_porcentaje)
+        if ctx.rol in CON_TOPE and porcentaje > dec(tope):
+            raise datos_invalidos(f"El descuento maximo que puedes dar es {tope}%")
+        descuento = (subtotal * porcentaje / dec(100)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    else:
+        descuento = dec(datos.descuento)
     if descuento > subtotal:
         raise datos_invalidos("El descuento no puede ser mayor que la venta")
 
-    cuenta = db.get(Cuenta, punto.cuenta_id)
-    tope = int(cuenta.descuento_maximo or 0) if cuenta else 0
-    if ctx.rol in CON_TOPE and descuento > CERO:
+    if ctx.rol in CON_TOPE and descuento > CERO and datos.descuento_porcentaje is None:
         maximo = pesos(subtotal * dec(tope) / dec(100))
         if descuento > maximo:
             raise datos_invalidos(f"El descuento maximo que puedes dar es {tope}% ({maximo})")

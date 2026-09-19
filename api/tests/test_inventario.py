@@ -115,6 +115,11 @@ def test_traslado_entre_bodegas(cliente, cuenta):
     assert respuesta.status_code == 201, respuesta.text
     assert existencia(cliente, cuenta, cuenta["central"]["id"]) == 250
     assert existencia(cliente, cuenta, cuenta["bodega_finca"]["id"]) == 150
+    # el costo viaja con el articulo: la bodega de la finca queda con el costo de la central
+    assert respuesta.json()["total"] == 150 * 2500
+    filas = cliente.get(f"{API}/existencias?bodega_id={cuenta['bodega_finca']['id']}", headers=cuenta["cab"]).json()
+    fila = next(f for f in filas if f["articulo_id"] == cuenta["articulo"]["id"])
+    assert fila["costo_promedio"] == 2500
 
 
 def test_salida_descuenta(cliente, cuenta):

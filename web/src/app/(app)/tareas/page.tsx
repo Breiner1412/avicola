@@ -5,7 +5,21 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Galpon, Rutina, Tarea, Usuario } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tarjeta,
+  Vacio,
+  usePaginas,
+} from "@/componentes/ui";
+import { fecha, hoy } from "@/lib/formato";
+import { avisar } from "@/componentes/dialogos";
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
 const PRIORIDADES = [
@@ -19,10 +33,6 @@ const ESTADOS = [
   { valor: "hecha", texto: "Hecha" },
   { valor: "cancelada", texto: "Cancelada" },
 ];
-
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const TONO_PRIORIDAD: Record<string, "rojo" | "azul" | "gris"> = { alta: "rojo", media: "azul", baja: "gris" };
 
@@ -39,7 +49,9 @@ export default function Tareas() {
     puede("tareas", "crear") ? "/rutinas" : null,
     `${finca}-${recargas}`,
   );
-  const { datos: usuarios } = useDatos<Usuario[]>(puede("usuarios", "ver") ? "/usuarios?incluir_inactivos=false" : null);
+  const { datos: usuarios } = useDatos<Usuario[]>(
+    puede("usuarios", "ver") ? "/usuarios?incluir_inactivos=false" : null,
+  );
   const { datos: galpones } = useDatos<Galpon[]>("/galpones", finca);
 
   const [abierto, setAbierto] = useState(false);
@@ -128,9 +140,10 @@ export default function Tareas() {
       const salida = await api<{ creadas: number }>("/rutinas/generar", { metodo: "POST", cuerpo: { fecha: dia } });
       setRecargas((n) => n + 1);
       await recargar();
-      alert(salida.creadas ? `Se crearon ${salida.creadas} tarea(s) de rutina.` : "Las tareas de hoy ya estaban creadas.");
+      if (salida.creadas) avisar.bien(`Se crearon ${salida.creadas} tarea(s) de rutina`);
+      else avisar.info("Las tareas de rutina de ese dia ya estaban creadas");
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -140,12 +153,14 @@ export default function Tareas() {
       setRecargas((n) => n + 1);
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
   const pendientes = (datos ?? []).filter((t) => t.estado !== "hecha" && t.estado !== "cancelada");
   const listas = (datos ?? []).filter((t) => t.estado === "hecha" || t.estado === "cancelada");
+  const pagPendientes = usePaginas(pendientes, 12, ruta);
+  const pagListas = usePaginas(listas, 12, ruta);
 
   function Tarjetita({ fila }: { fila: Tarea }) {
     return (
@@ -154,7 +169,7 @@ export default function Tareas() {
           <div>
             <p className="font-medium text-slate-800">{fila.titulo}</p>
             <p className="text-xs text-slate-500">
-              {fila.fecha}
+              {fecha(fila.fecha)}
               {fila.hora ? ` · ${fila.hora}` : ""}
               {fila.asignado_nombre ? ` · ${fila.asignado_nombre}` : " · sin asignar"}
               {fila.rutina_id ? " · rutina" : ""}
@@ -165,9 +180,7 @@ export default function Tareas() {
 
         {fila.descripcion ? <p className="mt-2 text-sm text-slate-600">{fila.descripcion}</p> : null}
         {fila.notas ? <p className="mt-1 text-xs text-slate-500">Nota: {fila.notas}</p> : null}
-        {fila.terminada_por ? (
-          <p className="mt-1 text-xs text-emerald-700">Hecha por {fila.terminada_por}</p>
-        ) : null}
+        {fila.terminada_por ? <p className="mt-1 text-xs text-emerald-700">Hecha por {fila.terminada_por}</p> : null}
 
         {puede("tareas", "editar") ? (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -234,19 +247,21 @@ export default function Tareas() {
 
       {pendientes.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {pendientes.map((fila) => (
+          {pagPendientes.visibles.map((fila) => (
             <Tarjetita key={fila.id} fila={fila} />
           ))}
         </div>
       ) : null}
+      <Paginador {...pagPendientes} nombre="tareas" />
 
       {listas.length > 0 ? (
         <Tarjeta titulo="Ya hechas">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {listas.map((fila) => (
+            {pagListas.visibles.map((fila) => (
               <Tarjetita key={fila.id} fila={fila} />
             ))}
           </div>
+          <Paginador {...pagListas} nombre="tareas" />
         </Tarjeta>
       ) : null}
 
@@ -254,7 +269,10 @@ export default function Tareas() {
         <Tarjeta titulo="Rutinas">
           <ul className="space-y-2 text-sm">
             {rutinas.map((fila) => (
-              <li key={fila.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+              <li
+                key={fila.id}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2"
+              >
                 <span>
                   <span className="font-medium text-slate-700">{fila.titulo}</span>
                   <span className="block text-xs text-slate-500">
@@ -294,7 +312,12 @@ export default function Tareas() {
               value={tarea.fecha}
               onChange={(e) => setTarea({ ...tarea, fecha: e.target.value })}
             />
-            <Campo etiqueta="Hora" type="time" value={tarea.hora} onChange={(e) => setTarea({ ...tarea, hora: e.target.value })} />
+            <Campo
+              etiqueta="Hora"
+              type="time"
+              value={tarea.hora}
+              onChange={(e) => setTarea({ ...tarea, hora: e.target.value })}
+            />
             <Lista
               etiqueta="Prioridad"
               value={tarea.prioridad}
@@ -366,13 +389,21 @@ export default function Tareas() {
               <option value="semanal">Algunos dias de la semana</option>
               <option value="mensual">Una vez al mes</option>
             </Lista>
-            <Campo etiqueta="Hora" type="time" value={rutina.hora} onChange={(e) => setRutina({ ...rutina, hora: e.target.value })} />
+            <Campo
+              etiqueta="Hora"
+              type="time"
+              value={rutina.hora}
+              onChange={(e) => setRutina({ ...rutina, hora: e.target.value })}
+            />
           </div>
 
           {rutina.frecuencia === "semanal" ? (
             <div className="flex flex-wrap gap-2">
               {DIAS.map((nombre, indice) => (
-                <label key={nombre} className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-sm">
+                <label
+                  key={nombre}
+                  className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+                >
                   <input
                     type="checkbox"
                     checked={rutina.dias_semana.includes(indice)}

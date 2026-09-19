@@ -16,7 +16,7 @@ from app.esquemas.inventario import ItemEntrada, MovimientoCrear
 from app.modelos.aves import AplicacionSanitaria, Lote
 from app.modelos.organizacion import Galpon
 from app.servicios.alcance import cuenta_filtro, ids_fincas_visibles
-from app.servicios.aves import dec, lote_de
+from app.servicios.aves import dec, lote_de, refuerzos_pendientes
 from app.servicios.inventario import articulo_de, bodega_de, crear_movimiento, existencia
 
 router = APIRouter(prefix="/sanidad", tags=["Vacunas y tratamientos"])
@@ -101,7 +101,7 @@ def proximas(
         consulta = consulta.where(AplicacionSanitaria.finca_id == ctx.finca_id)
 
     filas = db.scalars(consulta.order_by(AplicacionSanitaria.proximo_refuerzo)).all()
-    return [_salida(db, fila) for fila in filas]
+    return [_salida(db, fila) for fila in refuerzos_pendientes(db, list(filas))]
 
 
 @router.post("", response_model=SanidadSalida, status_code=201, summary="Registrar una vacuna o tratamiento")

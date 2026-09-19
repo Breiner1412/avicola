@@ -5,7 +5,21 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Articulo, Bodega, Galpon, Lote, Sanidad } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tabla,
+  Tarjeta,
+  Vacio,
+  usePaginas,
+} from "@/componentes/ui";
+import { fecha, hoy } from "@/lib/formato";
 
 const TIPOS = [
   { valor: "vacuna", texto: "Vacuna" },
@@ -16,10 +30,6 @@ const TIPOS = [
 ];
 
 const VIAS = ["agua", "ocular", "aspersion", "inyectado", "alimento", "otro"];
-
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const VACIO = {
   fecha: hoy(),
@@ -50,15 +60,14 @@ export default function SanidadPagina() {
   const { datos: galpones } = useDatos<Galpon[]>("/galpones", finca);
   const { datos: bodegas } = useDatos<Bodega[]>(puede("bodegas", "ver") ? "/bodegas" : null, finca);
   const { datos: articulos } = useDatos<Articulo[]>(puede("articulos", "ver") ? "/articulos" : null, finca);
+  const pagAplicaciones = usePaginas(datos, 20, "");
 
   const [abierto, setAbierto] = useState(false);
   const [formulario, setFormulario] = useState(VACIO);
   const [fallo, setFallo] = useState("");
   const [guardando, setGuardando] = useState(false);
 
-  const medicamentos = (articulos ?? []).filter((a) =>
-    ["vacuna", "medicamento", "insumo", "otro"].includes(a.clase),
-  );
+  const medicamentos = (articulos ?? []).filter((a) => ["vacuna", "medicamento", "insumo", "otro"].includes(a.clase));
 
   async function guardar(evento: React.FormEvent) {
     evento.preventDefault();
@@ -112,7 +121,7 @@ export default function SanidadPagina() {
           Refuerzos proximos:{" "}
           {proximas
             .slice(0, 4)
-            .map((p) => `${p.producto} (${p.proximo_refuerzo}${p.lote_codigo ? `, lote ${p.lote_codigo}` : ""})`)
+            .map((p) => `${p.producto} (${fecha(p.proximo_refuerzo)}${p.lote_codigo ? `, lote ${p.lote_codigo}` : ""})`)
             .join(" · ")}
         </Aviso>
       ) : null}
@@ -123,27 +132,30 @@ export default function SanidadPagina() {
         ) : !datos || datos.length === 0 ? (
           <Vacio>Todavia no hay vacunas ni tratamientos registrados.</Vacio>
         ) : (
-          <Tabla columnas={["Fecha", "Tipo", "Producto", "Lote o galpon", "Via", "Dosis", "Aves", "Refuerzo"]}>
-            {datos.map((fila) => (
-              <tr key={fila.id} className="hover:bg-slate-50">
-                <td className="whitespace-nowrap px-3 py-2">{fila.fecha}</td>
-                <td className="px-3 py-2 capitalize">{fila.tipo}</td>
-                <td className="px-3 py-2 font-medium text-slate-700">
-                  {fila.producto}
-                  {fila.lote_producto ? (
-                    <span className="block text-xs text-slate-400">lote {fila.lote_producto}</span>
-                  ) : null}
-                </td>
-                <td className="px-3 py-2">{fila.lote_codigo ?? fila.galpon_nombre ?? "-"}</td>
-                <td className="px-3 py-2">{fila.via}</td>
-                <td className="px-3 py-2 text-slate-500">{fila.dosis ?? "-"}</td>
-                <td className="px-3 py-2">{fila.aves_tratadas?.toLocaleString("es-CO") ?? "-"}</td>
-                <td className="px-3 py-2">
-                  {fila.proximo_refuerzo ? <Insignia tono="azul">{fila.proximo_refuerzo}</Insignia> : "-"}
-                </td>
-              </tr>
-            ))}
-          </Tabla>
+          <>
+            <Tabla columnas={["Fecha", "Tipo", "Producto", "Lote o galpon", "Via", "Dosis", "Aves", "Refuerzo"]}>
+              {pagAplicaciones.visibles.map((fila) => (
+                <tr key={fila.id} className="hover:bg-slate-50">
+                  <td className="whitespace-nowrap px-3 py-2">{fecha(fila.fecha)}</td>
+                  <td className="px-3 py-2 capitalize">{fila.tipo}</td>
+                  <td className="px-3 py-2 font-medium text-slate-700">
+                    {fila.producto}
+                    {fila.lote_producto ? (
+                      <span className="block text-xs text-slate-400">lote del producto {fila.lote_producto}</span>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2">{fila.lote_codigo ?? fila.galpon_nombre ?? "-"}</td>
+                  <td className="px-3 py-2">{fila.via}</td>
+                  <td className="px-3 py-2 text-slate-500">{fila.dosis ?? "-"}</td>
+                  <td className="px-3 py-2">{fila.aves_tratadas?.toLocaleString("es-CO") ?? "-"}</td>
+                  <td className="px-3 py-2">
+                    {fila.proximo_refuerzo ? <Insignia tono="azul">{fecha(fila.proximo_refuerzo)}</Insignia> : "-"}
+                  </td>
+                </tr>
+              ))}
+            </Tabla>
+            <Paginador {...pagAplicaciones} nombre="aplicaciones" />
+          </>
         )}
       </Tarjeta>
 

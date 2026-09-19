@@ -1,230 +1,292 @@
 # AVISENA
 
-Sistema de gestion para granjas avicolas: varias fincas, varias cuentas (empresas o
-personas), aves, inventario, sanidad y ventas.
+**Sistema web para la gestión de granjas avícolas.** Lleva en un solo lugar las aves, la producción de
+huevos, los sensores de los galpones, el inventario, las ventas con su caja, las tareas del personal y
+los reportes, para una o varias fincas y para varias empresas a la vez.
 
-- **API:** FastAPI (Python 3.11) + SQLAlchemy + Alembic + MySQL 8.4 + Redis
-- **Web:** Next.js 15 + TypeScript + Tailwind CSS
-- **Local:** Docker Compose levanta base de datos, cache, API y web
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-> La version 2 esta en las carpetas `api/` y `web/`.
-> Las carpetas `BACKEND/` y `FRONTEND/` son la version 1 y se eliminaran cuando la
-> version 2 la reemplace por completo.
+![Panel de AVISENA](docs/manual/imagenes/03-panel.png)
+
+📘 **[Manual de usuario completo](docs/manual/MANUAL_DE_USUARIO.md)** — cómo usar cada pantalla, paso a paso.
 
 ---
 
-## Puesta en marcha
+## Contenido
 
-```bash
-# 1. Variables de entorno (cambia las contrasenas y el JWT_SECRET)
-cp .env.example .env
+- [Qué hace](#qué-hace)
+- [Capturas](#capturas)
+- [Tecnologías](#tecnologías)
+- [Arquitectura](#arquitectura)
+- [Instalación con Docker](#instalación-con-docker)
+- [Instalación sin Docker](#instalación-sin-docker)
+- [Datos de ejemplo](#datos-de-ejemplo)
+- [Variables de entorno](#variables-de-entorno)
+- [Conectar los sensores](#conectar-los-sensores)
+- [Pruebas](#pruebas)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Cómo funcionan los accesos](#cómo-funcionan-los-accesos)
+- [Reglas del negocio](#reglas-del-negocio)
+- [Seguridad](#seguridad)
+- [Poner en un servidor](#poner-en-un-servidor)
+- [Solución de problemas](#solución-de-problemas)
+- [Versión anterior](#versión-anterior)
+- [Autor](#autor)
 
-# 2. Levantar todo
-docker compose -f docker-compose.v2.yml up -d --build
+---
 
-# 3. Abrir
-#    Aplicacion:  http://localhost:3000
-#    API y documentacion: http://localhost:8000/docs
+## Qué hace
+
+| Módulo | Funciones |
+|---|---|
+| **Cuentas y fincas** | Varias empresas (o personas) en el mismo sistema, cada una con sus fincas y sus datos totalmente separados |
+| **Galpones y lotes** | Galpones con capacidad y ocupación; lotes con raza, edad y costo; mortalidad, descarte, ventas, fugas, traslados; cierre del lote |
+| **Producción de huevos** | Recolección diaria por tipo (Super, AAA, AA, A, B, sucios, rotos), porcentaje de postura y huevos disponibles |
+| **Sanidad** | Vacunas, medicamentos, vitaminas y desinfecciones, con próximo refuerzo y descuento de la bodega |
+| **Alimento y pesajes** | Alimento entregado por lote (descuenta del inventario y suma al costo), pesajes con peso promedio |
+| **Sensores** | Temperatura, humedad, amoníaco, CO₂, luz, agua y silo; estado en tiempo real, historial filtrable por días y gráfica con el rango normal |
+| **Inventario** | Bodega central y bodegas por finca; entradas, salidas, traslados y ajustes por conteo; costo promedio; stock mínimo |
+| **Ventas y caja** | Puntos de venta con numeración propia, productos por presentación, historial de precios, apertura y cierre de caja, descuentos en porcentaje con tope, varias formas de pago, anulaciones |
+| **Tareas y rutinas** | Tareas del día con responsable y prioridad; rutinas diarias, semanales o mensuales |
+| **Novedades** | Daños, clima, plagas, cortes de servicios, robos y salud del lote, con gravedad, costo y cierre |
+| **Avisos** | Campana con stock bajo, sensores fuera de rango, refuerzos, tareas atrasadas, novedades graves y cajas sin cerrar; se cierran solos |
+| **Reportes** | Producción, ventas, aves, alimento y pendientes por periodo; descarga en CSV para Excel |
+| **Importar desde Excel** | Sube el archivo con su propio formato, empareja columnas, revisa antes de guardar y deshace si hace falta |
+| **Usuarios y permisos** | Seis roles con permisos editables por módulo (ver, crear, editar, borrar) |
+| **Registro de cambios** | Quién hizo qué, cuándo y en qué finca |
+| **Celular** | Diseño adaptable e instalable como aplicación (PWA) |
+
+---
+
+## Capturas
+
+| Historial de un sensor | Caja |
+|---|---|
+| ![Sensor](docs/manual/imagenes/16-sensor-detalle.png) | ![Caja](docs/manual/imagenes/35-caja.png) |
+
+| Detalle de un lote | Avisos |
+|---|---|
+| ![Lote](docs/manual/imagenes/10-lote-detalle.png) | ![Campana](docs/manual/imagenes/05-campana.png) |
+
+| En el celular | Menú en el celular |
+|---|---|
+| <img src="docs/manual/imagenes/37-celular-panel.png" width="280" alt="Panel en el celular"> | <img src="docs/manual/imagenes/38-celular-menu.png" width="280" alt="Menú en el celular"> |
+
+Todas las pantallas están en el [manual de usuario](docs/manual/MANUAL_DE_USUARIO.md).
+
+---
+
+## Tecnologías
+
+**Backend (`api/`)**
+
+- Python 3.11, **FastAPI**, Pydantic v2
+- **SQLAlchemy 2** (modelos tipados) y **Alembic** (migraciones)
+- **MySQL 8.4** con PyMySQL
+- JWT (python-jose) + token de refresco en cookie `HttpOnly`; contraseñas con bcrypt
+- **Redis** para limitar intentos de inicio de sesión (con respaldo en memoria)
+- openpyxl para leer Excel
+- pytest (110 pruebas contra MySQL real)
+
+**Frontend (`web/`)**
+
+- **Next.js 15** (App Router) con **TypeScript**
+- **Tailwind CSS 4**
+- sonner (notificaciones), gráficas propias en SVG
+- PWA: manifiesto e íconos para instalarla en el celular
+
+**Infraestructura**
+
+- **Docker Compose**: base de datos, caché, API y web
+- Flujo de GitHub Actions listo para correr las pruebas (`docs/github-actions-pruebas.yml`)
+
+---
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    U[Navegador o celular] -->|HTTPS| W[Next.js<br/>web:3000]
+    W -->|/api/* reenviado| A[FastAPI<br/>api:8000]
+    S[Equipos de sensores] -->|POST /api/v1/sensores/lecturas| A
+    A --> D[(MySQL 8.4)]
+    A --> R[(Redis)]
 ```
 
-> Detén primero la version 1 (`docker compose down`): las dos usan el puerto 8000 de la API.
+- La web llama a la API por `/api` en el mismo dominio y Next.js reenvía esas rutas al backend. Así la
+  cookie de sesión funciona sin configurar CORS.
+- Cada petición lleva el token de acceso y la **finca activa** (`X-Finca-Id`). La API valida en cada
+  operación el rol, el permiso del módulo y que la finca pertenezca a la cuenta del usuario.
+- Las reglas del negocio viven en `api/app/servicios/`; las rutas solo reciben, validan y responden.
+- La documentación interactiva de la API queda en `http://localhost:8000/docs`.
 
-Entra con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env`. La primera vez el sistema
-crea los modulos, los roles, los permisos, el usuario de plataforma y una cuenta con
-una finca de ejemplo para poder empezar.
+---
 
-| Accion | Comando |
+## Instalación con Docker
+
+**Requisitos:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows o macOS) o
+Docker Engine con Compose (Linux), y Git.
+
+```bash
+# 1. Descargar el proyecto
+git clone https://github.com/Breiner1412/AVISENA.git
+cd AVISENA
+
+# 2. Crear el archivo de configuración y cambiar las contraseñas
+cp .env.example .env          # en Windows (PowerShell): copy .env.example .env
+
+# 3. Construir y levantar todo
+docker compose -f docker-compose.v2.yml up -d --build
+
+# 4. Ver que todo esté arriba (api y db deben decir "healthy")
+docker compose -f docker-compose.v2.yml ps
+```
+
+Abre:
+
+| Qué | Dirección |
+|---|---|
+| Aplicación | http://localhost:3000 |
+| Documentación de la API | http://localhost:8000/docs |
+
+Entra con el `ADMIN_EMAIL` y el `ADMIN_PASSWORD` del `.env`. La primera vez el sistema crea solo las
+tablas, los módulos, los roles, los permisos, el usuario de plataforma y una cuenta con una finca de
+ejemplo para empezar.
+
+### Comandos útiles
+
+| Acción | Comando |
 |---|---|
 | Ver los registros de la API | `docker compose -f docker-compose.v2.yml logs -f api` |
 | Detener | `docker compose -f docker-compose.v2.yml down` |
-| Empezar de cero | `docker compose -f docker-compose.v2.yml down -v` y volver a levantar |
-| Reiniciar la clave del admin | `docker compose -f docker-compose.v2.yml exec api python -m app.semilla --reiniciar-admin` |
-| Restaurar los permisos de fabrica | `... exec api python -m app.semilla --forzar-permisos` |
+| Empezar de cero (**borra la base de datos**) | `docker compose -f docker-compose.v2.yml down -v` |
+| Actualizar después de un cambio en el código | `docker compose -f docker-compose.v2.yml up -d --build` |
+| Reiniciar la contraseña del admin | `docker compose -f docker-compose.v2.yml exec api python -m app.semilla --reiniciar-admin` |
+| Restaurar los permisos de fábrica | `docker compose -f docker-compose.v2.yml exec api python -m app.semilla --forzar-permisos` |
+| Cargar datos de ejemplo | `docker compose -f docker-compose.v2.yml exec api python -m app.demo` |
 
-### Sin Docker
+---
+
+## Instalación sin Docker
+
+**Requisitos:** Python 3.11, Node.js 22, MySQL 8 y (opcional) Redis.
 
 ```bash
-# API
+# --- API ---
 cd api
-cp .env.example .env          # ajusta la conexion a tu MySQL
-python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
+cp .env.example .env                     # ajusta DB_HOST=127.0.0.1 y los datos de tu MySQL
+python -m venv .venv
+. .venv/bin/activate                     # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
-alembic upgrade head
-python -m app.semilla
-uvicorn app.main:app --reload         # http://localhost:8000
+alembic upgrade head                     # crea las tablas
+python -m app.semilla                    # módulos, roles, permisos y usuario admin
+uvicorn app.main:app --reload            # http://localhost:8000
 
-# Web (en otra terminal)
+# --- Web (en otra terminal) ---
 cd web
 npm install
-npm run dev                            # http://localhost:3000
+npm run dev                              # http://localhost:3000
 ```
 
-La web llama a la API por `/api` del mismo dominio: Next.js reenvia esas rutas al
-backend (`API_INTERNA`), asi las cookies de sesion funcionan sin configurar CORS.
+Si la API no está en `http://localhost:8000`, indica dónde con la variable `API_INTERNA` antes de
+`npm run dev`.
 
 ---
 
-## Estructura
+## Datos de ejemplo
 
-```
-AVISENA/
-├── docker-compose.v2.yml     # base de datos + cache + API + web
-├── .env.example              # variables de entorno (copiar a .env)
-├── docs/DISENO_V2.md         # diseno completo del sistema
-├── api/
-│   ├── app/
-│   │   ├── main.py           # aplicacion FastAPI
-│   │   ├── core/             # configuracion, base de datos, seguridad, permisos, auditoria
-│   │   ├── modelos/          # tablas (SQLAlchemy)
-│   │   ├── esquemas/         # validacion de datos que entran y salen
-│   │   ├── servicios/        # reglas de negocio (sesiones, alcance por finca)
-│   │   ├── rutas/            # endpoints por modulo (sesion, fincas, inventario, ...)
-│   │   └── semilla.py        # datos iniciales
-│   ├── migraciones/          # Alembic
-│   └── tests/                # pruebas de extremo a extremo
-└── web/
-    └── src/
-        ├── app/              # pantallas (App Router)
-        ├── componentes/      # piezas de interfaz reutilizables
-        └── lib/              # cliente de la API, sesion, menu, tipos
+Para ver el sistema como si una granja llevara **seis meses** usándolo:
+
+```bash
+docker compose -f docker-compose.v2.yml exec api python -m app.demo
+# sin Docker: cd api && python -m app.demo
 ```
 
----
+Tarda unos 3 minutos y crea la cuenta **Granja Avícola La Esperanza** con:
 
-## Como funcionan los accesos
+- 2 fincas: *La Esperanza* (gallinas ponedoras) y *El Recreo* (pollo de engorde)
+- 6 galpones, 11 lotes (incluido un lote viejo que se descarta y unas pollitas que pasan a postura)
+- 7 usuarios con todos los roles
+- ~180 días de recolección de huevos, alimento, mortalidad, pesajes, vacunas y desinfecciones
+- ~2.900 ventas con su caja diaria, descuentos, pagos por transferencia y algunas anulaciones
+- compras, traslados, salidas y conteos de inventario
+- rutinas y tareas diarias, novedades y ~20.000 mediciones de 9 sensores
 
-- **Cuenta:** una empresa o una persona. Todo lo que se registra pertenece a una cuenta.
-- **Finca:** cada cuenta puede tener varias. La informacion se guarda separada por finca.
-- **Finca activa:** al entrar, el empleado elige en cual esta trabajando; los
-  administradores y supervisores pueden cambiarla desde la barra superior. La web envia
-  esa finca en cada peticion y la API valida que el usuario tenga acceso.
-- **Supervisor:** trabaja en las fincas a su cargo y puede tener otras marcadas como
-  *solo consulta*, para ver lo que necesite de otra finca de la misma cuenta.
+Todo se registra con las mismas reglas del sistema, así que el inventario, las aves y las cajas cuadran.
 
-| Rol | Que puede hacer |
+| Usuario | Rol |
 |---|---|
-| plataforma | Administra el sistema y todas las cuentas |
-| propietario | Todo dentro de su cuenta |
-| administrador | Toda la operacion de las fincas de la cuenta |
-| supervisor | Su finca completa; otras fincas de la cuenta solo de consulta |
-| operario | Registra el trabajo diario de su finca |
-| cajero | Atiende el punto de venta |
+| `dueno@demo-avisena.com` | Propietario |
+| `admin@demo-avisena.com` | Administrador |
+| `supervisor@demo-avisena.com` | Supervisor |
+| `operario1@demo-avisena.com` | Operario |
+| `caja@demo-avisena.com` | Cajero |
 
-Los permisos se guardan en la base de datos (`permisos`) y se cambian desde la pantalla
-**Roles y permisos**. El backend los valida en cada peticion; la web solo esconde lo que
-el rol no puede usar.
+Contraseña de todos: **`Granja2026`**. Los datos se cargan una sola vez por base de datos; para volver a
+cargarlos hay que empezar de cero (`down -v`).
 
 ---
 
-## Inventario
+## Variables de entorno
 
-- **Bodegas:** una central para toda la cuenta (sin finca) y las que quieras por finca.
-  Cada quien ve la bodega de su finca activa y las centrales.
-- **Articulos:** alimento, vacunas, medicamentos, herramientas, repuestos e insumos, con
-  su unidad (kg, unidad, litro, bulto, dosis, metro), los kilos por bulto cuando aplica y
-  la cantidad minima que deberia haber.
-- **Movimientos:** entrada (compra), salida (consumo, perdida, dano), traslado entre
-  bodegas y ajuste por conteo fisico. La existencia nunca queda en negativo: si no hay
-  suficiente, la operacion no se guarda.
-- **Anular en vez de borrar:** un movimiento equivocado se anula con su motivo, las
-  existencias vuelven como estaban y el movimiento sigue en la lista.
-- **Costo promedio:** cada entrada recalcula el costo promedio del articulo en esa bodega.
-- **Alerta:** los articulos por debajo de su minimo salen marcados en la lista.
+Se configuran en el archivo `.env` (copia de `.env.example`). **Nunca subas el `.env` al repositorio** y
+no uses el signo `$` en las contraseñas: Docker Compose lo interpreta como variable.
 
----
-
-## Aves
-
-- **Lotes:** cada grupo de aves que entra a un galpon, con su raza, proposito (postura,
-  engorde o levante), edad, cuantas entraron y cuanto costo cada una. La ocupacion del
-  galpon se actualiza sola y no deja pasar de la capacidad.
-- **Movimientos:** mortalidad, descarte, fuga, robo, venta, consumo, regalo, ingreso de
-  mas aves y traslado a otro galpon. Un movimiento mal registrado se anula y las aves
-  vuelven al lote.
-- **Descarte:** las gallinas que dejan de producir salen del conteo de produccion y
-  quedan guardadas como aves de descarte (salvamento) para venderlas despues; siguen
-  ocupando el galpon hasta que salgan.
-- **Produccion de huevos:** recoleccion del dia por lote y tipo (Super, AAA, AA, A, B,
-  sucios y rotos). Volver a registrar el mismo dia corrige lo anterior sin duplicar. Los
-  tipos que se venden entran al **stock de huevos** de la finca.
-- **Alimento:** lo que se le entrega a cada lote sale de una bodega, queda en el kardex y
-  suma al costo del lote.
-- **Pesajes:** se pesa una muestra y el sistema calcula el peso promedio por ave.
-- **Vacunas y tratamientos:** fecha, lote o galpon, producto, lote del producto, dosis,
-  via, aves tratadas y proximo refuerzo. Si se indica el producto y la bodega, tambien se
-  descuenta del inventario.
-- **Balance del lote:** aves, mortalidad, alimento consumido (kg, kg por ave y costo),
-  huevos y porcentaje de postura, peso promedio, conversion alimenticia y costo por ave.
+| Variable | Para qué | Ejemplo |
+|---|---|---|
+| `MYSQL_ROOT_PASSWORD` | Contraseña root de MySQL (solo Docker) | `CambiaEstaClaveRoot123` |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos de la aplicación | `avisena` |
+| `DB_HOST`, `DB_PORT` | Dónde está MySQL | `db`, `3306` |
+| `JWT_SECRET` | Clave para firmar las sesiones (**mínimo 32 caracteres**) | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `MINUTOS_ACCESO` | Duración del token de acceso | `30` |
+| `DIAS_REFRESCO` | Días que dura la sesión sin volver a entrar | `14` |
+| `COOKIE_SEGURA` | `true` cuando se sirve con HTTPS | `false` |
+| `REDIS_URL` | Caché para limitar intentos | `redis://cache:6379/0` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NOMBRE` | Usuario de plataforma que se crea la primera vez | |
+| `CUENTA_DEMO`, `FINCA_DEMO` | Nombre de la cuenta y la finca que se crean la primera vez | |
+| `SMTP_*` | Correo para recuperar contraseñas (opcional) | |
+| `CORS_ORIGENES` | Orígenes permitidos si se llama la API desde otro dominio | |
+| `WEB_PUERTO_HOST`, `API_PUERTO_HOST`, `DB_PUERTO_HOST` | Puertos en tu máquina | `3000`, `8000`, `3308` |
+| `TZ` | Zona horaria del servidor | `America/Bogota` |
 
 ---
 
-## Ventas
+## Conectar los sensores
 
-- **Puntos de venta:** uno por finca y/o uno central. Cada punto numera sus ventas
-  aparte (`PV1-000123`).
-- **Productos:** huevos por unidad, docena (12), medio panal (15) o panal (30); gallinas
-  de descarte por unidad; aves de engorde por kilo. Cada producto guarda **historial de
-  precios**: al cambiar el precio, el anterior queda con su fecha de fin.
-- **Caja:** el cajero abre la caja con una base, vende, y al cerrar cuenta el efectivo;
-  el sistema muestra lo que deberia haber y la diferencia. Sin caja abierta no se vende.
-- **La venta descuenta lo que sale:** los huevos salen del stock de la finca y las aves
-  salen del lote (las de descarte de su bolsa de salvamento, las de engorde de las aves
-  en produccion), con su movimiento de aves y la ocupacion del galpon al dia.
-- **Descuentos:** el cajero, el operario y el supervisor tienen un tope en porcentaje que
-  configura la cuenta (10% de fabrica); el administrador no tiene tope.
-- **Anular:** la venta nunca se borra. Al anularla se devuelven los huevos y las aves, y
-  queda con el motivo, quien la anulo y a que hora. **El cajero solo puede anular ventas
-  de su turno abierto**; el administrador puede anular cualquiera.
-- **Formas de pago:** efectivo, transferencia, tarjeta o credito, y una venta puede
-  pagarse con varias a la vez. Los pagos deben sumar exactamente el total.
+Los equipos (ESP32, Raspberry Pi, un PLC con pasarela, etc.) envían sus mediciones a la API. Cada
+sensor se registra primero en **Aves → Sensores** con un **código** (por ejemplo `TEMP-G1`), y el equipo
+usa ese código.
 
----
+1. Crea en **Usuarios** un usuario para los equipos con rol **Supervisor** y acceso a la finca.
+2. El equipo entra y obtiene un token (dura `MINUTOS_ACCESO`; al vencer, vuelve a entrar):
 
-## Importar desde Excel
+   ```bash
+   curl -X POST http://SERVIDOR/api/v1/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email": "equipos@granja.com", "clave": "LaClaveDelEquipo"}'
+   ```
 
-No hay un formato obligatorio: se sube el archivo como lo maneje cada quien.
+3. Envía una o varias mediciones con el código de cada sensor y la finca:
 
-1. **Se sube** un `.xlsx` o un `.csv` (hasta 5 MB y 5000 filas) y se dice que contiene:
-   articulos, entrada de inventario, proveedores, vacunas o produccion de huevos.
-2. **El sistema lee las columnas** —salta los titulos sueltos de arriba, reconoce el
-   encabezado y entiende nombres distintos (`CÓDIGO`, `DESCRIPCIÓN DEL PRODUCTO`,
-   `VR UNITARIO`, `UND`...), incluso con tildes y mayusculas.
-3. **Se emparejan las columnas** con lo que pide el sistema; lo que se reconocio ya viene
-   marcado. Ese emparejamiento se puede **guardar como plantilla** para el mismo formato.
-4. **Se revisa antes de guardar:** muestra cuantas filas quedan listas y cuales tienen
-   problemas, con el motivo de cada una. Nada se guarda en este paso.
-5. **Se guarda** y queda en el historial.
-6. **Se puede deshacer:** las entradas de inventario se anulan, la produccion vuelve a
-   restarse del stock y lo demas se borra; los articulos creados por la importacion
-   quedan desactivados.
+   ```bash
+   curl -X POST http://SERVIDOR/api/v1/sensores/lecturas \
+     -H "Authorization: Bearer TOKEN" \
+     -H "X-Finca-Id: 1" \
+     -H "Content-Type: application/json" \
+     -d '{"lecturas": [
+           {"codigo": "TEMP-G1", "valor": 24.6},
+           {"codigo": "HUM-G1",  "valor": 61.3, "medido_en": "2026-09-19T14:30:00-05:00"}
+         ]}'
+   ```
 
-Fechas, numeros con puntos o comas (`1.234,56`) y unidades escritas de varias formas
-(`kg`, `kilos`, `und`, `bultos`) se entienden automaticamente.
-
----
-
-## Tareas, novedades y reportes
-
-- **Tareas:** lo que hay que hacer cada dia, con prioridad, hora y responsable. El
-  operario y el cajero solo ven **sus** tareas y solo cambian su estado; el supervisor y
-  el administrador las crean, asignan y reasignan.
-- **Rutinas:** una tarea que se repite (todos los dias, ciertos dias de la semana o una
-  vez al mes). Con un boton se generan las tareas del dia, y no se duplican si ya estaban.
-- **Novedades:** lo que se sale de lo normal —danos de infraestructura, clima, plagas,
-  cortes de luz o agua, robos, problemas de salud del lote— con su categoria, un tipo en
-  las palabras de cada finca, gravedad, costo estimado y que se hizo. Se cierran cuando
-  quedan resueltas. Si murieron aves, se descuentan del lote en el mismo registro.
-- **Reportes:** produccion de huevos y su promedio, ventas por producto y forma de pago,
-  aves vivas y mortalidad, alimento consumido con su costo, articulos bajo el minimo y
-  lo que falta por hacer. Todo por el periodo que se elija y **descargable en CSV** para
-  abrirlo en Excel.
-
-## Desde el celular
-
-La aplicacion se usa igual desde el telefono: el menu se abre y se cierra con un toque y
-las pantallas se acomodan a la pantalla pequena. Ademas se puede **instalar como una app**
-("Agregar a la pantalla de inicio"): tiene su icono, su nombre y abre sin la barra del
-navegador.
+   Responde cuántas se guardaron y qué códigos no reconoció. Si no se envía `medido_en`, se toma la
+   hora de llegada. El sistema marca solo las que estén fuera de rango y avisa en la campana.
 
 ---
 
@@ -233,50 +295,150 @@ navegador.
 ```bash
 cd api
 pip install -r requirements-dev.txt
+python -m app.semilla --reiniciar-admin     # deja la clave del admin como está en el .env
 python -m pytest -q
 ```
 
-Las pruebas cubren el inicio de sesion, el cambio de contrasena, los permisos por rol,
-la eleccion de finca, los galpones, el inventario completo (entradas, salidas, traslados,
-ajustes y anulaciones), los lotes de aves (mortalidad, descarte, produccion, alimento,
-pesajes y sanidad), las ventas (caja, descuentos, pagos y anulaciones), la importacion
-desde Excel (lectura, validacion, carga y deshacer), las tareas y novedades, los reportes
-y el registro de cambios; y —lo mas importante— que **una cuenta no pueda ver ni tocar los
-datos de otra**.
+Son **110 pruebas** de extremo a extremo contra MySQL. Cubren el inicio de sesión y el cambio de
+contraseña, los permisos por rol, la elección de finca, galpones, inventario (entradas, salidas,
+traslados con su costo, ajustes y anulaciones), lotes (mortalidad, descarte, traslado, producción,
+alimento, pesajes y sanidad), ventas (caja, descuentos en porcentaje y su tope, pagos y anulaciones),
+importación desde Excel, tareas y novedades, sensores (incluido el envío por código), avisos, reportes y
+el registro de cambios; y, lo más importante, que **una cuenta no pueda ver ni tocar los datos de
+otra**.
+
+Para correrlas en GitHub, copia `docs/github-actions-pruebas.yml` a `.github/workflows/pruebas.yml`.
+
+---
+
+## Estructura del proyecto
+
+```
+AVISENA/
+├── docker-compose.v2.yml        # base de datos + caché + API + web
+├── .env.example                 # variables de entorno (copiar a .env)
+├── docs/
+│   ├── manual/                  # manual de usuario con capturas
+│   ├── DISENO_V2.md             # diseño del sistema
+│   └── github-actions-pruebas.yml
+├── api/
+│   ├── app/
+│   │   ├── main.py              # aplicación FastAPI
+│   │   ├── core/                # configuración, base de datos, seguridad, permisos, auditoría
+│   │   ├── modelos/             # tablas (SQLAlchemy)
+│   │   ├── esquemas/            # validación de lo que entra y sale (Pydantic)
+│   │   ├── servicios/           # reglas del negocio (inventario, aves, ventas, avisos...)
+│   │   ├── rutas/               # endpoints por módulo
+│   │   ├── semilla.py           # datos iniciales
+│   │   └── demo.py              # seis meses de datos de ejemplo
+│   ├── migraciones/             # Alembic
+│   └── tests/                   # pruebas
+└── web/
+    └── src/
+        ├── app/                 # pantallas (App Router)
+        ├── componentes/         # interfaz reutilizable (menú, campana, gráficas, diálogos...)
+        └── lib/                 # cliente de la API, sesión, menú, tipos y formatos
+```
+
+---
+
+## Cómo funcionan los accesos
+
+- **Cuenta:** una empresa o una persona. Todo pertenece a una cuenta y ninguna ve los datos de otra.
+- **Finca:** cada cuenta puede tener varias; la información se lleva por finca.
+- **Finca activa:** al entrar se elige en cuál se trabaja y se puede cambiar desde la barra superior.
+- Un supervisor puede tener fincas en modo **solo consulta**.
+
+| Rol | Qué puede hacer |
+|---|---|
+| Plataforma | Administra el sistema y todas las cuentas |
+| Propietario | Todo dentro de su cuenta |
+| Administrador | Toda la operación de las fincas de la cuenta |
+| Supervisor | Su finca completa; otras fincas de la cuenta solo de consulta |
+| Operario | Registra el trabajo diario de su finca |
+| Cajero | Atiende el punto de venta |
+
+Los permisos se guardan en la base de datos y se cambian en **Roles y permisos**. El backend los valida
+en cada petición; la web solo oculta lo que el rol no puede usar.
+
+---
+
+## Reglas del negocio
+
+- **Nada queda en negativo:** existencias, aves de un lote y huevos disponibles.
+- **Nada se borra, se anula:** ventas y movimientos quedan en el historial con motivo, quién y cuándo.
+- **El costo viaja con el artículo:** cada entrada recalcula el costo promedio; traslados y salidas se
+  valoran al costo promedio de la bodega de origen.
+- **El descarte** saca a las gallinas del conteo de producción pero siguen en el galpón hasta venderse.
+- **La venta descuenta lo que sale:** huevos de los disponibles de la finca y aves del lote y del galpón.
+- **Descuentos en porcentaje** con tope configurable para cajero, operario y supervisor.
+- **El cajero solo anula ventas de su turno abierto.**
+- **La producción se corrige, no se duplica:** registrar el mismo lote y día reemplaza el registro.
+- **Los avisos se recalculan** y se cierran solos cuando el problema se resuelve.
+- **Las importaciones se pueden deshacer.**
 
 ---
 
 ## Seguridad
 
-- Token de acceso corto (JWT) y token de refresco en una cookie `HttpOnly`.
-- Contrasenas con bcrypt; limite de intentos en el inicio de sesion y en la recuperacion.
-- Cada operacion importante queda en el registro de cambios con usuario, finca y fecha.
-- Los errores internos salen como un mensaje generico, sin detalles de la base de datos.
-- **Nunca subas el archivo `.env` al repositorio.**
+- Token de acceso corto (JWT) y token de refresco en cookie `HttpOnly`; las sesiones se pueden revocar.
+- Contraseñas con bcrypt; límite de intentos en el inicio de sesión.
+- Permisos validados en el servidor en cada operación, con aislamiento estricto entre cuentas.
+- Cada operación importante queda en el registro de cambios.
+- Los errores internos se responden con un mensaje genérico, sin detalles de la base de datos.
+- El `.gitignore` deja por fuera el `.env`, `node_modules/`, `.next/` y los temporales de Python.
 
 ---
 
-## Subirlo a GitHub
+## Poner en un servidor
+
+Resumen para una máquina virtual con Linux (Azure, AWS, DigitalOcean…):
+
+1. Instala Docker y Git, clona el repositorio y crea el `.env` con contraseñas y `JWT_SECRET` nuevos.
+2. Levanta con `docker compose -f docker-compose.v2.yml up -d --build`.
+3. Pon delante un proxy con HTTPS (Nginx o Caddy) que apunte al puerto 3000 y cambia
+   `COOKIE_SEGURA=true`.
+4. Abre en el firewall solo los puertos 80 y 443. La API y la base de datos quedan escuchando solo en
+   `127.0.0.1`.
+5. Programa una copia diaria de la base de datos con `mysqldump`.
+
+---
+
+## Solución de problemas
+
+**`exec /bin/sh: exec format error` al construir.** La imagen base se descargó dañada o de otra
+arquitectura. Bórrala y vuelve a construir:
 
 ```bash
-git init
-git add .
-git commit -m "AVISENA v2: cuentas, fincas, usuarios y permisos"
-git branch -M main
-git remote add origin https://github.com/USUARIO/REPOSITORIO.git
-git push -u origin main
+docker image rm -f node:22-alpine python:3.11-slim
+docker builder prune -af
+docker compose -f docker-compose.v2.yml build --no-cache
+docker compose -f docker-compose.v2.yml up -d
 ```
 
-El `.gitignore` ya deja por fuera el `.env`, `node_modules/`, `.next/` y los archivos
-temporales de Python. **Revisa que `BACKEND/.env` no quede en el commit.**
+**`rpc error: code = Unavailable ... EOF`.** Docker Desktop se quedó sin memoria o se cerró el motor.
+Reinicia Docker Desktop y construye los servicios uno a uno (`build api` y luego `build web`).
 
-## Version 1 (carpetas BACKEND/ y FRONTEND/)
+**La API no arranca y el registro dice que no conecta a la base de datos.** La primera vez MySQL tarda en
+iniciar; espera un minuto. Si cambiaste las contraseñas del `.env` después de crear la base, empieza de
+cero con `down -v`.
 
-La version anterior sigue funcionando con `docker compose up -d --build`; sus variables
-estan en `BACKEND/.env.example`. Se mantiene solo como referencia mientras se termina la
-version 2.
+**El puerto 3000, 8000 o 3308 ya está en uso.** Cambia `WEB_PUERTO_HOST`, `API_PUERTO_HOST` o
+`DB_PUERTO_HOST` en el `.env`.
 
-## Pruebas automaticas en GitHub
+**No recuerdo la contraseña del admin.** `docker compose -f docker-compose.v2.yml exec api python -m
+app.semilla --reiniciar-admin` la deja como está en el `.env`.
 
-El archivo `docs/github-actions-pruebas.yml` trae el flujo de trabajo listo. Para
-activarlo, copialo a `.github/workflows/pruebas.yml` en tu computador y sube el cambio.
+---
+
+## Versión anterior
+
+Las carpetas `BACKEND/` y `FRONTEND/` contienen la primera versión del sistema y se conservan solo como
+referencia. La versión actual está en `api/` y `web/`.
+
+---
+
+## Autor
+
+Desarrollado por **Breiner Stiven Guisao Rodríguez** — Tecnólogo en Análisis y Desarrollo de Software
+(SENA). [github.com/Breiner1412](https://github.com/Breiner1412)

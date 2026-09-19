@@ -6,6 +6,7 @@ import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { PrecioHistorial, ProductoVenta, TipoHuevo } from "@/lib/tipos";
 import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { avisar } from "@/componentes/dialogos";
 
 const CLASES = [
   { valor: "huevo", texto: "Huevos" },
@@ -85,7 +86,7 @@ export default function ProductosVenta() {
       setRecargas((n) => n + 1);
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -95,7 +96,7 @@ export default function ProductosVenta() {
       setRecargas((n) => n + 1);
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 

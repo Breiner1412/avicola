@@ -6,6 +6,7 @@ import { useDatos, mensajeDeError } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Galpon } from "@/lib/tipos";
 import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 const TIPOS = [
   { valor: "postura", texto: "Postura" },
@@ -17,6 +18,7 @@ const TIPOS = [
 const VACIO = { codigo: "", nombre: "", tipo: "postura", capacidad: 0, observaciones: "" };
 
 export default function Galpones() {
+  const { confirmar } = useDialogos();
   const { sesion, puede } = useSesion();
   const [verInactivos, setVerInactivos] = useState(false);
   const ruta = `/galpones?incluir_inactivos=${verInactivos}`;
@@ -69,12 +71,18 @@ export default function Galpones() {
   }
 
   async function desactivar(galpon: Galpon) {
-    if (!confirm(`Desactivar el galpon ${galpon.nombre}?`)) return;
+    const seguro = await confirmar({
+      titulo: `Desactivar ${galpon.nombre}`,
+      mensaje: "Deja de aparecer para registrar lotes. Su historial se conserva.",
+      aceptar: "Desactivar",
+      peligro: true,
+    });
+    if (!seguro) return;
     try {
       await api(`/galpones/${galpon.id}`, { metodo: "DELETE" });
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 

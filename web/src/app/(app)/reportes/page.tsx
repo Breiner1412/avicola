@@ -5,6 +5,8 @@ import { useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { ResumenReporte } from "@/lib/tipos";
 import { Aviso, Boton, Campo, Cargando, Insignia, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { haceDias } from "@/lib/formato";
+import { avisar } from "@/componentes/dialogos";
 
 const moneda = (valor: number) => `$${Math.round(valor).toLocaleString("es-CO")}`;
 const numero = (valor: number) => valor.toLocaleString("es-CO");
@@ -26,11 +28,6 @@ const NOMBRE_CLASE: Record<string, string> = {
   otro: "Otros",
 };
 
-function haceDias(dias: number) {
-  const fecha = new Date();
-  fecha.setDate(fecha.getDate() - dias);
-  return fecha.toISOString().slice(0, 10);
-}
 
 function Dato({ titulo, valor, detalle }: { titulo: string; valor: string | number; detalle?: string }) {
   return (
@@ -73,7 +70,7 @@ export default function Reportes() {
       enlace.remove();
       URL.revokeObjectURL(enlace.href);
     } catch {
-      alert("No se pudo descargar el reporte");
+      avisar.error("No se pudo descargar el reporte");
     } finally {
       setBajando("");
     }
@@ -110,7 +107,7 @@ export default function Reportes() {
             <Dato
               titulo="Huevos recolectados"
               valor={numero(datos.produccion.huevos)}
-              detalle={`${datos.produccion.promedio_diario} por dia`}
+              detalle={`${numero(Math.round(datos.produccion.promedio_diario))} por dia`}
             />
             <Dato
               titulo="Vendido"
@@ -124,7 +121,7 @@ export default function Reportes() {
             />
             <Dato
               titulo="Mortalidad"
-              valor={`${datos.aves.mortalidad_porcentaje}%`}
+              valor={`${datos.aves.mortalidad_porcentaje.toLocaleString("es-CO")}%`}
               detalle={`${numero(datos.aves.muertes)} ave(s) en el periodo`}
             />
           </div>
@@ -139,7 +136,7 @@ export default function Reportes() {
                     <tr key={fila.tipo} className="hover:bg-slate-50">
                       <td className="px-3 py-2 font-medium text-slate-700">{fila.tipo}</td>
                       <td className="px-3 py-2">{numero(fila.cantidad)}</td>
-                      <td className="px-3 py-2 text-slate-500">{(fila.cantidad / 30).toFixed(1)}</td>
+                      <td className="px-3 py-2 text-slate-500">{(fila.cantidad / 30).toLocaleString("es-CO", { maximumFractionDigits: 1 })}</td>
                     </tr>
                   ))}
                 </Tabla>
@@ -158,6 +155,18 @@ export default function Reportes() {
                         <td className="px-3 py-2 font-medium">{moneda(fila.total)}</td>
                       </tr>
                     ))}
+                    {datos.ventas.por_clase.reduce((suma, fila) => suma + fila.total, 0) - datos.ventas.total > 0.5 ? (
+                      <tr>
+                        <td className="px-3 py-2 text-slate-500">Descuentos</td>
+                        <td className="px-3 py-2 text-slate-500">
+                          -{moneda(datos.ventas.por_clase.reduce((suma, fila) => suma + fila.total, 0) - datos.ventas.total)}
+                        </td>
+                      </tr>
+                    ) : null}
+                    <tr className="font-semibold text-slate-800">
+                      <td className="px-3 py-2">Total</td>
+                      <td className="px-3 py-2">{moneda(datos.ventas.total)}</td>
+                    </tr>
                   </Tabla>
                   <p className="mt-3 text-xs text-slate-500">
                     Efectivo {moneda(datos.ventas.efectivo)} · otros medios {moneda(datos.ventas.otros_medios)}

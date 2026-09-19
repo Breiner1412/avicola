@@ -594,3 +594,90 @@ export type ResumenReporte = {
   inventario: { bajo_minimo: { articulo: string; unidad: string; hay: number; minimo: number }[] };
   trabajo: { tareas_pendientes: number; novedades_abiertas: number };
 };
+
+// --- Sensores ---
+export type TipoSensor = {
+  id: number;
+  cuenta_id: number | null;
+  nombre: string;
+  unidad: string;
+  min_ok: number | null;
+  max_ok: number | null;
+};
+
+export type Sensor = {
+  id: number;
+  finca_id: number;
+  galpon_id: number | null;
+  galpon_nombre: string | null;
+  tipo_id: number;
+  tipo: string;
+  unidad: string;
+  codigo: string;
+  nombre: string;
+  ubicacion: string | null;
+  min_ok: number | null;
+  max_ok: number | null;
+  activo: boolean;
+  estado: "ok" | "alto" | "bajo" | "sin_datos";
+  ultimo_valor: number | null;
+  ultima_medicion: string | null;
+  historial: number[];
+};
+
+export type LecturaSensor = {
+  id: number;
+  sensor_id: number;
+  valor: number;
+  medido_en: string;
+  fuera_rango: boolean;
+  origen: string;
+  usuario_nombre: string | null;
+};
+
+// --- Alertas ---
+export type Alerta = {
+  id: number;
+  tipo: string;
+  nivel: "info" | "aviso" | "critico";
+  titulo: string;
+  detalle: string | null;
+  ruta: string | null;
+  entidad_id: number | null;
+  leida: boolean;
+  creado_en: string;
+};
+
+export type ResumenAlertas = {
+  total: number;
+  sin_leer: number;
+  criticas: number;
+  alertas: Alerta[];
+};
+
+// --- Panel ---
+export type ResumenPanel = {
+  finca_activa: { id: number; nombre: string } | null;
+  fincas_visibles: number;
+  usuarios_activos: number;
+  galpones_activos: number;
+  aves_en_finca: number;
+  capacidad_finca: number;
+  ocupacion: number;
+  solo_lectura: boolean;
+  dias: number;
+  huevos_periodo: number;
+  huevos_promedio: number;
+  huevos_disponibles: number;
+  ventas_periodo: number;
+  produccion: { fecha: string; valor: number }[];
+  ventas: { fecha: string; valor: number }[];
+  lotes_activos: number;
+  aves_descarte: number;
+  tareas_hoy: number;
+  tareas_atrasadas: number;
+  novedades_abiertas: number;
+  sensores: number;
+  sensores_alerta: number;
+  alertas: number;
+};

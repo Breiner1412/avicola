@@ -153,6 +153,8 @@ class VentaCrear(BaseModel):
     items: list[ItemVenta] = Field(min_length=1)
     pagos: list[PagoVenta] = []
     descuento: float = Field(default=0, ge=0)
+    # Si se indica, el descuento se calcula como porcentaje del subtotal (y 'descuento' se ignora)
+    descuento_porcentaje: float | None = Field(default=None, ge=0, le=100)
     observaciones: str | None = Field(default=None, max_length=255)
 
 
@@ -210,3 +212,12 @@ class ResumenVentas(BaseModel):
     anuladas: int
     huevos_vendidos: int
     aves_vendidas: int
+
+
+class AjustesVentas(BaseModel):
+    descuento_maximo: int
+    tengo_tope: bool = False
+
+
+class AjustesVentasActualizar(BaseModel):
+    descuento_maximo: int = Field(ge=0, le=100)

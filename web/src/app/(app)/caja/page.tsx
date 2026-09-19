@@ -5,7 +5,22 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Lote, MetodoPago, Pagina, ProductoVenta, PuntoVenta, Turno, Venta } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tabla,
+  Tarjeta,
+  Vacio,
+} from "@/componentes/ui";
+import { fecha, hora } from "@/lib/formato";
+import { type AjustesVentas } from "@/componentes/tope-descuento";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 type Linea = {
   producto: ProductoVenta;
@@ -25,17 +40,25 @@ const NOMBRE_PRESENTACION: Record<string, string> = {
 };
 
 export default function Caja() {
+  const { pedirTexto } = useDialogos();
   const { sesion, puede } = useSesion();
   const finca = sesion?.finca_activa?.id ?? 0;
   const [recargas, setRecargas] = useState(0);
 
-  const { datos: turno, cargando, recargar: recargarTurno } = useDatos<Turno | null>("/caja/turno", `${finca}-${recargas}`);
+  const {
+    datos: turno,
+    cargando,
+    recargar: recargarTurno,
+  } = useDatos<Turno | null>("/caja/turno", `${finca}-${recargas}`);
   const { datos: puntos } = useDatos<PuntoVenta[]>("/puntos-venta", finca);
   const { datos: productos } = useDatos<ProductoVenta[]>("/productos-venta", `${finca}-${recargas}`);
   const { datos: metodos } = useDatos<MetodoPago[]>("/metodos-pago", finca);
   const { datos: lotes } = useDatos<Lote[]>("/lotes?solo_activos=true", `${finca}-${recargas}`);
+  const [paginaVentas, setPaginaVentas] = useState(1);
+  const { datos: ajustes } = useDatos<AjustesVentas>("/ventas/ajustes");
+  const tope = ajustes?.tengo_tope ? ajustes.descuento_maximo : 100;
   const { datos: ventas, recargar: recargarVentas } = useDatos<Pagina<Venta>>(
-    turno ? `/ventas?turno_id=${turno.id}&tamano=50` : null,
+    turno ? `/ventas?turno_id=${turno.id}&pagina=${paginaVentas}&tamano=12` : null,
     `${turno?.id ?? 0}-${recargas}`,
   );
 
@@ -52,11 +75,12 @@ export default function Caja() {
   const [contado, setContado] = useState("");
 
   const subtotal = useMemo(
-    () =>
-      lineas.reduce((suma, linea) => suma + Number(linea.cantidad || 0) * Number(linea.producto.precio ?? 0), 0),
+    () => lineas.reduce((suma, linea) => suma + Number(linea.cantidad || 0) * Number(linea.producto.precio ?? 0), 0),
     [lineas],
   );
-  const total = Math.max(0, subtotal - Number(descuento || 0));
+  const porcentaje = Math.min(tope, Math.max(0, Number(descuento || 0)));
+  const valorDescuento = Math.round((subtotal * porcentaje) / 100);
+  const total = Math.max(0, subtotal - valorDescuento);
 
   function agregar(producto: ProductoVenta) {
     setFallo("");
@@ -107,10 +131,8 @@ export default function Caja() {
             lote_id: l.lote_id ? Number(l.lote_id) : null,
             aves: l.aves ? Number(l.aves) : null,
           })),
-          pagos: metodoId
-            ? [{ metodo_pago_id: Number(metodoId), monto: total, referencia: referencia || null }]
-            : [],
-          descuento: Number(descuento || 0),
+          pagos: metodoId ? [{ metodo_pago_id: Number(metodoId), monto: total, referencia: referencia || null }] : [],
+          descuento_porcentaje: porcentaje || null,
         },
       });
       setRecibo(venta);
@@ -127,14 +149,23 @@ export default function Caja() {
   }
 
   async function anular(venta: Venta) {
-    const motivo = prompt(`Por que se anula la venta ${venta.numero}?`);
-    if (!motivo || motivo.trim().length < 3) return;
+    const motivo = await pedirTexto({
+      titulo: `Anular la venta ${venta.numero}`,
+      mensaje: "Lo vendido vuelve al inventario. La venta queda en el historial como anulada.",
+      etiqueta: "Por que se anula?",
+      placeholder: "Ej: se registro la cantidad equivocada",
+      aceptar: "Anular venta",
+      peligro: true,
+      requerido: true,
+    });
+    if (!motivo || motivo.length < 3) return;
     try {
-      await api(`/ventas/${venta.id}/anular`, { metodo: "POST", cuerpo: { motivo: motivo.trim() } });
+      await api(`/ventas/${venta.id}/anular`, { metodo: "POST", cuerpo: { motivo } });
       setRecargas((n) => n + 1);
       await Promise.all([recargarTurno(), recargarVentas()]);
+      avisar.bien(`Venta ${venta.numero} anulada`);
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -147,7 +178,7 @@ export default function Caja() {
       setRecargas((n) => n + 1);
       await recargarTurno();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -199,8 +230,7 @@ export default function Caja() {
         <div>
           <h1 className="text-xl font-semibold text-slate-800">Caja · {turno.punto_venta_nombre}</h1>
           <p className="text-sm text-slate-500">
-            Turno abierto por {turno.usuario_nombre} · {turno.ventas} venta(s) · vendido{" "}
-            {moneda(turno.total_vendido)}
+            Turno abierto por {turno.usuario_nombre} · {turno.ventas} venta(s) · vendido {moneda(turno.total_vendido)}
           </p>
         </div>
         {puede("caja", "editar") ? (
@@ -228,7 +258,7 @@ export default function Caja() {
                     <span className="block text-xs text-slate-500">
                       {NOMBRE_PRESENTACION[producto.presentacion]}
                       {producto.disponible !== null && producto.disponible !== undefined
-                        ? ` · quedan ${producto.disponible}`
+                        ? ` · quedan ${producto.disponible.toLocaleString("es-CO", { maximumFractionDigits: 1 })}`
                         : ""}
                     </span>
                     <span className="mt-1 block text-sm font-semibold text-emerald-800">
@@ -241,41 +271,52 @@ export default function Caja() {
             )}
           </Tarjeta>
 
-          <Tarjeta titulo="Ventas del turno">
+          <Tarjeta
+            titulo="Ventas del turno"
+            descripcion={ventas ? `${ventas.total} venta(s) en este turno` : undefined}
+          >
             {!ventas || ventas.datos.length === 0 ? (
               <Vacio>Todavia no hay ventas en este turno.</Vacio>
             ) : (
-              <Tabla columnas={["Numero", "Hora", "Total", "Pago", "Estado", ""]}>
-                {ventas.datos.map((venta) => (
-                  <tr key={venta.id} className={venta.estado === "anulada" ? "text-slate-400" : "hover:bg-slate-50"}>
-                    <td className="px-3 py-2 font-medium text-slate-700">{venta.numero}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">
-                      {new Date(venta.creado_en).toLocaleTimeString("es-CO")}
-                    </td>
-                    <td className="px-3 py-2">{moneda(venta.total)}</td>
-                    <td className="px-3 py-2 text-xs">{venta.pagos.map((p) => p.metodo_nombre).join(", ")}</td>
-                    <td className="px-3 py-2">
-                      {venta.estado === "anulada" ? (
-                        <Insignia tono="rojo">Anulada</Insignia>
-                      ) : (
-                        <Insignia tono="verde">Activa</Insignia>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Boton tono="suave" onClick={() => setRecibo(venta)}>
-                          Ver
-                        </Boton>
-                        {puede("ventas", "editar") && venta.estado === "activa" ? (
-                          <Boton tono="peligro" onClick={() => anular(venta)}>
-                            Anular
+              <>
+                <Tabla columnas={["Numero", "Hora", "Total", "Pago", "Estado", ""]}>
+                  {ventas.datos.map((venta) => (
+                    <tr key={venta.id} className={venta.estado === "anulada" ? "text-slate-400" : "hover:bg-slate-50"}>
+                      <td className="px-3 py-2 font-medium text-slate-700">{venta.numero}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{hora(venta.creado_en)}</td>
+                      <td className="px-3 py-2">{moneda(venta.total)}</td>
+                      <td className="px-3 py-2 text-xs">{venta.pagos.map((p) => p.metodo_nombre).join(", ")}</td>
+                      <td className="px-3 py-2">
+                        {venta.estado === "anulada" ? (
+                          <Insignia tono="rojo">Anulada</Insignia>
+                        ) : (
+                          <Insignia tono="verde">Activa</Insignia>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Boton tono="suave" onClick={() => setRecibo(venta)}>
+                            Ver
                           </Boton>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </Tabla>
+                          {puede("ventas", "editar") && venta.estado === "activa" ? (
+                            <Boton tono="peligro" onClick={() => anular(venta)}>
+                              Anular
+                            </Boton>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Tabla>
+                <Paginador
+                  pagina={ventas.pagina}
+                  paginas={Math.max(1, Math.ceil(ventas.total / ventas.tamano))}
+                  total={ventas.total}
+                  porPagina={ventas.tamano}
+                  setPagina={setPaginaVentas}
+                  nombre="ventas"
+                />
+              </>
             )}
           </Tarjeta>
         </div>
@@ -293,7 +334,9 @@ export default function Caja() {
                         <p className="text-sm font-medium text-slate-800">{linea.producto.nombre}</p>
                         <p className="text-xs text-slate-500">
                           {moneda(linea.producto.precio ?? 0)}
-                          {linea.producto.cobro_por === "kg" ? " por kg" : ` por ${NOMBRE_PRESENTACION[linea.producto.presentacion]}`}
+                          {linea.producto.cobro_por === "kg"
+                            ? " por kg"
+                            : ` por ${NOMBRE_PRESENTACION[linea.producto.presentacion]}`}
                         </p>
                       </div>
                       <button
@@ -357,13 +400,49 @@ export default function Caja() {
                     <span className="text-slate-500">Subtotal</span>
                     <span>{moneda(subtotal)}</span>
                   </div>
-                  <Campo
-                    etiqueta="Descuento"
-                    type="number"
-                    min={0}
-                    value={descuento}
-                    onChange={(e) => setDescuento(e.target.value)}
-                  />
+                  <div>
+                    <span className="text-sm font-medium text-slate-700">
+                      Descuento
+                      {ajustes?.tengo_tope ? (
+                        <span className="ml-1 font-normal text-slate-500">(maximo {ajustes.descuento_maximo}%)</span>
+                      ) : null}
+                    </span>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {[0, 5, 10].filter((valor) => valor <= tope).map((valor) => (
+                        <button
+                          key={valor}
+                          type="button"
+                          onClick={() => setDescuento(String(valor))}
+                          className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                            porcentaje === valor
+                              ? "bg-emerald-700 font-medium text-white"
+                              : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          {valor === 0 ? "Sin descuento" : `${valor}%`}
+                        </button>
+                      ))}
+                      <label className="flex items-center gap-1 rounded-lg bg-white px-2 ring-1 ring-slate-300 focus-within:ring-2 focus-within:ring-emerald-600">
+                        <input
+                          type="number"
+                          min={0}
+                          max={tope}
+                          step="0.5"
+                          value={descuento}
+                          onChange={(e) => setDescuento(e.target.value)}
+                          aria-label="Otro porcentaje de descuento"
+                          className="w-14 border-0 bg-transparent py-1.5 text-right text-sm focus:ring-0"
+                        />
+                        <span className="text-sm text-slate-500">%</span>
+                      </label>
+                    </div>
+                    {valorDescuento > 0 ? (
+                      <div className="mt-2 flex justify-between text-slate-500">
+                        <span>Descuento {porcentaje}%</span>
+                        <span>-{moneda(valorDescuento)}</span>
+                      </div>
+                    ) : null}
+                  </div>
                   <Lista etiqueta="Forma de pago" value={metodoId} onChange={(e) => setMetodoId(e.target.value)}>
                     <option value="">Efectivo</option>
                     {(metodos ?? []).map((m) => (
@@ -373,11 +452,7 @@ export default function Caja() {
                     ))}
                   </Lista>
                   {metodoId && !metodos?.find((m) => String(m.id) === metodoId)?.es_efectivo ? (
-                    <Campo
-                      etiqueta="Referencia"
-                      value={referencia}
-                      onChange={(e) => setReferencia(e.target.value)}
-                    />
+                    <Campo etiqueta="Referencia" value={referencia} onChange={(e) => setReferencia(e.target.value)} />
                   ) : null}
                   <div className="flex justify-between text-base font-semibold text-slate-800">
                     <span>Total</span>
@@ -421,7 +496,7 @@ export default function Caja() {
         {recibo ? (
           <div className="space-y-3 text-sm">
             <p className="text-slate-500">
-              {recibo.fecha} · {recibo.punto_venta_nombre} · {recibo.usuario_nombre}
+              {fecha(recibo.fecha)} · {recibo.punto_venta_nombre} · {recibo.usuario_nombre}
             </p>
             <ul className="divide-y divide-slate-100">
               {recibo.detalles.map((detalle) => (
@@ -444,7 +519,7 @@ export default function Caja() {
               </div>
               {recibo.descuento ? (
                 <div className="flex justify-between text-slate-500">
-                  <span>Descuento</span>
+                  <span>Descuento {Math.round((recibo.descuento * 1000) / recibo.subtotal) / 10}%</span>
                   <span>-{moneda(recibo.descuento)}</span>
                 </div>
               ) : null}
@@ -456,7 +531,9 @@ export default function Caja() {
                 Pago: {recibo.pagos.map((p) => `${p.metodo_nombre} ${moneda(p.monto)}`).join(" · ")}
               </div>
               {recibo.estado === "anulada" ? (
-                <Aviso>Anulada por {recibo.anulada_por}: {recibo.motivo_anulacion}</Aviso>
+                <Aviso>
+                  Anulada por {recibo.anulada_por}: {recibo.motivo_anulacion}
+                </Aviso>
               ) : null}
             </div>
           </div>

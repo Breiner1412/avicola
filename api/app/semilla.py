@@ -20,12 +20,14 @@ from app.core.catalogo import (
     RAZAS,
     ROLES,
     TIPOS_HUEVO,
+    TIPOS_SENSOR,
 )
 from app.core.config import config
 from app.core.db import SesionLocal
 from app.core.seguridad import cifrar_clave
 from app.modelos.acceso import Modulo, Permiso, Rol, Usuario
 from app.modelos.aves import Raza, TipoHuevo
+from app.modelos.sensores import TipoSensor
 from app.modelos.inventario import Bodega, CategoriaArticulo
 from app.modelos.organizacion import Cuenta, Finca
 from app.modelos.ventas import MetodoPago
@@ -112,6 +114,15 @@ def sembrar_aves(db: Session) -> None:
     db.flush()
 
 
+def sembrar_sensores(db: Session) -> None:
+    """Tipos de sensor del sistema."""
+    existentes = {t.nombre for t in db.scalars(select(TipoSensor).where(TipoSensor.cuenta_id.is_(None))).all()}
+    for nombre, unidad, minimo, maximo in TIPOS_SENSOR:
+        if nombre not in existentes:
+            db.add(TipoSensor(cuenta_id=None, nombre=nombre, unidad=unidad, min_ok=minimo, max_ok=maximo))
+    db.flush()
+
+
 def sembrar_pagos(db: Session) -> None:
     """Formas de pago del sistema."""
     existentes = {m.nombre for m in db.scalars(select(MetodoPago).where(MetodoPago.cuenta_id.is_(None))).all()}
@@ -175,6 +186,7 @@ def principal(reiniciar_admin: bool = False, forzar_permisos: bool = False) -> N
         sembrar_categorias(db)
         sembrar_aves(db)
         sembrar_pagos(db)
+        sembrar_sensores(db)
         sembrar_admin(db, roles, reiniciar_admin)
         sembrar_cuenta_demo(db, roles)
         db.commit()

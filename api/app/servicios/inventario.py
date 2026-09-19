@@ -156,6 +156,9 @@ def crear_movimiento(db: Session, ctx: Contexto, datos: MovimientoCrear) -> Movi
         articulo = articulo_de(db, ctx, entrada.articulo_id)
         cantidad = dec(entrada.cantidad)
         costo = dec(entrada.costo_unitario)
+        if datos.tipo != "entrada" and costo <= CERO:
+            # Lo que sale, se traslada o se ajusta se valora al costo promedio de la bodega
+            costo = dec(existencia(db, origen.id, articulo.id).costo_promedio)
 
         if datos.tipo == "ajuste":
             actual = dec(existencia(db, origen.id, articulo.id).cantidad)

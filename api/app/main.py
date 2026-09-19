@@ -11,6 +11,7 @@ from sqlalchemy import text
 from app.core.config import config
 from app.core.db import motor
 from app.rutas import (
+    alertas,
     auth,
     aves,
     cuentas,
@@ -25,6 +26,7 @@ from app.rutas import (
     reportes,
     roles,
     sanidad,
+    sensores,
     trabajo,
     usuarios,
     ventas,
@@ -90,7 +92,7 @@ async def error_general(peticion: Request, error: Exception):
 for modulo in (
     auth, panel, cuentas, fincas, galpones, usuarios, roles,
     inventario, movimientos, aves, produccion, sanidad, ventas, importacion,
-    trabajo, reportes, registro,
+    trabajo, sensores, alertas, reportes, registro,
 ):
     app.include_router(modulo.router, prefix=PREFIJO)
 

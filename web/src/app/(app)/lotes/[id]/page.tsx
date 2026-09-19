@@ -16,7 +16,22 @@ import type {
   Pesaje,
   Sanidad,
 } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tabla,
+  Tarjeta,
+  Vacio,
+  usePaginas,
+} from "@/componentes/ui";
+import { fecha, hoy } from "@/lib/formato";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 const TIPOS_MOVIMIENTO = [
   { valor: "muerte", texto: "Mortalidad" },
@@ -37,10 +52,6 @@ const PESTANAS = [
   { clave: "sanidad", texto: "Vacunas" },
 ];
 
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function Dato({ titulo, valor, detalle }: { titulo: string; valor: string | number; detalle?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -52,6 +63,7 @@ function Dato({ titulo, valor, detalle }: { titulo: string; valor: string | numb
 }
 
 export default function DetalleLote() {
+  const { confirmar, pedirTexto } = useDialogos();
   const parametros = useParams<{ id: string }>();
   const loteId = Number(parametros.id);
   const { puede } = useSesion();
@@ -75,6 +87,10 @@ export default function DetalleLote() {
   const { datos: galpones } = useDatos<Galpon[]>("/galpones");
   const { datos: bodegas } = useDatos<Bodega[]>(puede("bodegas", "ver") ? "/bodegas" : null);
   const { datos: articulos } = useDatos<Articulo[]>(puede("articulos", "ver") ? "/articulos?clase=alimento" : null);
+  const pagSanidad = usePaginas(sanidad, 15, "");
+  const pagPesajes = usePaginas(pesajes, 15, "");
+  const pagConsumos = usePaginas(consumos, 15, "");
+  const pagMovimientos = usePaginas(movimientos, 15, "");
 
   const [modal, setModal] = useState<"" | "movimiento" | "alimento" | "pesaje">("");
   const [fallo, setFallo] = useState("");
@@ -89,7 +105,13 @@ export default function DetalleLote() {
     motivo: "",
     observaciones: "",
   });
-  const [alimento, setAlimento] = useState({ fecha: hoy(), articulo_id: "", bodega_id: "", cantidad: "", observaciones: "" });
+  const [alimento, setAlimento] = useState({
+    fecha: hoy(),
+    articulo_id: "",
+    bodega_id: "",
+    cantidad: "",
+    observaciones: "",
+  });
   const [pesaje, setPesaje] = useState({ fecha: hoy(), aves_muestra: "", peso_total_kg: "", observaciones: "" });
 
   async function refrescar() {
@@ -177,23 +199,35 @@ export default function DetalleLote() {
   }
 
   async function anularMovimiento(id: number) {
-    const motivo = prompt("Por que se anula este movimiento?");
-    if (!motivo || motivo.trim().length < 3) return;
+    const motivo = await pedirTexto({
+      titulo: "Anular el movimiento",
+      mensaje: "Las aves vuelven a quedar como estaban. El movimiento queda en el historial como anulado.",
+      etiqueta: "Por que se anula?",
+      aceptar: "Anular",
+      peligro: true,
+      requerido: true,
+    });
+    if (!motivo || motivo.length < 3) return;
     try {
-      await api(`/movimientos-aves/${id}/anular`, { metodo: "POST", cuerpo: { motivo: motivo.trim() } });
+      await api(`/movimientos-aves/${id}/anular`, { metodo: "POST", cuerpo: { motivo } });
       await refrescar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
   async function cerrarLote() {
-    if (!confirm("Cerrar el lote? Solo se puede si ya no quedan aves.")) return;
+    const seguro = await confirmar({
+      titulo: "Cerrar el lote",
+      mensaje: "Solo se puede cerrar si ya no quedan aves. Despues no se le pueden registrar mas movimientos.",
+      aceptar: "Cerrar lote",
+    });
+    if (!seguro) return;
     try {
       await api(`/lotes/${loteId}/cerrar`, { metodo: "POST", cuerpo: { fecha: hoy() } });
       await refrescar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -253,7 +287,7 @@ export default function DetalleLote() {
         />
         <Dato
           titulo="Mortalidad"
-          valor={`${lote.mortalidad_porcentaje}%`}
+          valor={`${lote.mortalidad_porcentaje.toLocaleString("es-CO")}%`}
           detalle={`${lote.mortalidad.toLocaleString("es-CO")} aves`}
         />
         <Dato
@@ -275,7 +309,7 @@ export default function DetalleLote() {
           <Dato
             titulo="Huevos"
             valor={balance.huevos_total.toLocaleString("es-CO")}
-            detalle={`${balance.huevos_por_dia} por dia · postura ${balance.porcentaje_postura}%`}
+            detalle={`${Math.round(balance.huevos_por_dia).toLocaleString("es-CO")} por dia · postura ${balance.porcentaje_postura.toLocaleString("es-CO")}%`}
           />
         )}
       </div>
@@ -285,7 +319,11 @@ export default function DetalleLote() {
           <Dato titulo="Aves" valor={moneda(balance.costo_aves)} />
           <Dato titulo="Alimento" valor={moneda(balance.alimento_costo)} />
           <Dato titulo="Sanidad" valor={moneda(balance.costo_sanidad)} />
-          <Dato titulo="Costo por ave" valor={moneda(balance.costo_por_ave)} detalle={`Total ${moneda(balance.costo_total)}`} />
+          <Dato
+            titulo="Costo por ave"
+            valor={moneda(balance.costo_por_ave)}
+            detalle={`Total ${moneda(balance.costo_total)}`}
+          />
         </div>
       </Tarjeta>
 
@@ -310,31 +348,34 @@ export default function DetalleLote() {
           {!movimientos || movimientos.length === 0 ? (
             <Vacio>Sin movimientos registrados.</Vacio>
           ) : (
-            <Tabla columnas={["Fecha", "Tipo", "Cantidad", "Motivo", "Quien", ""]}>
-              {movimientos.map((m) => (
-                <tr key={m.id} className={m.anulado ? "text-slate-400" : "hover:bg-slate-50"}>
-                  <td className="whitespace-nowrap px-3 py-2">{m.fecha}</td>
-                  <td className="px-3 py-2 capitalize">
-                    {m.tipo}
-                    {m.anulado ? (
-                      <span className="ml-2">
-                        <Insignia tono="rojo">Anulado</Insignia>
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2">{m.cantidad.toLocaleString("es-CO")}</td>
-                  <td className="px-3 py-2 text-slate-500">{m.motivo ?? "-"}</td>
-                  <td className="px-3 py-2 text-xs text-slate-500">{m.usuario_nombre ?? "-"}</td>
-                  <td className="px-3 py-2 text-right">
-                    {puede("movimientos_aves", "editar") && !m.anulado && m.tipo !== "ingreso" ? (
-                      <Boton tono="peligro" onClick={() => anularMovimiento(m.id)}>
-                        Anular
-                      </Boton>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </Tabla>
+            <>
+              <Tabla columnas={["Fecha", "Tipo", "Cantidad", "Motivo", "Quien", ""]}>
+                {pagMovimientos.visibles.map((m) => (
+                  <tr key={m.id} className={m.anulado ? "text-slate-400" : "hover:bg-slate-50"}>
+                    <td className="whitespace-nowrap px-3 py-2">{fecha(m.fecha)}</td>
+                    <td className="px-3 py-2 capitalize">
+                      {m.tipo}
+                      {m.anulado ? (
+                        <span className="ml-2">
+                          <Insignia tono="rojo">Anulado</Insignia>
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2">{m.cantidad.toLocaleString("es-CO")}</td>
+                    <td className="px-3 py-2 text-slate-500">{m.motivo ?? "-"}</td>
+                    <td className="px-3 py-2 text-xs text-slate-500">{m.usuario_nombre ?? "-"}</td>
+                    <td className="px-3 py-2 text-right">
+                      {puede("movimientos_aves", "editar") && !m.anulado && m.tipo !== "ingreso" ? (
+                        <Boton tono="peligro" onClick={() => anularMovimiento(m.id)}>
+                          Anular
+                        </Boton>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </Tabla>
+              <Paginador {...pagMovimientos} nombre="movimientos" />
+            </>
           )}
         </Tarjeta>
       ) : null}
@@ -344,19 +385,22 @@ export default function DetalleLote() {
           {!consumos || consumos.length === 0 ? (
             <Vacio>Todavia no se ha registrado alimento para este lote.</Vacio>
           ) : (
-            <Tabla columnas={["Fecha", "Alimento", "Cantidad", "Costo", "Quien"]}>
-              {consumos.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-3 py-2">{c.fecha}</td>
-                  <td className="px-3 py-2">{c.articulo_nombre}</td>
-                  <td className="px-3 py-2">
-                    {c.cantidad.toLocaleString("es-CO")} {c.unidad}
-                  </td>
-                  <td className="px-3 py-2">{moneda(c.costo)}</td>
-                  <td className="px-3 py-2 text-xs text-slate-500">{c.usuario_nombre ?? "-"}</td>
-                </tr>
-              ))}
-            </Tabla>
+            <>
+              <Tabla columnas={["Fecha", "Alimento", "Cantidad", "Costo", "Quien"]}>
+                {pagConsumos.visibles.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50">
+                    <td className="whitespace-nowrap px-3 py-2">{fecha(c.fecha)}</td>
+                    <td className="px-3 py-2">{c.articulo_nombre}</td>
+                    <td className="px-3 py-2">
+                      {c.cantidad.toLocaleString("es-CO")} {c.unidad}
+                    </td>
+                    <td className="px-3 py-2">{moneda(c.costo)}</td>
+                    <td className="px-3 py-2 text-xs text-slate-500">{c.usuario_nombre ?? "-"}</td>
+                  </tr>
+                ))}
+              </Tabla>
+              <Paginador {...pagConsumos} nombre="registros" />
+            </>
           )}
         </Tarjeta>
       ) : null}
@@ -366,38 +410,50 @@ export default function DetalleLote() {
           {!pesajes || pesajes.length === 0 ? (
             <Vacio>Sin pesajes registrados.</Vacio>
           ) : (
-            <Tabla columnas={["Fecha", "Edad", "Aves pesadas", "Peso total", "Promedio"]}>
-              {pesajes.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-3 py-2">{p.fecha}</td>
-                  <td className="px-3 py-2">{p.edad_dias ? `${p.edad_dias} dias` : "-"}</td>
-                  <td className="px-3 py-2">{p.aves_muestra}</td>
-                  <td className="px-3 py-2">{p.peso_total_kg} kg</td>
-                  <td className="px-3 py-2 font-medium text-slate-700">{p.peso_promedio_kg} kg</td>
-                </tr>
-              ))}
-            </Tabla>
+            <>
+              <Tabla columnas={["Fecha", "Edad", "Aves pesadas", "Peso total", "Promedio"]}>
+                {pagPesajes.visibles.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50">
+                    <td className="whitespace-nowrap px-3 py-2">{fecha(p.fecha)}</td>
+                    <td className="px-3 py-2">{p.edad_dias ? `${p.edad_dias} dias` : "-"}</td>
+                    <td className="px-3 py-2">{p.aves_muestra}</td>
+                    <td className="px-3 py-2">{p.peso_total_kg} kg</td>
+                    <td className="px-3 py-2 font-medium text-slate-700">{p.peso_promedio_kg} kg</td>
+                  </tr>
+                ))}
+              </Tabla>
+              <Paginador {...pagPesajes} nombre="pesajes" />
+            </>
           )}
         </Tarjeta>
       ) : null}
 
       {pestana === "sanidad" ? (
-        <Tarjeta acciones={<Link href="/sanidad" className="text-sm text-emerald-700 hover:underline">Registrar</Link>}>
+        <Tarjeta
+          acciones={
+            <Link href="/sanidad" className="text-sm text-emerald-700 hover:underline">
+              Registrar
+            </Link>
+          }
+        >
           {!sanidad || sanidad.length === 0 ? (
             <Vacio>Sin vacunas ni tratamientos registrados para este lote.</Vacio>
           ) : (
-            <Tabla columnas={["Fecha", "Tipo", "Producto", "Via", "Aves", "Refuerzo"]}>
-              {sanidad.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-3 py-2">{s.fecha}</td>
-                  <td className="px-3 py-2 capitalize">{s.tipo}</td>
-                  <td className="px-3 py-2 font-medium text-slate-700">{s.producto}</td>
-                  <td className="px-3 py-2">{s.via}</td>
-                  <td className="px-3 py-2">{s.aves_tratadas ?? "-"}</td>
-                  <td className="px-3 py-2">{s.proximo_refuerzo ?? "-"}</td>
-                </tr>
-              ))}
-            </Tabla>
+            <>
+              <Tabla columnas={["Fecha", "Tipo", "Producto", "Via", "Aves", "Refuerzo"]}>
+                {pagSanidad.visibles.map((s) => (
+                  <tr key={s.id} className="hover:bg-slate-50">
+                    <td className="whitespace-nowrap px-3 py-2">{fecha(s.fecha)}</td>
+                    <td className="px-3 py-2 capitalize">{s.tipo}</td>
+                    <td className="px-3 py-2 font-medium text-slate-700">{s.producto}</td>
+                    <td className="px-3 py-2">{s.via}</td>
+                    <td className="px-3 py-2">{s.aves_tratadas ?? "-"}</td>
+                    <td className="px-3 py-2">{s.proximo_refuerzo ?? "-"}</td>
+                  </tr>
+                ))}
+              </Tabla>
+              <Paginador {...pagSanidad} nombre="aplicaciones" />
+            </>
           )}
         </Tarjeta>
       ) : null}

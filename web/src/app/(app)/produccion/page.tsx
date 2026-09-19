@@ -5,11 +5,20 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Lote, ProduccionDia, StockHuevos, TipoHuevo } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
-
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Paginador,
+  Tabla,
+  Tarjeta,
+  Vacio,
+  usePaginas,
+} from "@/componentes/ui";
+import { fecha as verFecha, hoy } from "@/lib/formato";
 
 type Resumen = {
   huevos_recolectados: number;
@@ -29,6 +38,7 @@ export default function Produccion() {
   const { datos: dias, cargando } = useDatos<ProduccionDia[]>("/produccion", `${finca}-${recargas}`);
   const { datos: stock } = useDatos<StockHuevos[]>("/stock-huevos", `${finca}-${recargas}`);
   const { datos: resumen } = useDatos<Resumen>("/produccion/resumen", `${finca}-${recargas}`);
+  const pagDias = usePaginas(dias, 20, "");
 
   const [loteId, setLoteId] = useState("");
   const [fecha, setFecha] = useState(hoy());
@@ -68,7 +78,7 @@ export default function Produccion() {
         metodo: "POST",
         cuerpo: { lote_id: Number(loteId), fecha, detalles },
       });
-      setAviso(`Se guardaron ${guardado.total} huevos del ${guardado.fecha} (postura ${guardado.porcentaje_postura}%)`);
+      setAviso(`Se guardaron ${guardado.total} huevos del ${verFecha(guardado.fecha)} (postura ${guardado.porcentaje_postura}%)`);
       setCantidades({});
       setRecargas((n) => n + 1);
     } catch (error) {
@@ -97,7 +107,7 @@ export default function Produccion() {
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-slate-500">Promedio diario</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">{resumen.promedio_diario}</p>
+            <p className="mt-1 text-xl font-semibold text-slate-800">{Math.round(resumen.promedio_diario).toLocaleString("es-CO")}</p>
             <p className="text-xs text-slate-500">{resumen.dias_con_registro} dias con registro</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -105,7 +115,7 @@ export default function Produccion() {
             <p className="mt-1 text-xl font-semibold text-slate-800">
               {resumen.huevos_disponibles.toLocaleString("es-CO")}
             </p>
-            <p className="text-xs text-slate-500">{resumen.panales_disponibles} panales</p>
+            <p className="text-xs text-slate-500">{resumen.panales_disponibles.toLocaleString("es-CO", { maximumFractionDigits: 1 })} panales</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-slate-500">Lotes en postura</p>
@@ -174,7 +184,7 @@ export default function Produccion() {
                   ) : null}
                 </td>
                 <td className="px-3 py-2">{fila.cantidad.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2">{fila.panales}</td>
+                <td className="px-3 py-2">{fila.panales.toLocaleString("es-CO", { maximumFractionDigits: 1 })}</td>
               </tr>
             ))}
           </Tabla>
@@ -187,22 +197,25 @@ export default function Produccion() {
         ) : !dias || dias.length === 0 ? (
           <Vacio>Todavia no hay recolecciones registradas.</Vacio>
         ) : (
-          <Tabla columnas={["Fecha", "Lote", "Total", "Se venden", "Postura", "Detalle"]}>
-            {dias.slice(0, 60).map((dia) => (
-              <tr key={`${dia.lote_id}-${dia.fecha}`} className="hover:bg-slate-50">
-                <td className="whitespace-nowrap px-3 py-2">{dia.fecha}</td>
-                <td className="px-3 py-2">{dia.lote_codigo}</td>
-                <td className="px-3 py-2 font-medium text-slate-700">{dia.total.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2">{dia.comercial.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2">{dia.porcentaje_postura}%</td>
-                <td className="px-3 py-2 text-xs text-slate-500">
-                  {Object.entries(dia.detalles)
-                    .map(([tipo, cantidad]) => `${tipo}: ${cantidad}`)
-                    .join(" · ")}
-                </td>
-              </tr>
-            ))}
-          </Tabla>
+          <>
+            <Tabla columnas={["Fecha", "Lote", "Total", "Se venden", "Postura", "Detalle"]}>
+              {pagDias.visibles.map((dia) => (
+                <tr key={`${dia.lote_id}-${dia.fecha}`} className="hover:bg-slate-50">
+                  <td className="whitespace-nowrap px-3 py-2">{verFecha(dia.fecha)}</td>
+                  <td className="px-3 py-2">{dia.lote_codigo}</td>
+                  <td className="px-3 py-2 font-medium text-slate-700">{dia.total.toLocaleString("es-CO")}</td>
+                  <td className="px-3 py-2">{dia.comercial.toLocaleString("es-CO")}</td>
+                  <td className="px-3 py-2">{dia.porcentaje_postura}%</td>
+                  <td className="px-3 py-2 text-xs text-slate-500">
+                    {Object.entries(dia.detalles)
+                      .map(([tipo, cantidad]) => `${tipo}: ${cantidad}`)
+                      .join(" · ")}
+                  </td>
+                </tr>
+              ))}
+            </Tabla>
+            <Paginador {...pagDias} nombre="registros" />
+          </>
         )}
       </Tarjeta>
     </>

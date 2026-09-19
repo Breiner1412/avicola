@@ -5,7 +5,22 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { PuntoVenta, Turno } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tabla,
+  Tarjeta,
+  Vacio,
+  usePaginas,
+} from "@/componentes/ui";
+import { fechaHora } from "@/lib/formato";
+import { TopeDescuento } from "@/componentes/tope-descuento";
 
 const moneda = (valor: number) => `$${Math.round(valor).toLocaleString("es-CO")}`;
 const VACIO = { codigo: "", nombre: "", direccion: "", finca_id: "" };
@@ -17,7 +32,8 @@ export default function PuntosVenta() {
     "/puntos-venta?incluir_inactivos=true",
     `${sesion?.finca_activa?.id ?? 0}-${recargas}`,
   );
-  const { datos: turnos } = useDatos<Turno[]>(puede("caja", "ver") ? "/caja/turnos?limite=20" : null, recargas);
+  const { datos: turnos } = useDatos<Turno[]>(puede("caja", "ver") ? "/caja/turnos?limite=200" : null, recargas);
+  const pagTurnos = usePaginas(turnos, 10, "");
 
   const [abierto, setAbierto] = useState(false);
   const [editando, setEditando] = useState<PuntoVenta | null>(null);
@@ -116,42 +132,51 @@ export default function PuntosVenta() {
         )}
       </Tarjeta>
 
+      <TopeDescuento editable={puede("puntos_venta", "editar")} />
+
       {turnos && turnos.length > 0 ? (
         <Tarjeta titulo="Turnos de caja">
-          <Tabla columnas={["Punto", "Cajero", "Abierto", "Ventas", "Vendido", "Contado", "Diferencia"]}>
-            {turnos.map((turno) => (
-              <tr key={turno.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2">{turno.punto_venta_nombre}</td>
-                <td className="px-3 py-2">{turno.usuario_nombre}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-500">
-                  {new Date(turno.abierto_en).toLocaleString("es-CO")}
-                  {turno.estado === "abierto" ? (
-                    <span className="ml-2">
-                      <Insignia tono="verde">abierto</Insignia>
-                    </span>
-                  ) : null}
-                </td>
-                <td className="px-3 py-2">{turno.ventas}</td>
-                <td className="px-3 py-2">{moneda(turno.total_vendido)}</td>
-                <td className="px-3 py-2">
-                  {turno.efectivo_contado !== null ? moneda(turno.efectivo_contado) : "-"}
-                </td>
-                <td className="px-3 py-2">
-                  {turno.diferencia === null ? (
-                    "-"
-                  ) : turno.diferencia === 0 ? (
-                    <Insignia tono="verde">cuadro</Insignia>
-                  ) : (
-                    <Insignia tono="rojo">{moneda(turno.diferencia)}</Insignia>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </Tabla>
+          <>
+            <Tabla columnas={["Punto", "Cajero", "Abierto", "Ventas", "Vendido", "Contado", "Diferencia"]}>
+              {pagTurnos.visibles.map((turno) => (
+                <tr key={turno.id} className="hover:bg-slate-50">
+                  <td className="px-3 py-2">{turno.punto_venta_nombre}</td>
+                  <td className="px-3 py-2">{turno.usuario_nombre}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-500">
+                    {fechaHora(turno.abierto_en)}
+                    {turno.estado === "abierto" ? (
+                      <span className="ml-2">
+                        <Insignia tono="verde">abierto</Insignia>
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2">{turno.ventas}</td>
+                  <td className="px-3 py-2">{moneda(turno.total_vendido)}</td>
+                  <td className="px-3 py-2">
+                    {turno.efectivo_contado !== null ? moneda(turno.efectivo_contado) : "-"}
+                  </td>
+                  <td className="px-3 py-2">
+                    {turno.diferencia === null ? (
+                      "-"
+                    ) : turno.diferencia === 0 ? (
+                      <Insignia tono="verde">cuadro</Insignia>
+                    ) : (
+                      <Insignia tono="rojo">{moneda(turno.diferencia)}</Insignia>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </Tabla>
+            <Paginador {...pagTurnos} nombre="turnos" />
+          </>
         </Tarjeta>
       ) : null}
 
-      <Modal titulo={editando ? "Editar punto" : "Nuevo punto de venta"} abierto={abierto} onCerrar={() => setAbierto(false)}>
+      <Modal
+        titulo={editando ? "Editar punto" : "Nuevo punto de venta"}
+        abierto={abierto}
+        onCerrar={() => setAbierto(false)}
+      >
         <form onSubmit={guardar} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Campo

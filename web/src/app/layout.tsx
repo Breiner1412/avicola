@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ProveedorSesion } from "@/lib/sesion";
+import { ProveedorDialogos } from "@/componentes/dialogos";
 
 export const metadata: Metadata = {
   title: "AVISENA",
@@ -23,7 +24,9 @@ export default function RaizLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body>
-        <ProveedorSesion>{children}</ProveedorSesion>
+        <ProveedorSesion>
+          <ProveedorDialogos>{children}</ProveedorDialogos>
+        </ProveedorSesion>
       </body>
     </html>
   );

@@ -161,3 +161,15 @@ METODOS_PAGO: list[tuple[str, bool]] = [
     ("Tarjeta", False),
     ("Credito", False),
 ]
+
+
+# Tipos de sensor que trae el sistema: (nombre, unidad, minimo normal, maximo normal)
+TIPOS_SENSOR: list[tuple[str, str, float | None, float | None]] = [
+    ("Temperatura", "C", 18.0, 28.0),
+    ("Humedad", "%", 40.0, 70.0),
+    ("Amoniaco", "ppm", None, 20.0),
+    ("Dioxido de carbono", "ppm", None, 3000.0),
+    ("Luz", "lux", 5.0, 60.0),
+    ("Consumo de agua", "L", None, None),
+    ("Peso del silo", "kg", None, None),
+]

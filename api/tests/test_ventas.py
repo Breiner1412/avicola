@@ -268,6 +268,47 @@ def test_el_cajero_no_puede_pasarse_del_tope_de_descuento(cliente, tienda):
     assert permitido.json()["total"] == 16500
 
 
+def test_descuento_en_porcentaje(cliente, tienda):
+    # 5% de un panal de 18000 = 900
+    venta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["panal"]["id"], "cantidad": 1}], "descuento_porcentaje": 5},
+    )
+    assert venta.status_code == 201, venta.text
+    assert venta.json()["descuento"] == 900
+    assert venta.json()["total"] == 17100
+
+    # el cajero no puede pasar del tope de la cuenta (10%)
+    mucho = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["panal"]["id"], "cantidad": 1}], "descuento_porcentaje": 15},
+    )
+    assert mucho.status_code == 400
+    assert "10%" in mucho.json()["detail"]["mensaje"]
+
+
+def test_el_tope_de_descuento_se_configura(cliente, tienda):
+    ajustes = cliente.get(f"{API}/ventas/ajustes", headers=tienda["cab_cajero"])
+    assert ajustes.status_code == 200, ajustes.text
+    assert ajustes.json() == {"descuento_maximo": 10, "tengo_tope": True}
+
+    # el cajero no lo puede cambiar
+    assert cliente.patch(f"{API}/ventas/ajustes", headers=tienda["cab_cajero"], json={"descuento_maximo": 50}).status_code == 403
+
+    # el propietario si; y desde ahi el cajero puede dar hasta 15%
+    cambio = cliente.patch(f"{API}/ventas/ajustes", headers=tienda["cab"], json={"descuento_maximo": 15})
+    assert cambio.status_code == 200, cambio.text
+    venta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["panal"]["id"], "cantidad": 1}], "descuento_porcentaje": 15},
+    )
+    assert venta.status_code == 201, venta.text
+    cliente.patch(f"{API}/ventas/ajustes", headers=tienda["cab"], json={"descuento_maximo": 10})
+
+
 def test_los_pagos_deben_cuadrar(cliente, tienda):
     metodos = cliente.get(f"{API}/metodos-pago", headers=tienda["cab_cajero"]).json()
     efectivo = next(m for m in metodos if m["es_efectivo"])
@@ -396,3 +437,4 @@ def test_otra_cuenta_no_ve_las_ventas(cliente, tienda, token_plataforma):
     assert cliente.get(f"{API}/productos-venta", headers=cab).json() == []
     assert cliente.get(f"{API}/ventas", headers=cab).json()["total"] == 0
     assert cliente.get(f"{API}/ventas/{tienda['venta_huevos']['id']}", headers=cab).status_code == 404
+

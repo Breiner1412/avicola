@@ -20,6 +20,7 @@ from app.modelos.aves import (
     StockHuevos,
     TipoHuevo,
 )
+from app.modelos.alertas import Alerta
 from app.modelos.base import Base, Marcas
 from app.modelos.inventario import (
     Articulo,
@@ -33,6 +34,7 @@ from app.modelos.inventario import (
 from app.modelos.organizacion import Cuenta, Finca, Galpon
 from app.modelos.importacion import FilaImportacion, Importacion, PlantillaImportacion
 from app.modelos.registro import Auditoria
+from app.modelos.sensores import LecturaSensor, Sensor, TipoSensor
 from app.modelos.trabajo import Novedad, Rutina, Tarea
 from app.modelos.ventas import (
     MetodoPago,
@@ -91,4 +93,8 @@ __all__ = [
     "Tarea",
     "Rutina",
     "Novedad",
+    "TipoSensor",
+    "Sensor",
+    "LecturaSensor",
+    "Alerta",
 ]

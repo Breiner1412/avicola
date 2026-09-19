@@ -7,6 +7,7 @@ import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Galpon, Lote, Raza } from "@/lib/tipos";
 import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { hoy } from "@/lib/formato";
 
 const PROPOSITOS = [
   { valor: "postura", texto: "Postura (huevos)" },
@@ -14,9 +15,6 @@ const PROPOSITOS = [
   { valor: "levante", texto: "Levante (pollitas)" },
 ];
 
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const VACIO = {
   codigo: "",

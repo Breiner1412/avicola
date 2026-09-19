@@ -5,11 +5,26 @@ import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { Bodega, Existencia } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Modal, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import {
+  Aviso,
+  Boton,
+  Campo,
+  Cargando,
+  Insignia,
+  Lista,
+  Modal,
+  Paginador,
+  Tabla,
+  Tarjeta,
+  Vacio,
+  usePaginas,
+} from "@/componentes/ui";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 const VACIO = { codigo: "", nombre: "", ubicacion: "", finca_id: "" };
 
 export default function Bodegas() {
+  const { confirmar } = useDialogos();
   const { sesion, puede } = useSesion();
   const finca = sesion?.finca_activa;
   const { datos, cargando, error, recargar } = useDatos<Bodega[]>("/bodegas?incluir_inactivas=true", finca?.id ?? 0);
@@ -20,6 +35,7 @@ export default function Bodegas() {
     rutaExistencias,
     `${finca?.id ?? 0}-${bodegaVista}`,
   );
+  const pagExistencias = usePaginas(existencias, 20, rutaExistencias);
 
   const [abierto, setAbierto] = useState(false);
   const [editando, setEditando] = useState<Bodega | null>(null);
@@ -66,12 +82,18 @@ export default function Bodegas() {
   }
 
   async function desactivar(bodega: Bodega) {
-    if (!confirm(`Desactivar la bodega ${bodega.nombre}?`)) return;
+    const seguro = await confirmar({
+      titulo: `Desactivar ${bodega.nombre}`,
+      mensaje: "Deja de aparecer en los movimientos. Su historial se conserva.",
+      aceptar: "Desactivar",
+      peligro: true,
+    });
+    if (!seguro) return;
     try {
       await api(`/bodegas/${bodega.id}`, { metodo: "DELETE" });
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -153,20 +175,25 @@ export default function Bodegas() {
         ) : !existencias || existencias.length === 0 ? (
           <Vacio>No hay existencias registradas.</Vacio>
         ) : (
-          <Tabla columnas={["Bodega", "Codigo", "Articulo", "Cantidad", "Costo promedio", ""]}>
-            {existencias.map((fila) => (
-              <tr key={`${fila.bodega_id}-${fila.articulo_id}`} className="hover:bg-slate-50">
-                <td className="px-3 py-2 text-slate-500">{fila.bodega_nombre}</td>
-                <td className="px-3 py-2">{fila.articulo_codigo}</td>
-                <td className="px-3 py-2 font-medium text-slate-700">{fila.articulo_nombre}</td>
-                <td className="px-3 py-2">
-                  {fila.cantidad.toLocaleString("es-CO")} {fila.unidad}
-                </td>
-                <td className="px-3 py-2">${fila.costo_promedio.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2">{fila.bajo_minimo ? <Insignia tono="rojo">Bajo minimo</Insignia> : null}</td>
-              </tr>
-            ))}
-          </Tabla>
+          <>
+            <Tabla columnas={["Bodega", "Codigo", "Articulo", "Cantidad", "Costo promedio", ""]}>
+              {pagExistencias.visibles.map((fila) => (
+                <tr key={`${fila.bodega_id}-${fila.articulo_id}`} className="hover:bg-slate-50">
+                  <td className="px-3 py-2 text-slate-500">{fila.bodega_nombre}</td>
+                  <td className="px-3 py-2">{fila.articulo_codigo}</td>
+                  <td className="px-3 py-2 font-medium text-slate-700">{fila.articulo_nombre}</td>
+                  <td className="px-3 py-2">
+                    {fila.cantidad.toLocaleString("es-CO")} {fila.unidad}
+                  </td>
+                  <td className="px-3 py-2">${fila.costo_promedio.toLocaleString("es-CO")}</td>
+                  <td className="px-3 py-2">
+                    {fila.bajo_minimo ? <Insignia tono="rojo">Bajo minimo</Insignia> : null}
+                  </td>
+                </tr>
+              ))}
+            </Tabla>
+            <Paginador {...pagExistencias} nombre="articulos" />
+          </>
         )}
       </Tarjeta>
 

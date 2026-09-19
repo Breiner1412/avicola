@@ -12,8 +12,11 @@ import type {
   ValidacionImportacion,
 } from "@/lib/tipos";
 import { Aviso, Boton, Campo, Cargando, Insignia, Lista, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { fechaHora } from "@/lib/formato";
+import { avisar, useDialogos } from "@/componentes/dialogos";
 
 export default function Importar() {
+  const { confirmar } = useDialogos();
   const { sesion, puede } = useSesion();
   const finca = sesion?.finca_activa?.id ?? 0;
   const [recargas, setRecargas] = useState(0);
@@ -129,20 +132,26 @@ export default function Importar() {
         cuerpo: { tipo, nombre: nombrePlantilla.trim(), mapeo },
       });
       setNombrePlantilla("");
-      alert("Plantilla guardada. La proxima vez puedes usarla para no volver a emparejar las columnas.");
+      avisar.bien("Plantilla guardada. La proxima vez puedes usarla para no volver a emparejar las columnas.");
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
   async function deshacer(importacion: Importacion) {
-    if (!confirm(`Deshacer la importacion de ${importacion.archivo}? Se quitara lo que se creo con ella.`)) return;
+    const seguro = await confirmar({
+      titulo: "Deshacer la importacion",
+      mensaje: `Se quitara lo que se creo al importar ${importacion.archivo}.`,
+      aceptar: "Deshacer",
+      peligro: true,
+    });
+    if (!seguro) return;
     try {
       await api(`/importacion/${importacion.id}/revertir`, { metodo: "POST" });
       setRecargas((n) => n + 1);
       await recargar();
     } catch (error) {
-      alert(mensajeDeError(error));
+      avisar.error(mensajeDeError(error));
     }
   }
 
@@ -372,7 +381,7 @@ export default function Importar() {
             {historial.map((fila) => (
               <tr key={fila.id} className="hover:bg-slate-50">
                 <td className="whitespace-nowrap px-3 py-2 text-slate-500">
-                  {new Date(fila.creado_en).toLocaleString("es-CO")}
+                  {fechaHora(fila.creado_en)}
                 </td>
                 <td className="px-3 py-2 font-medium text-slate-700">{fila.archivo}</td>
                 <td className="px-3 py-2 text-xs">{fila.etiqueta_tipo}</td>

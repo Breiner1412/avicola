@@ -10,7 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.aves import MovimientoAvesCrear
-from app.modelos.aves import Lote, MovimientoAves, StockHuevos, TipoHuevo
+from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, StockHuevos, TipoHuevo
 from app.modelos.organizacion import Galpon
 from app.servicios.alcance import cuenta_filtro, ids_fincas_visibles
 
@@ -294,3 +294,52 @@ def tipos_huevo_de(db: Session, ctx: Contexto) -> list[TipoHuevo]:
         .where((TipoHuevo.cuenta_id.is_(None)) | (TipoHuevo.cuenta_id == cuenta))
         .order_by(TipoHuevo.orden, TipoHuevo.nombre)
     ).all()
+
+
+# --- Refuerzos de sanidad ---
+def refuerzos_pendientes(db: Session, aplicaciones: list[AplicacionSanitaria]) -> list[AplicacionSanitaria]:
+    """Quita los refuerzos que ya se hicieron y los de lotes cerrados.
+
+    Un refuerzo se da por hecho si despues se registro otra aplicacion al mismo lote (o
+    al mismo galpon, si fue para el galpon) con el mismo articulo o el mismo producto.
+    """
+    if not aplicaciones:
+        return []
+    fincas = {a.finca_id for a in aplicaciones}
+    desde = min(a.fecha for a in aplicaciones)
+    posteriores = db.scalars(
+        select(AplicacionSanitaria).where(
+            AplicacionSanitaria.finca_id.in_(fincas), AplicacionSanitaria.fecha > desde
+        )
+    ).all()
+    lotes_cerrados = set(
+        db.scalars(
+            select(Lote.id).where(
+                Lote.id.in_({a.lote_id for a in aplicaciones if a.lote_id}), Lote.estado == "cerrado"
+            )
+        ).all()
+    )
+
+    def mismo_destino(a: AplicacionSanitaria, b: AplicacionSanitaria) -> bool:
+        if a.lote_id:
+            return b.lote_id == a.lote_id
+        if a.galpon_id:
+            return b.galpon_id == a.galpon_id
+        return b.finca_id == a.finca_id and b.lote_id is None and b.galpon_id is None
+
+    def mismo_producto(a: AplicacionSanitaria, b: AplicacionSanitaria) -> bool:
+        if a.articulo_id and b.articulo_id:
+            return a.articulo_id == b.articulo_id
+        return a.producto.strip().lower() == b.producto.strip().lower()
+
+    pendientes = []
+    for a in aplicaciones:
+        if a.lote_id in lotes_cerrados:
+            continue
+        hecho = any(
+            b.id != a.id and b.fecha > a.fecha and mismo_destino(a, b) and mismo_producto(a, b)
+            for b in posteriores
+        )
+        if not hecho:
+            pendientes.append(a)
+    return pendientes

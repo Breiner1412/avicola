@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useDatos } from "@/lib/hooks";
 import type { LineaAuditoria, Pagina } from "@/lib/tipos";
-import { Aviso, Boton, Campo, Cargando, Lista, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { Aviso, Boton, Campo, Cargando, Lista, Paginador, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
+import { fechaHora } from "@/lib/formato";
 
 const ENTIDADES = ["", "usuarios", "fincas", "galpones", "cuentas", "permisos", "sesiones"];
 
@@ -60,9 +61,7 @@ export default function Auditoria() {
             <Tabla columnas={["Fecha", "Usuario", "Accion", "Tipo", "Detalle"]}>
               {datos.datos.map((linea) => (
                 <tr key={linea.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-500">
-                    {new Date(linea.creado_en).toLocaleString("es-CO")}
-                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-500">{fechaHora(linea.creado_en)}</td>
                   <td className="px-3 py-2">{linea.usuario_nombre ?? "-"}</td>
                   <td className="px-3 py-2 capitalize">{linea.accion.replace("_", " ")}</td>
                   <td className="px-3 py-2">{linea.entidad}</td>
@@ -71,19 +70,14 @@ export default function Auditoria() {
               ))}
             </Tabla>
 
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
-              <span>
-                {datos.total} movimiento(s) · pagina {datos.pagina} de {paginas}
-              </span>
-              <div className="flex gap-2">
-                <Boton tono="suave" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-                  Anterior
-                </Boton>
-                <Boton tono="suave" disabled={pagina >= paginas} onClick={() => setPagina((p) => p + 1)}>
-                  Siguiente
-                </Boton>
-              </div>
-            </div>
+            <Paginador
+              pagina={pagina}
+              paginas={paginas}
+              total={datos.total}
+              porPagina={datos.tamano}
+              setPagina={setPagina}
+              nombre="cambios"
+            />
           </>
         )}
       </Tarjeta>
