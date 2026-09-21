@@ -1,4 +1,4 @@
-# AVISENA
+# Avícola
 
 **Sistema web para la gestión de granjas avícolas.** Lleva en un solo lugar las aves, la producción de
 huevos, los sensores de los galpones, el inventario, las ventas con su caja, las tareas del personal y
@@ -12,7 +12,7 @@ los reportes, para una o varias fincas y para varias empresas a la vez.
 ![MySQL](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-![Panel de AVISENA](docs/manual/imagenes/03-panel.png)
+![Panel de Avícola](docs/manual/imagenes/03-panel.png)
 
 📘 **[Manual de usuario completo](docs/manual/MANUAL_DE_USUARIO.md)** — cómo usar cada pantalla, paso a paso.
 
@@ -36,7 +36,6 @@ los reportes, para una o varias fincas y para varias empresas a la vez.
 - [Seguridad](#seguridad)
 - [Poner en un servidor](#poner-en-un-servidor)
 - [Solución de problemas](#solución-de-problemas)
-- [Versión anterior](#versión-anterior)
 - [Autor](#autor)
 
 ---
@@ -135,8 +134,8 @@ Docker Engine con Compose (Linux), y Git.
 
 ```bash
 # 1. Descargar el proyecto
-git clone https://github.com/Breiner1412/AVISENA.git
-cd AVISENA
+git clone https://github.com/Breiner1412/avicola.git
+cd avicola
 
 # 2. Crear el archivo de configuración y cambiar las contraseñas
 cp .env.example .env          # en Windows (PowerShell): copy .env.example .env
@@ -222,11 +221,11 @@ Todo se registra con las mismas reglas del sistema, así que el inventario, las 
 
 | Usuario | Rol |
 |---|---|
-| `dueno@demo-avisena.com` | Propietario |
-| `admin@demo-avisena.com` | Administrador |
-| `supervisor@demo-avisena.com` | Supervisor |
-| `operario1@demo-avisena.com` | Operario |
-| `caja@demo-avisena.com` | Cajero |
+| `dueno@demo-avicola.com` | Propietario |
+| `admin@demo-avicola.com` | Administrador |
+| `supervisor@demo-avicola.com` | Supervisor |
+| `operario1@demo-avicola.com` | Operario |
+| `caja@demo-avicola.com` | Cajero |
 
 Contraseña de todos: **`Granja2026`**. Los datos se cargan una sola vez por base de datos; para volver a
 cargarlos hay que empezar de cero (`down -v`).
@@ -241,7 +240,7 @@ no uses el signo `$` en las contraseñas: Docker Compose lo interpreta como vari
 | Variable | Para qué | Ejemplo |
 |---|---|---|
 | `MYSQL_ROOT_PASSWORD` | Contraseña root de MySQL (solo Docker) | `CambiaEstaClaveRoot123` |
-| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos de la aplicación | `avisena` |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos de la aplicación | `avicola` |
 | `DB_HOST`, `DB_PORT` | Dónde está MySQL | `db`, `3306` |
 | `JWT_SECRET` | Clave para firmar las sesiones (**mínimo 32 caracteres**) | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `MINUTOS_ACCESO` | Duración del token de acceso | `30` |
@@ -314,7 +313,7 @@ Para correrlas en GitHub, copia `docs/github-actions-pruebas.yml` a `.github/wor
 ## Estructura del proyecto
 
 ```
-AVISENA/
+avicola/
 ├── docker-compose.v2.yml        # base de datos + caché + API + web
 ├── .env.example                 # variables de entorno (copiar a .env)
 ├── docs/
@@ -428,13 +427,6 @@ cero con `down -v`.
 
 **No recuerdo la contraseña del admin.** `docker compose -f docker-compose.v2.yml exec api python -m
 app.semilla --reiniciar-admin` la deja como está en el `.env`.
-
----
-
-## Versión anterior
-
-Las carpetas `BACKEND/` y `FRONTEND/` contienen la primera versión del sistema y se conservan solo como
-referencia. La versión actual está en `api/` y `web/`.
 
 ---
 

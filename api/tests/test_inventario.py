@@ -293,7 +293,7 @@ def test_otra_cuenta_no_ve_ni_mueve_nada(cliente, cuenta, token_plataforma):
 
 
 def test_el_operario_registra_pero_no_anula(cliente, cuenta):
-    email = f"{unico('bodeguero')}@avisena.com"
+    email = f"{unico('bodeguero')}@avicola.com"
     creado = cliente.post(
         f"{API}/usuarios",
         headers=cuenta["cab"],

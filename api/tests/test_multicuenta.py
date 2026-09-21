@@ -23,7 +23,7 @@ def crear_cuenta_completa(cliente, token, nombre: str):
     assert finca.status_code == 201, finca.text
     finca_id = finca.json()["id"]
 
-    email = f"{unico('admin')}@avisena.com"
+    email = f"{unico('admin')}@avicola.com"
     usuario = cliente.post(
         f"{API}/usuarios",
         headers=cabeceras(token),
@@ -97,7 +97,7 @@ def test_no_puede_crear_usuarios_de_plataforma(cliente, cuenta_a):
         headers=cabeceras(cuenta_a["token"]),
         json={
             "nombres": "Falso",
-            "email": f"{unico('falso')}@avisena.com",
+            "email": f"{unico('falso')}@avicola.com",
             "rol": "plataforma",
             "clave": CLAVE,
         },
@@ -112,7 +112,7 @@ def test_operario_solo_entra_a_su_finca(cliente, cuenta_a, token_plataforma):
         json={"codigo": "P2", "nombre": unico("Finca2"), "cuenta_id": cuenta_a["cuenta_id"]},
     ).json()
 
-    email = f"{unico('operario')}@avisena.com"
+    email = f"{unico('operario')}@avicola.com"
     creado = cliente.post(
         f"{API}/usuarios",
         headers=cabeceras(cuenta_a["token"]),
@@ -145,7 +145,7 @@ def test_supervisor_de_solo_lectura(cliente, cuenta_a, token_plataforma):
         json={"codigo": "P3", "nombre": unico("Finca3"), "cuenta_id": cuenta_a["cuenta_id"]},
     ).json()
 
-    email = f"{unico('supervisor')}@avisena.com"
+    email = f"{unico('supervisor')}@avicola.com"
     cliente.post(
         f"{API}/usuarios",
         headers=cabeceras(cuenta_a["token"]),

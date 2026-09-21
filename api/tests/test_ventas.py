@@ -91,7 +91,7 @@ def tienda(cliente, token_plataforma):
     ).json()
 
     # Cajero del punto
-    email = f"{unico('cajero')}@avisena.com"
+    email = f"{unico('cajero')}@avicola.com"
     cliente.post(
         f"{API}/usuarios",
         headers=cab,

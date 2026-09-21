@@ -24,7 +24,7 @@ def finca(cliente, token_plataforma):
         json={"codigo": "L1", "galpon_id": galpon["id"], "fecha_ingreso": "2026-01-05", "aves_iniciales": 400},
     ).json()
 
-    email = f"{unico('operario')}@avisena.com"
+    email = f"{unico('operario')}@avicola.com"
     operario = cliente.post(
         f"{API}/usuarios",
         headers=cab,

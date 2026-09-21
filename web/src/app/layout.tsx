@@ -4,11 +4,11 @@ import { ProveedorSesion } from "@/lib/sesion";
 import { ProveedorDialogos } from "@/componentes/dialogos";
 
 export const metadata: Metadata = {
-  title: "AVISENA",
+  title: "Avícola",
   description: "Gestion de granjas avicolas: fincas, galpones, aves, inventario, ventas y tareas.",
   manifest: "/manifest.webmanifest",
-  applicationName: "AVISENA",
-  appleWebApp: { capable: true, title: "AVISENA", statusBarStyle: "black-translucent" },
+  applicationName: "Avícola",
+  appleWebApp: { capable: true, title: "Avícola", statusBarStyle: "black-translucent" },
   icons: { apple: "/apple-icon.png" },
   formatDetection: { telephone: false },
 };

@@ -6,7 +6,7 @@ from email.message import EmailMessage
 
 from app.core.config import config
 
-log = logging.getLogger("avisena.correo")
+log = logging.getLogger("avicola.correo")
 
 
 def enviar(destino: str, asunto: str, cuerpo: str) -> bool:

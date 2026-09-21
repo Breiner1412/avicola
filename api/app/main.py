@@ -1,4 +1,4 @@
-"""Aplicacion FastAPI de AVISENA."""
+"""Aplicacion FastAPI de Avícola."""
 
 import logging
 
@@ -33,12 +33,12 @@ from app.rutas import (
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
-log = logging.getLogger("avisena")
+log = logging.getLogger("avicola")
 
 PREFIJO = "/api/v1"
 
 app = FastAPI(
-    title="AVISENA",
+    title="Avícola",
     description="API de gestion de granjas avicolas (multi finca y multi cuenta).",
     version="2.0.0",
     docs_url="/docs",
@@ -99,7 +99,7 @@ for modulo in (
 
 @app.get("/", include_in_schema=False)
 def inicio():
-    return {"nombre": "AVISENA", "version": app.version, "documentacion": "/docs"}
+    return {"nombre": "Avícola", "version": app.version, "documentacion": "/docs"}
 
 
 @app.get(f"{PREFIJO}/salud", tags=["Estado"], summary="Estado de la API y de la base de datos")

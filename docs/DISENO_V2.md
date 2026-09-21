@@ -1,4 +1,4 @@
-# AVISENA v2 — Documento de diseño
+# Avícola v2 — Documento de diseño
 
 > **Estado:** borrador para revisión · **Fecha:** 16/09/2026
 > Este documento define **qué** se va a construir y **cómo** se organiza antes de escribir código.
@@ -23,7 +23,7 @@ Sistema de gestión para granjas avícolas **multi-cliente**: cada cliente (empr
 ## 2. Modelo de organización
 
 ```
-Plataforma AVISENA
+Plataforma Avícola
  └── Cuenta (empresa o persona natural)
       ├── Usuarios (un rol por persona)
       ├── Fincas
@@ -388,7 +388,7 @@ backend/
 ## 8. ❓ Decisiones pendientes
 
 1. **Frontend:** ¿opción A (HTML + JS) u opción B (Next.js + TypeScript)?
-2. **Nombre y ubicación del repo nuevo:** ¿`avisena` con carpetas `backend/` y `frontend/` en un solo repo? (recomendado)
+2. **Nombre y ubicación del repo nuevo:** ¿`avicola` con carpetas `backend/` y `frontend/` en un solo repo? (recomendado)
 3. **Descuentos en ventas:** ¿el cajero puede aplicarlos? ¿Con un tope (por ejemplo, 10 %)?
 4. **Anulación por cajero:** ¿cualquier venta o solo las de su turno abierto?
 5. **Numeración de ventas:** ¿consecutivo por punto de venta (`PV1-000123`) está bien?

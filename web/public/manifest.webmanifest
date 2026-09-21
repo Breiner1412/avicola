@@ -1,6 +1,6 @@
 {
-  "name": "AVISENA",
-  "short_name": "AVISENA",
+  "name": "Avícola",
+  "short_name": "Avícola",
   "description": "Gestion de granjas avicolas: aves, inventario, ventas y tareas.",
   "lang": "es-CO",
   "start_url": "/panel",

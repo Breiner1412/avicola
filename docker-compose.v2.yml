@@ -1,4 +1,4 @@
-name: avisena-v2
+name: avicola
 
 services:
   db:
@@ -9,8 +9,8 @@ services:
       --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME:-avisena}
-      MYSQL_USER: ${DB_USER:-avisena}
+      MYSQL_DATABASE: ${DB_NAME:-avicola}
+      MYSQL_USER: ${DB_USER:-avicola}
       MYSQL_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
     volumes:
       - db_datos:/var/lib/mysql

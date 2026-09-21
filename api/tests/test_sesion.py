@@ -21,7 +21,7 @@ def test_login_con_clave_mala(cliente):
 
 def test_login_correo_desconocido(cliente):
     respuesta = cliente.post(
-        f"{API}/auth/login", json={"email": f"{unico('nadie')}@avisena.com", "clave": "loQueSea123"}
+        f"{API}/auth/login", json={"email": f"{unico('nadie')}@avicola.com", "clave": "loQueSea123"}
     )
     assert respuesta.status_code == 401
 

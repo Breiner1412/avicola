@@ -13,8 +13,8 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: raiz123
-          MYSQL_DATABASE: avisena
-          MYSQL_USER: avisena
+          MYSQL_DATABASE: avicola
+          MYSQL_USER: avicola
           MYSQL_PASSWORD: clave123
         ports: ["3306:3306"]
         options: >-
@@ -23,11 +23,11 @@ jobs:
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      DB_USER: avisena
+      DB_USER: avicola
       DB_PASSWORD: clave123
-      DB_NAME: avisena
+      DB_NAME: avicola
       JWT_SECRET: clave-de-pruebas-larga-1234567890abcdefghij
-      ADMIN_EMAIL: admin@avisena.com
+      ADMIN_EMAIL: admin@avicola.com
       ADMIN_PASSWORD: Admin12345
       REDIS_URL: ""
     steps:

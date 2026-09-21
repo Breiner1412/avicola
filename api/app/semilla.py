@@ -194,7 +194,7 @@ def principal(reiniciar_admin: bool = False, forzar_permisos: bool = False) -> N
 
 
 if __name__ == "__main__":
-    analizador = argparse.ArgumentParser(description="Carga los datos iniciales de AVISENA")
+    analizador = argparse.ArgumentParser(description="Carga los datos iniciales de Avícola")
     analizador.add_argument("--reiniciar-admin", action="store_true", help="vuelve a poner la contrasena del admin")
     analizador.add_argument("--forzar-permisos", action="store_true", help="restaura los permisos de fabrica")
     args = analizador.parse_args()

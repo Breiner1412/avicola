@@ -1,4 +1,4 @@
-"""Datos de ejemplo: una granja que lleva seis meses usando AVISENA.
+"""Datos de ejemplo: una granja que lleva seis meses usando Avícola.
 
 Crea la cuenta "Granja Avicola La Esperanza" con dos fincas, sus usuarios, galpones,
 bodegas, articulos, lotes, puntos de venta y sensores, y despues simula dia por dia
@@ -82,11 +82,11 @@ from app.rutas import trabajo as r_tra
 from app.rutas import ventas as r_ven
 from app.rutas.sensores import estado_de
 
-log = logging.getLogger("avisena.demo")
+log = logging.getLogger("avicola.demo")
 
 NOMBRE_CUENTA = "Granja Avicola La Esperanza"
 CLAVE_DEMO = "Granja2026"
-DOMINIO = "demo-avisena.com"
+DOMINIO = "demo-avicola.com"
 # Colombia no cambia de hora: la hora local es UTC - 5
 DESFASE = timedelta(hours=5)
 
@@ -1266,7 +1266,7 @@ def principal() -> None:
     analizador.add_argument("--dias", type=int, default=180, help="cuantos dias hacia atras (por defecto 180)")
     argumentos = analizador.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    logging.getLogger("avisena").setLevel(logging.INFO)
+    logging.getLogger("avicola").setLevel(logging.INFO)
 
     demo = Demo(max(30, min(argumentos.dias, 400)))
     demo.correr()

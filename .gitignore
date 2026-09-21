@@ -24,3 +24,9 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Version anterior (se queda solo en tu computador, no se sube)
+BACKEND/
+FRONTEND/
+docker-compose.yml
+REVISION_ERRORES.md

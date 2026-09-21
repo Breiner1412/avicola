@@ -140,12 +140,12 @@ def elegir_finca(
 def refrescar(
     respuesta: Response,
     db: Session = Depends(obtener_db),
-    avisena_refresco: str | None = Cookie(default=None, alias=config.cookie_refresco),
+    avicola_refresco: str | None = Cookie(default=None, alias=config.cookie_refresco),
 ):
-    if not avisena_refresco:
+    if not avicola_refresco:
         raise sin_sesion("No hay sesion abierta")
 
-    sesion = buscar_sesion(db, avisena_refresco)
+    sesion = buscar_sesion(db, avicola_refresco)
     if sesion is None:
         raise sin_sesion("La sesion expiro. Vuelve a entrar.")
 
@@ -162,10 +162,10 @@ def refrescar(
 def salir(
     respuesta: Response,
     db: Session = Depends(obtener_db),
-    avisena_refresco: str | None = Cookie(default=None, alias=config.cookie_refresco),
+    avicola_refresco: str | None = Cookie(default=None, alias=config.cookie_refresco),
 ):
-    if avisena_refresco:
-        sesion = buscar_sesion(db, avisena_refresco)
+    if avicola_refresco:
+        sesion = buscar_sesion(db, avicola_refresco)
         if sesion is not None:
             cerrar_sesion(db, sesion)
             registrar(
@@ -229,7 +229,7 @@ def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obten
         db.commit()
         enviar(
             usuario.email,
-            "Codigo para recuperar tu contrasena de AVISENA",
+            "Codigo para recuperar tu contrasena de Avícola",
             f"Tu codigo es {codigo}. Vence en {MINUTOS_CODIGO} minutos.\n"
             "Si no lo pediste, ignora este mensaje.",
         )

@@ -45,7 +45,7 @@ export default function Login() {
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-emerald-800 to-emerald-950 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-emerald-800">AVISENA</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-emerald-800">Avícola</h1>
           <p className="mt-1 text-sm text-slate-500">Gestion de granjas avicolas</p>
         </div>
 

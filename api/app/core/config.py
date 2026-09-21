@@ -16,15 +16,15 @@ class Configuracion(BaseSettings):
     )
 
     # --- General ---
-    app_nombre: str = "AVISENA"
+    app_nombre: str = "Avícola"
     entorno: str = "desarrollo"
 
     # --- Base de datos ---
     db_host: str = "localhost"
     db_port: int = 3306
-    db_user: str = "avisena"
+    db_user: str = "avicola"
     db_password: str = ""
-    db_name: str = "avisena"
+    db_name: str = "avicola"
 
     # --- Sesiones ---
     jwt_secret: str = ""
@@ -32,15 +32,15 @@ class Configuracion(BaseSettings):
     minutos_acceso: int = 30
     dias_refresco: int = 14
     cookie_segura: bool = False
-    cookie_refresco: str = "avisena_refresco"
+    cookie_refresco: str = "avicola_refresco"
 
     # --- Cache ---
     redis_url: str = ""
 
     # --- Usuario inicial ---
-    admin_email: str = "admin@avisena.com"
+    admin_email: str = "admin@avicola.com"
     admin_password: str = "Admin12345"
-    admin_nombre: str = "Administrador AVISENA"
+    admin_nombre: str = "Administrador Avicola"
     cuenta_demo: str = "Granja de ejemplo"
     finca_demo: str = "Finca principal"
 

@@ -1,8 +1,8 @@
-# Manual de usuario de AVISENA
+# Manual de usuario de Avícola
 
 **Sistema de gestión para granjas avícolas**
 
-Este manual explica, paso a paso, cómo usar AVISENA en el día a día de una granja: desde entrar por
+Este manual explica, paso a paso, cómo usar Avícola en el día a día de una granja: desde entrar por
 primera vez hasta cerrar la caja, registrar la recolección de huevos, controlar el inventario o
 revisar los reportes del mes.
 
@@ -13,7 +13,7 @@ los datos de prueba (ver el [README](../../README.md#datos-de-ejemplo)).
 
 ## Contenido
 
-1. [Qué es AVISENA](#1-qué-es-avisena)
+1. [Qué es Avícola](#1-qué-es-avícola)
 2. [Conceptos básicos](#2-conceptos-básicos)
 3. [Roles: qué puede hacer cada persona](#3-roles-qué-puede-hacer-cada-persona)
 4. [Entrar al sistema](#4-entrar-al-sistema)
@@ -50,7 +50,7 @@ los datos de prueba (ver el [README](../../README.md#datos-de-ejemplo)).
     - [Importar desde Excel](#141-importar-desde-excel)
     - [Registro de cambios](#142-registro-de-cambios)
     - [Mi cuenta](#143-mi-cuenta)
-15. [Usar AVISENA desde el celular](#15-usar-avisena-desde-el-celular)
+15. [Usar Avícola desde el celular](#15-usar-avícola-desde-el-celular)
 16. [El día a día según el rol](#16-el-día-a-día-según-el-rol)
 17. [Reglas que el sistema cuida por ti](#17-reglas-que-el-sistema-cuida-por-ti)
 18. [Preguntas frecuentes y problemas comunes](#18-preguntas-frecuentes-y-problemas-comunes)
@@ -58,9 +58,9 @@ los datos de prueba (ver el [README](../../README.md#datos-de-ejemplo)).
 
 ---
 
-## 1. Qué es AVISENA
+## 1. Qué es Avícola
 
-AVISENA reúne en un solo lugar todo lo que pasa en una granja avícola:
+Avícola reúne en un solo lugar todo lo que pasa en una granja avícola:
 
 | Área | Qué se lleva |
 |---|---|
@@ -120,7 +120,7 @@ trae el sistema son estos (el propietario los puede cambiar en **Roles y permiso
 
 ### 4.1 Iniciar sesión
 
-1. Abre la dirección de AVISENA en el navegador (en una instalación local es `http://localhost:3000`).
+1. Abre la dirección de Avícola en el navegador (en una instalación local es `http://localhost:3000`).
 2. Escribe tu **correo** y tu **contraseña**.
 3. Pulsa **Entrar**.
 
@@ -255,7 +255,7 @@ El sistema avisa de:
 
 ## 8. Primeros pasos: dejar lista la granja
 
-Cuando se empieza a usar AVISENA, el propietario o el administrador configura la granja en este
+Cuando se empieza a usar Avícola, el propietario o el administrador configura la granja en este
 orden. Cada paso se explica en detalle más adelante.
 
 | Paso | Dónde | Qué hacer |
@@ -830,7 +830,7 @@ actual, la nueva dos veces y pulsa **Guardar**.
 
 ---
 
-## 15. Usar AVISENA desde el celular
+## 15. Usar Avícola desde el celular
 
 Todas las pantallas se acomodan al celular. El menú se abre con **☰** y se cierra al elegir una opción
 o tocando afuera.
@@ -841,7 +841,7 @@ o tocando afuera.
 
 ### Instalarla como aplicación
 
-- **Android (Chrome):** abre AVISENA, toca los tres puntos del navegador y elige **Instalar aplicación**
+- **Android (Chrome):** abre Avícola, toca los tres puntos del navegador y elige **Instalar aplicación**
   o **Agregar a la pantalla principal**.
 - **iPhone (Safari):** toca **Compartir** y luego **Agregar a pantalla de inicio**.
 
@@ -938,7 +938,7 @@ por conteo si hace falta corregir.
 
 **Un sensor dice "Sin datos".**
 El equipo no ha enviado mediciones. Revisa que esté encendido, con conexión, y que su código coincida
-con el registrado en AVISENA.
+con el registrado en Avícola.
 
 **El descuento no pasa.**
 Superaste el tope de descuento de tu rol. El mensaje dice cuál es el máximo.
@@ -974,4 +974,4 @@ Pídele al administrador que te asigne una nueva en **Usuarios → Contraseña**
 
 ---
 
-*AVISENA — Manual de usuario.*
+*Avícola — Manual de usuario.*

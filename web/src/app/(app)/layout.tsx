@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Recuerda si el menu quedo fijo en el computador.
   useEffect(() => {
     try {
-      if (localStorage.getItem("avisena.menu.fijo") === "1") setMenuFijo(true);
+      if (localStorage.getItem("avicola.menu.fijo") === "1") setMenuFijo(true);
     } catch {}
   }, []);
 
@@ -129,7 +129,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setMenuFijo(fijo);
     setMenuAbierto(false);
     try {
-      localStorage.setItem("avisena.menu.fijo", fijo ? "1" : "0");
+      localStorage.setItem("avicola.menu.fijo", fijo ? "1" : "0");
     } catch {}
   }
 
@@ -155,7 +155,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-300">
               <Icono nombre="huevo" className="h-5 w-5" />
             </span>
-            <span className="text-lg font-semibold tracking-tight">AVISENA</span>
+            <span className="text-lg font-semibold tracking-tight">Avícola</span>
           </Link>
           <div className="flex items-center gap-1">
             <button

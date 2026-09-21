@@ -7,8 +7,8 @@ import { Icono } from "@/componentes/iconos";
 
 type Grupo = { titulo: string; enlaces: Enlace[] };
 
-const CLAVE_GRUPOS = "avisena.menu.grupos";
-const CLAVE_SCROLL = "avisena.menu.scroll";
+const CLAVE_GRUPOS = "avicola.menu.grupos";
+const CLAVE_SCROLL = "avicola.menu.scroll";
 
 function leer<T>(clave: string, almacen: "local" | "sesion", porDefecto: T): T {
   try {

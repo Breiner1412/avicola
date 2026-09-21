@@ -17,10 +17,10 @@ COPY . .
 
 RUN sed -i 's/\r$//' docker-entrypoint.sh \
     && chmod +x docker-entrypoint.sh \
-    && useradd --create-home --uid 1000 avisena \
-    && chown -R avisena:avisena /app
+    && useradd --create-home --uid 1000 avicola \
+    && chown -R avicola:avicola /app
 
-USER avisena
+USER avicola
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
