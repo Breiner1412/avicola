@@ -18,8 +18,24 @@ los reportes, para una o varias fincas y para varias empresas a la vez.
 
 ---
 
+## Demo en vivo
+
+🌐 **https://granja-breiner.eastus2.cloudapp.azure.com**
+
+La demo tiene dos fincas con seis meses de trabajo simulado. Entra con cualquiera de estos usuarios (contraseña para todos: `Granja2026`):
+
+| Usuario | Rol | Qué puede ver |
+|---|---|---|
+| `dueno@demo-avicola.com` | Propietario | Todo: 2 fincas, reportes, usuarios y roles |
+| `supervisor@demo-avicola.com` | Supervisor | Lotes, vacunas, tareas y sensores |
+| `operario1@demo-avicola.com` | Operario | La vista del trabajador |
+| `caja@demo-avicola.com` | Cajero | Caja con turno abierto |
+
+> La demo se restaura sola cada noche: lo que cambies se borra y vuelve a quedar como al principio.
+
 ## Contenido
 
+- [Demo en vivo](#demo-en-vivo)
 - [Qué hace](#qué-hace)
 - [Capturas](#capturas)
 - [Tecnologías](#tecnologías)
