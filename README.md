@@ -11,6 +11,7 @@ los reportes, para una o varias fincas y para varias empresas a la vez.
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Licencia](https://img.shields.io/badge/License-GPLv3-blue)
 
 ![Panel de Avícola](docs/manual/imagenes/03-panel.png)
 
@@ -52,6 +53,7 @@ La demo tiene dos fincas con seis meses de trabajo simulado. Entra con cualquier
 - [Seguridad](#seguridad)
 - [Poner en un servidor](#poner-en-un-servidor)
 - [Solución de problemas](#solución-de-problemas)
+- [Licencia](#licencia)
 - [Autor](#autor)
 
 ---
@@ -443,6 +445,18 @@ cero con `down -v`.
 
 **No recuerdo la contraseña del admin.** `docker compose -f docker-compose.v2.yml exec api python -m
 app.semilla --reiniciar-admin` la deja como está en el `.env`.
+
+---
+
+## Licencia
+
+Este proyecto usa la licencia **GNU General Public License v3.0**. El texto completo está en el archivo
+[LICENSE](LICENSE).
+
+En corto: cualquiera puede usar, estudiar, modificar y compartir el código libremente, pero si distribuye
+una versión modificada tiene que publicarla también bajo la GPL-3.0 y conservar el crédito original.
+
+Copyright © 2026 Breiner Stiven Guisao Rodríguez
 
 ---
 
