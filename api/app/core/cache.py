@@ -28,6 +28,14 @@ class _Memoria:
             self._datos[clave] = (valor, vence)
             return valor, int(vence - ahora)
 
+    def leer(self, clave: str) -> tuple[int, int]:
+        ahora = time.time()
+        with self._candado:
+            valor, vence = self._datos.get(clave, (0, 0.0))
+            if vence <= ahora:
+                return 0, 0
+            return valor, int(vence - ahora)
+
     def borrar(self, clave: str) -> None:
         with self._candado:
             self._datos.pop(clave, None)
@@ -68,6 +76,21 @@ def contar(clave: str, ventana: int) -> tuple[int, int]:
         return int(total), int(ttl)
     except Exception:  # noqa: BLE001
         return _memoria.incr(clave, ventana)
+
+
+def leer(clave: str) -> tuple[int, int]:
+    """Total de la clave y segundos que faltan, sin sumar."""
+    red = cliente()
+    if red is None:
+        return _memoria.leer(clave)
+    try:
+        tubo = red.pipeline()
+        tubo.get(clave)
+        tubo.ttl(clave)
+        total, ttl = tubo.execute()
+        return int(total or 0), max(int(ttl or 0), 0)
+    except Exception:  # noqa: BLE001
+        return _memoria.leer(clave)
 
 
 def reiniciar(clave: str) -> None:

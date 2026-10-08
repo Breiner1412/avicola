@@ -54,8 +54,10 @@ def login(
     db: Session = Depends(obtener_db),
 ):
     ip = ip_de(peticion) or "desconocida"
-    limites.login_ip.registrar(ip)
-    limites.login_email.registrar(datos.email)
+    correo_ip = f"{datos.email}|{ip}"
+    limites.login_ip.revisar(ip)
+    limites.login_email_ip.revisar(correo_ip)
+    limites.login_email.revisar(datos.email)
 
     usuario = db.scalars(
         select(Usuario)
@@ -64,15 +66,21 @@ def login(
     ).first()
 
     if usuario is None or not verificar_clave(datos.clave, usuario.clave_hash):
-        registrar(
-            db, None, "ingreso_fallido", "usuarios",
-            entidad_id=usuario.id if usuario else None,
-            descripcion=f"Intento fallido con {datos.email}",
-            cuenta_id=usuario.cuenta_id if usuario else None,
-            usuario_id=usuario.id if usuario else None,
-            ip=ip,
-        )
-        db.commit()
+        limites.login_ip.sumar(ip)
+        limites.login_email_ip.sumar(correo_ip)
+        limites.login_email.sumar(datos.email)
+        # Solo los usuarios que existen dejan linea en el registro (y como mucho
+        # tantas como permite el limite): correos inventados no lo llenan
+        if usuario is not None:
+            registrar(
+                db, None, "ingreso_fallido", "usuarios",
+                entidad_id=usuario.id,
+                descripcion=f"Intento fallido con {datos.email}",
+                cuenta_id=usuario.cuenta_id,
+                usuario_id=usuario.id,
+                ip=ip,
+            )
+            db.commit()
         raise _credenciales_malas()
 
     if not usuario.activo:
@@ -96,7 +104,7 @@ def login(
 
     sesion, refresco = abrir_sesion(db, usuario, finca_id, ip, peticion.headers.get("user-agent"))
     usuario.ultimo_ingreso = ahora_simple()
-    limites.login_email.limpiar(datos.email)
+    limites.login_email_ip.limpiar(correo_ip)
 
     registrar(
         db, None, "ingreso", "usuarios", usuario.id,
