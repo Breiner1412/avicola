@@ -1,9 +1,12 @@
 """Cliente de Redis con respaldo en memoria si no esta disponible."""
 
+import logging
 import threading
 import time
 
 from app.core.config import config
+
+log = logging.getLogger("avicola.cache")
 
 try:  # redis es opcional: sin el, se usa memoria
     import redis as _redis
@@ -56,6 +59,7 @@ def cliente():
         _cliente = _redis.from_url(config.redis_url, decode_responses=True, socket_timeout=2)
         _cliente.ping()
     except Exception:  # noqa: BLE001 - si falla, seguimos en memoria
+        log.warning("Redis no responde en %s: los limites de intentos quedan en memoria", config.redis_url)
         _cliente = None
     return _cliente
 

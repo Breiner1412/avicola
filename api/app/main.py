@@ -1,6 +1,7 @@
 """Aplicacion FastAPI de Avícola."""
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -9,8 +10,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from app.core import limites
+from app.core.cache import cliente as cliente_redis
 from app.core.config import config
+from app.core.contexto import ip_de
 from app.core.db import motor
+from app.core.errores import ErrorApi
+from app.core.seguridad import leer_token_acceso
 from app.rutas import (
     alertas,
     auth,
@@ -38,7 +44,17 @@ log = logging.getLogger("avicola")
 
 PREFIJO = "/api/v1"
 
+@asynccontextmanager
+async def ciclo_de_vida(_app: FastAPI):
+    # En produccion los limites de intentos deben ser compartidos entre workers:
+    # sin Redis cada worker llevaria su propia cuenta
+    if config.es_produccion and cliente_redis() is None:
+        raise RuntimeError("En produccion hace falta Redis (REDIS_URL) para los limites de intentos")
+    yield
+
+
 app = FastAPI(
+    lifespan=ciclo_de_vida,
     title="Avícola",
     description="API de gestion de granjas avicolas (multi finca y multi cuenta).",
     version="2.0.0",
@@ -58,6 +74,31 @@ async def capturar_errores(peticion: Request, siguiente):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"codigo": "error_interno", "mensaje": "Ocurrio un error inesperado", "detalles": {}},
         )
+
+
+@app.middleware("http")
+async def limitar_peticiones(peticion: Request, siguiente):
+    """Tope general de cambios, subidas y descargas por usuario o por conexion."""
+    aplican = limites.limites_de_peticion(peticion.method, peticion.url.path)
+    if aplican:
+        quien = _quien_pide(peticion)
+        try:
+            for limite in aplican:
+                limite.registrar(quien)
+        except ErrorApi as error:
+            return JSONResponse(status_code=error.status_code, content={"detail": error.detail})
+    return await siguiente(peticion)
+
+
+def _quien_pide(peticion: Request) -> str:
+    """El usuario del token (sin ir a la base) o, si no hay sesion valida, la conexion."""
+    cabecera = peticion.headers.get("authorization", "")
+    if cabecera.lower().startswith("bearer "):
+        try:
+            return f"usuario:{leer_token_acceso(cabecera[7:].strip()).get('sub')}"
+        except ErrorApi:
+            pass
+    return f"ip:{ip_de(peticion)}"
 
 
 app.add_middleware(
