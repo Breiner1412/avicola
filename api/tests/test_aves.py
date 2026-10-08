@@ -163,6 +163,8 @@ def test_la_venta_sale_del_descarte(cliente, granja):
     assert lote["aves_descarte"] == 25
     assert lote["aves_actuales"] == 450
     assert galpon_actual(cliente, granja) == 475
+    # Las aves vendidas no cuentan como muertas
+    assert lote["mortalidad"] == 10
 
 
 def test_anular_devuelve_las_aves(cliente, granja):
@@ -172,6 +174,7 @@ def test_anular_devuelve_las_aves(cliente, granja):
         json={"lote_id": granja["lote"]["id"], "fecha": "2026-06-06", "tipo": "muerte", "cantidad": 7},
     ).json()
     assert lote_actual(cliente, granja)["aves_actuales"] == 443
+    assert lote_actual(cliente, granja)["mortalidad"] == 17
 
     anulado = cliente.post(
         f"{API}/movimientos-aves/{creado['id']}/anular",
