@@ -58,7 +58,9 @@ app = FastAPI(
     title="Avícola",
     description="API de gestion de granjas avicolas (multi finca y multi cuenta).",
     version="2.0.0",
-    docs_url="/docs",
+    # En produccion no se publica la documentacion ni el esquema de la API
+    docs_url=None if config.es_produccion else "/docs",
+    openapi_url=None if config.es_produccion else "/openapi.json",
     redoc_url=None,
 )
 
@@ -151,7 +153,7 @@ for modulo in (
 
 @app.get("/", include_in_schema=False)
 def inicio():
-    return {"nombre": "Avícola", "version": app.version, "documentacion": "/docs"}
+    return {"nombre": "Avícola"}
 
 
 @app.get(f"{PREFIJO}/salud", tags=["Estado"], summary="Estado de la API y de la base de datos")
@@ -163,4 +165,4 @@ def salud():
     except Exception:  # noqa: BLE001
         log.exception("La base de datos no responde")
         base = "sin conexion"
-    return {"api": "ok", "base_datos": base, "entorno": config.entorno}
+    return {"api": "ok", "base_datos": base}

@@ -2,9 +2,20 @@
 
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
+
+
+# Valores de los archivos de ejemplo y de los valores por defecto: nunca en produccion
+CLAVES_DE_EJEMPLO = {
+    "cambia-esta-clave-por-una-larga-y-aleatoria-de-32-o-mas",
+    "Admin12345",
+    "CambiaEstaClave123",
+    "CambiaEstaClaveMigra123",
+    "CambiaEstaClaveRoot123",
+    "cambia-esta-clave",
+}
 
 
 class Configuracion(BaseSettings):
@@ -84,6 +95,26 @@ class Configuracion(BaseSettings):
             database=self.db_name,
             query={"charset": "utf8mb4"},
         )
+
+    @model_validator(mode="after")
+    def _produccion_segura(self) -> "Configuracion":
+        """En produccion no arranca con las claves de ejemplo ni sin cookie segura."""
+        if not self.es_produccion:
+            return self
+        problemas = []
+        if self.jwt_secret in CLAVES_DE_EJEMPLO:
+            problemas.append("JWT_SECRET es el de ejemplo")
+        if self.admin_password in CLAVES_DE_EJEMPLO or len(self.admin_password) < 12:
+            problemas.append("ADMIN_PASSWORD es la de ejemplo o tiene menos de 12 caracteres")
+        if self.db_password in CLAVES_DE_EJEMPLO or not self.db_password:
+            problemas.append("DB_PASSWORD esta vacia o es la de ejemplo")
+        if self.db_migra_password and self.db_migra_password in CLAVES_DE_EJEMPLO:
+            problemas.append("DB_MIGRA_PASSWORD es la de ejemplo")
+        if not self.cookie_segura:
+            problemas.append("COOKIE_SEGURA debe ser true (la app va detras de HTTPS)")
+        if problemas:
+            raise ValueError("Configuracion insegura para produccion: " + "; ".join(problemas))
+        return self
 
     @property
     def url_base_datos(self) -> URL:
