@@ -1,5 +1,6 @@
 # Solo para desarrollo: publica los puertos en tu equipo (127.0.0.1).
 # Uso: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Crea su propia red "proxy" si no tienes Caddy en tu equipo.
 services:
   db:
     ports:
@@ -10,3 +11,8 @@ services:
   web:
     ports:
       - "127.0.0.1:${WEB_PUERTO_HOST:-3000}:3000"
+
+networks:
+  proxy:
+    external: false
+    name: avicola_proxy_local

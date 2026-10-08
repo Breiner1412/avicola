@@ -6,7 +6,9 @@ name: avicola
 services:
   db:
     image: mysql:8.4
+    container_name: avicola-db
     restart: unless-stopped
+    networks: [interna]
     # log-bin-trust-function-creators: permite a las migraciones crear los triggers
     # que dejan el registro de cambios de solo insercion
     command: >
@@ -33,7 +35,9 @@ services:
 
   cache:
     image: redis:7-alpine
+    container_name: avicola-cache
     restart: unless-stopped
+    networks: [interna]
     command: ["redis-server", "--appendonly", "no", "--save", ""]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -43,7 +47,10 @@ services:
 
   api:
     build: ./api
+    container_name: avicola-api
     restart: unless-stopped
+    # interna: base y cache; proxy: Caddy y salida a internet (correo)
+    networks: [interna, proxy]
     env_file: ${ENV_FILE:-.env}
     environment:
       DB_HOST: db
@@ -64,11 +71,21 @@ services:
       context: ./web
       args:
         API_INTERNA: http://api:8000
+    container_name: avicola-web
     restart: unless-stopped
+    networks: [interna, proxy]
     environment:
       API_INTERNA: http://api:8000
     depends_on:
       - api
+
+networks:
+  # Red compartida con Caddy y las demas apps (se crea una vez: docker network create proxy)
+  proxy:
+    external: true
+  # Solo entre los servicios de este proyecto, sin salida a internet
+  interna:
+    internal: true
 
 volumes:
   db_datos:
