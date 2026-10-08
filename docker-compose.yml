@@ -71,7 +71,11 @@ services:
 
   api:
     <<: *comun
-    build: ./api
+    build:
+      context: ./api
+      args:
+        # La demo publica (DEMO=true) incluye lo necesario para generar sus datos
+        INSTALAR_DEMO: ${DEMO:-false}
     container_name: avicola-api
     mem_limit: 768m
     pids_limit: 256

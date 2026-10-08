@@ -1,0 +1,2 @@
+# Solo para generar los datos de ejemplo (python -m app.demo): congela la fecha al simular
+freezegun>=1.5,<2

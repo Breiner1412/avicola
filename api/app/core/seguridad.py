@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
 
 from app.core.config import config
 from app.core.errores import sin_sesion
@@ -58,7 +58,7 @@ def crear_token_acceso(
 def leer_token_acceso(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(token, config.jwt_secret, algorithms=[config.jwt_algoritmo])
-    except JWTError as exc:  # token vencido, firma invalida, etc.
+    except jwt.PyJWTError as exc:  # token vencido, firma invalida, etc.
         raise sin_sesion() from exc
 
 

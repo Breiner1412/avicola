@@ -10,8 +10,12 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
+COPY requirements.txt requirements-demo.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Solo la imagen de la demo publica necesita lo de generar datos de ejemplo
+ARG INSTALAR_DEMO=false
+RUN if [ "$INSTALAR_DEMO" = "true" ]; then pip install --no-cache-dir -r requirements-demo.txt; fi
 
 COPY . .
 
