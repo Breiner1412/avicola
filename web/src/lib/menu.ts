@@ -60,3 +60,13 @@ export const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
     ],
   },
 ];
+
+/** Modulo que hace falta para abrir una pantalla (null = cualquiera con sesion, como Mi cuenta). */
+export function moduloDeRuta(ruta: string): string | null {
+  for (const grupo of GRUPOS) {
+    for (const enlace of grupo.enlaces) {
+      if (ruta === enlace.ruta || ruta.startsWith(`${enlace.ruta}/`)) return enlace.modulo;
+    }
+  }
+  return null;
+}

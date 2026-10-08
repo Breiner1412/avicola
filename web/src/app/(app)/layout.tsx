@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSesion } from "@/lib/sesion";
-import { GRUPOS } from "@/lib/menu";
+import { GRUPOS, moduloDeRuta } from "@/lib/menu";
 import { CambiarClave } from "@/componentes/cambiar-clave";
 import { Campana } from "@/componentes/campana";
 import { Icono } from "@/componentes/iconos";
@@ -123,6 +123,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...grupo,
     enlaces: grupo.enlaces.filter((enlace) => puede(enlace.modulo, "ver")),
   })).filter((grupo) => grupo.enlaces.length > 0);
+
+  // La API ya rechaza lo que el rol no puede ver; aqui ademas no se abre la pantalla
+  const moduloActual = moduloDeRuta(ruta);
+  const puedeVerPantalla = moduloActual === null || puede(moduloActual, "ver");
 
   const iniciales = `${sesion.usuario.nombres[0] ?? ""}${sesion.usuario.apellidos[0] ?? ""}`.toUpperCase();
 
@@ -288,7 +292,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               desactivar usuarios o fincas. Los datos vuelven a quedar como al principio cada noche.
             </Aviso>
           ) : null}
-          {children}
+          {puedeVerPantalla ? (
+            children
+          ) : (
+            <Aviso>
+              Tu rol no tiene acceso a esta pantalla.{" "}
+              <Link href="/panel" className="font-medium underline">
+                Volver al panel
+              </Link>
+            </Aviso>
+          )}
         </main>
       </div>
     </div>
