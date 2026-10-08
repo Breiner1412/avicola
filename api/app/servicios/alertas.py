@@ -6,9 +6,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto
+from app.core.db import bloquear
 from app.modelos.alertas import Alerta
 from app.modelos.aves import AplicacionSanitaria
 from app.modelos.inventario import Articulo, Bodega, Existencia
+from app.modelos.organizacion import Cuenta
 from app.modelos.sensores import LecturaSensor, Sensor
 from app.modelos.trabajo import Novedad, Tarea
 from app.modelos.ventas import PuntoVenta, TurnoCaja
@@ -231,6 +233,10 @@ def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
     if cuenta_id is None:
         return []
 
+    # Una sola revision a la vez por cuenta: dos peticiones juntas no insertan el
+    # mismo aviso dos veces (chocaban con el indice unico y respondian 500)
+    bloquear(db, Cuenta, cuenta_id)
+
     fincas = [ctx.finca_id] if ctx.finca_id is not None else ids_fincas_visibles(db, ctx)
     situaciones = _situaciones(db, ctx, cuenta_id, fincas)
     claves = {s["clave"] for s in situaciones}
@@ -238,6 +244,7 @@ def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
     existentes = {
         a.clave: a for a in db.scalars(select(Alerta).where(Alerta.cuenta_id == cuenta_id)).all()
     }
+    revisadas = set(fincas)
 
     momento = ahora()
     for situacion in situaciones:
@@ -269,8 +276,11 @@ def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
             alerta.detalle = (situacion.get("detalle") or "")[:255] or None
             alerta.actualizado_en = momento
 
-    # Lo que ya no esta pasando se cierra solo
+    # Lo que ya no esta pasando se cierra solo, pero solo en las fincas que se
+    # revisaron: los avisos de otra finca no se tocan desde aqui
     for clave, alerta in existentes.items():
+        if alerta.finca_id is not None and alerta.finca_id not in revisadas:
+            continue
         if alerta.activa and clave not in claves:
             alerta.activa = False
             alerta.resuelta_en = momento

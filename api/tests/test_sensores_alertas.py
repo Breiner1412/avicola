@@ -209,3 +209,25 @@ def test_los_equipos_envian_varias_mediciones_por_codigo(cliente, finca):
     ).json()
     assert [l["medido_en"][:16] for l in lecturas] == ["2026-01-10T17:00"]
     assert lecturas[0]["origen"] == "dispositivo"
+
+
+def test_los_avisos_de_otra_finca_no_se_cierran_al_mirar_esta(cliente, token_plataforma):
+    from sqlalchemy import select
+
+    from app.core.db import SesionLocal
+    from app.modelos.alertas import Alerta
+    from tests.test_multicuenta import crear_cuenta_completa
+
+    datos = crear_cuenta_completa(cliente, token_plataforma, "AvisosDosFincas")
+    admin = cabeceras(datos["token"])
+    finca2 = cliente.post(f"{API}/fincas", headers=admin, json={"codigo": "F2", "nombre": unico("Segunda")}).json()
+    cab2 = cabeceras(datos["token"], finca2["id"])
+    tarea = cliente.post(f"{API}/tareas", headers=cab2, json={"titulo": "Arreglar la cerca", "fecha": "2026-01-02"})
+    assert tarea.status_code == 201, tarea.text
+
+    assert cliente.get(f"{API}/alertas", headers=cab2).status_code == 200
+    cliente.get(f"{API}/alertas", headers=cabeceras(datos["token"], datos["finca_id"]))
+
+    with SesionLocal() as db:
+        de_la_finca2 = db.scalars(select(Alerta).where(Alerta.finca_id == finca2["id"])).all()
+    assert de_la_finca2 and all(a.activa for a in de_la_finca2)

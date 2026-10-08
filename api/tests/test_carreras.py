@@ -197,3 +197,8 @@ def test_aplicar_y_revertir_la_misma_importacion_a_la_vez(cliente, granja):
 
     codigos = a_la_vez(lambda: cliente.post(f"{API}/importacion/{subida['id']}/revertir", headers=granja["cab"]))
     assert codigos.count(200) == 1, codigos
+
+
+def test_ver_los_avisos_a_la_vez_no_falla(cliente, granja):
+    codigos = a_la_vez(lambda: cliente.get(f"{API}/alertas", headers=granja["cab"]))
+    assert codigos == [200] * EN_PARALELO
