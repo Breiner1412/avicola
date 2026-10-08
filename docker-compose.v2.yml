@@ -56,15 +56,38 @@ services:
     restart: unless-stopped
     # interna: base y cache; proxy: Caddy y salida a internet (correo)
     networks: [interna, proxy]
-    env_file: ${ENV_FILE:-.env}
-    # Se usan los nombres de contenedor: en la red proxy, un servicio de otra app
-    # llamado "api", "db" o "cache" responderia a esos nombres cortos
+    # Solo lo que la API necesita (sin MYSQL_ROOT_PASSWORD). Los valores salen del .env
+    # junto a este archivo, o del indicado con --env-file.
     environment:
+      ENTORNO: ${ENTORNO:-produccion}
+      DEMO: ${DEMO:-false}
+      ZONA_HORARIA: ${ZONA_HORARIA:-America/Bogota}
+      TZ: ${TZ:-America/Bogota}
+      # Se usan los nombres de contenedor: en la red proxy, un servicio de otra app
+      # llamado "api", "db" o "cache" responderia a esos nombres cortos
       DB_HOST: avicola-db
       DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-avicola}
+      DB_USER: ${DB_USER:-avicola_app}
+      DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
+      DB_MIGRA_USER: ${DB_MIGRA_USER:-avicola}
+      DB_MIGRA_PASSWORD: ${DB_MIGRA_PASSWORD:?falta DB_MIGRA_PASSWORD}
       REDIS_URL: redis://avicola-cache:6379/0
-      TZ: ${TZ:-America/Bogota}
-      ZONA_HORARIA: ${ZONA_HORARIA:-America/Bogota}
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET}
+      MINUTOS_ACCESO: ${MINUTOS_ACCESO:-30}
+      DIAS_REFRESCO: ${DIAS_REFRESCO:-14}
+      COOKIE_SEGURA: ${COOKIE_SEGURA:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?falta ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?falta ADMIN_PASSWORD}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador}
+      CUENTA_DEMO: ${CUENTA_DEMO:-Granja de ejemplo}
+      FINCA_DEMO: ${FINCA_DEMO:-Finca principal}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_DESDE: ${SMTP_DESDE:-}
+      CORS_ORIGENES: ${CORS_ORIGENES:-}
       # Solo se cree X-Forwarded-For de quien esta en las redes privadas de Docker
       # (Caddy y la web): la API no tiene puertos publicados
       FORWARDED_ALLOW_IPS: ${PROXY_CONFIABLE:-172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}
