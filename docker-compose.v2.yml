@@ -1,3 +1,6 @@
+# Produccion: ningun puerto publicado. Solo Caddy (otro proyecto) expone 80 y 443
+# y llega a la web y a la API por la red de Docker.
+# Para probar en tu equipo con puertos: docker compose -f <este archivo> -f docker-compose.local.yml up
 name: avicola
 
 services:
@@ -22,8 +25,6 @@ services:
     volumes:
       - db_datos:/var/lib/mysql
       - ./db/inicio:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "127.0.0.1:${DB_PUERTO_HOST:-3308}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -57,8 +58,6 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:${API_PUERTO_HOST:-8000}:8000"
 
   web:
     build:
@@ -70,8 +69,6 @@ services:
       API_INTERNA: http://api:8000
     depends_on:
       - api
-    ports:
-      - "${WEB_PUERTO_HOST:-3000}:3000"
 
 volumes:
   db_datos:
