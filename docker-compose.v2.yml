@@ -29,7 +29,9 @@ services:
       - db_datos:/var/lib/mysql
       - ./db/inicio:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      # $$ hace que la clave la lea el shell dentro del contenedor: no queda escrita
+      # en la configuracion (docker inspect) ni en la lista de procesos
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent']
       interval: 10s
       timeout: 5s
       retries: 12
