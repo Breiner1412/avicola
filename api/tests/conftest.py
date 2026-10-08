@@ -14,6 +14,15 @@ from app.core.config import config  # noqa: E402
 API = "/api/v1"
 
 
+@pytest.fixture(autouse=True)
+def limites_limpios():
+    """Cada prueba empieza sin intentos contados (todas salen de la misma IP)."""
+    from app.core import cache
+
+    cache._memoria._datos.clear()
+    yield
+
+
 @pytest.fixture(scope="session")
 def cliente():
     with TestClient(app) as c:
