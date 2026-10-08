@@ -259,6 +259,29 @@ def test_vender_engorde_por_kilo(cliente, tienda):
     assert despues["aves_actuales"] == antes["aves_actuales"] - 20
 
 
+def test_no_se_venden_aves_de_otra_finca(cliente, tienda):
+    admin = cabeceras(tienda["token"])
+    otra = cliente.post(f"{API}/fincas", headers=admin, json={"codigo": "P9", "nombre": unico("Otra")}).json()
+    cab_otra = cabeceras(tienda["token"], otra["id"])
+    galpon = cliente.post(
+        f"{API}/galpones", headers=cab_otra, json={"codigo": "G9", "nombre": "Galpon 9", "capacidad": 500}
+    ).json()
+    ajeno = cliente.post(
+        f"{API}/lotes",
+        headers=cab_otra,
+        json={"codigo": "E9", "galpon_id": galpon["id"], "proposito": "engorde",
+              "fecha_ingreso": "2026-05-01", "aves_iniciales": 100},
+    ).json()
+
+    venta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["pollo"]["id"], "cantidad": 10, "aves": 5, "lote_id": ajeno["id"]}]},
+    )
+    assert venta.status_code == 400
+    assert cliente.get(f"{API}/lotes/{ajeno['id']}", headers=cab_otra).json()["aves_actuales"] == 100
+
+
 def test_el_cajero_no_puede_pasarse_del_tope_de_descuento(cliente, tienda):
     respuesta = cliente.post(
         f"{API}/ventas",

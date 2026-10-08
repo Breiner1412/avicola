@@ -228,6 +228,13 @@ def _descontar_item(db: Session, ctx: Contexto, venta: Venta, producto: Producto
         lote = db.get(Lote, item.lote_id)
         if lote is None or lote.cuenta_id != venta.cuenta_id:
             raise no_encontrado("El lote no existe")
+        # Las aves salen de la finca del punto de venta (o, si el punto es central,
+        # de una finca en la que quien vende puede trabajar)
+        if venta.finca_id is not None:
+            if lote.finca_id != venta.finca_id:
+                raise datos_invalidos(f"El lote {lote.codigo} no es de la finca de este punto de venta")
+        elif not ctx.es_plataforma and lote.finca_id not in ids_fincas_visibles(db, ctx):
+            raise no_encontrado("El lote no existe")
 
         aves = int(item.aves if item.aves is not None else cantidad)
         if aves <= 0:
