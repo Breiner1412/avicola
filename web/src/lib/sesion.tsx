@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, alCerrarSesion, alRenovarSesion, fijarFinca, fijarToken } from "./api";
+import { api, alCerrarSesion, alRenovarSesion, fijarFinca, fijarToken, renovarSesion } from "./api";
 import type { Sesion } from "./tipos";
 
 type Estado = {
@@ -32,8 +32,8 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        const datos = await api<Sesion>("/auth/refrescar", { metodo: "POST", sinSesion: true });
-        guardar(datos);
+        // Comparte la renovacion con cualquier otra que este en marcha
+        guardar(await renovarSesion());
       } catch {
         guardar(null);
       } finally {

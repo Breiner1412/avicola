@@ -40,6 +40,8 @@ export class FalloApi extends Error {
 type Opciones = {
   metodo?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   cuerpo?: unknown;
+  // Para subir archivos: se manda tal cual (multipart), sin JSON
+  formulario?: FormData;
   finca?: number | null;
   sinSesion?: boolean;
 };
@@ -50,7 +52,8 @@ async function leer(respuesta: Response) {
   try {
     return JSON.parse(texto);
   } catch {
-    return { mensaje: texto };
+    // HTML de un proxy (502, 504...) u otra respuesta que no es de la API
+    return null;
   }
 }
 
@@ -58,46 +61,90 @@ function extraerError(estado: number, cuerpo: unknown): FalloApi {
   const datos = (cuerpo ?? {}) as Record<string, unknown>;
   const detalle = (datos.detail ?? datos) as Record<string, unknown>;
   const codigo = typeof detalle.codigo === "string" ? detalle.codigo : "error";
-  const mensaje =
-    typeof detalle.mensaje === "string" ? detalle.mensaje : "No se pudo completar la operacion";
+  let mensaje = typeof detalle.mensaje === "string" ? detalle.mensaje : "No se pudo completar la operacion";
+  if (cuerpo === null && estado >= 500) {
+    mensaje = "El servidor no respondio. Intenta de nuevo en un momento.";
+  }
   const detalles = (detalle.detalles ?? {}) as Record<string, unknown>;
   return new FalloApi(estado, codigo, mensaje, detalles);
 }
 
+const SIN_CONEXION = () => new FalloApi(0, "sin_conexion", "No hay conexion con el servidor. Revisa tu internet.");
+
 async function enviar(ruta: string, opciones: Opciones): Promise<Response> {
-  const cabeceras: Record<string, string> = { "Content-Type": "application/json" };
+  const cabeceras: Record<string, string> = {};
+  if (!opciones.formulario) cabeceras["Content-Type"] = "application/json";
   if (token && !opciones.sinSesion) cabeceras.Authorization = `Bearer ${token}`;
 
   const finca = opciones.finca !== undefined ? opciones.finca : fincaId;
   if (finca) cabeceras["X-Finca-Id"] = String(finca);
 
-  return fetch(`${BASE}${ruta}`, {
-    method: opciones.metodo ?? "GET",
-    headers: cabeceras,
-    body: opciones.cuerpo === undefined ? undefined : JSON.stringify(opciones.cuerpo),
-    credentials: "include",
-  });
+  const cuerpo = opciones.formulario ?? (opciones.cuerpo === undefined ? undefined : JSON.stringify(opciones.cuerpo));
+  try {
+    return await fetch(`${BASE}${ruta}`, {
+      method: opciones.metodo ?? "GET",
+      headers: cabeceras,
+      body: cuerpo,
+      credentials: "include",
+    });
+  } catch {
+    throw SIN_CONEXION();
+  }
+}
+
+let renovando: Promise<Sesion | null> | null = null;
+
+/**
+ * Renueva el token de acceso con la cookie de refresco. Si varias peticiones lo
+ * necesitan a la vez, todas esperan la misma renovacion (el servidor cambia la
+ * cookie en cada uso). Devuelve null solo si la sesion ya no sirve (401).
+ */
+export function renovarSesion(): Promise<Sesion | null> {
+  if (!renovando) {
+    renovando = (async () => {
+      let respuesta: Response;
+      try {
+        respuesta = await fetch(`${BASE}/auth/refrescar`, { method: "POST", credentials: "include" });
+      } catch {
+        throw SIN_CONEXION();
+      }
+      if (respuesta.status === 401) return null;
+      if (!respuesta.ok) throw extraerError(respuesta.status, await leer(respuesta));
+      return (await respuesta.json()) as Sesion;
+    })().finally(() => {
+      renovando = null;
+    });
+  }
+  return renovando;
+}
+
+/** Hace la peticion y, si el token vencio, lo renueva una vez y la repite. */
+async function pedir(ruta: string, opciones: Opciones): Promise<Response> {
+  const respuesta = await enviar(ruta, opciones);
+  if (respuesta.status !== 401 || opciones.sinSesion || ruta.startsWith("/auth/")) return respuesta;
+
+  const sesion = await renovarSesion();
+  if (!sesion) {
+    token = null;
+    alCerrar?.();
+    return respuesta;
+  }
+  token = sesion.token;
+  fincaId = sesion.finca_activa?.id ?? fincaId;
+  alRenovar?.(sesion);
+  return enviar(ruta, opciones);
 }
 
 export async function api<T>(ruta: string, opciones: Opciones = {}): Promise<T> {
-  let respuesta = await enviar(ruta, opciones);
-
-  // Si el token vencio, se intenta renovar una sola vez con la cookie de refresco.
-  if (respuesta.status === 401 && !opciones.sinSesion && !ruta.startsWith("/auth/refrescar")) {
-    const renovada = await fetch(`${BASE}/auth/refrescar`, { method: "POST", credentials: "include" });
-    if (renovada.ok) {
-      const sesion = (await renovada.json()) as Sesion;
-      token = sesion.token;
-      fincaId = sesion.finca_activa?.id ?? fincaId;
-      alRenovar?.(sesion);
-      respuesta = await enviar(ruta, opciones);
-    } else {
-      token = null;
-      alCerrar?.();
-    }
-  }
-
+  const respuesta = await pedir(ruta, opciones);
   const cuerpo = await leer(respuesta);
   if (!respuesta.ok) throw extraerError(respuesta.status, cuerpo);
   return cuerpo as T;
+}
+
+/** Descarga un archivo (CSV) con la misma sesion y renovacion que api(). */
+export async function descargar(ruta: string): Promise<Blob> {
+  const respuesta = await pedir(ruta, {});
+  if (!respuesta.ok) throw extraerError(respuesta.status, await leer(respuesta));
+  return respuesta.blob();
 }
