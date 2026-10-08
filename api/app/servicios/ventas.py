@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
@@ -137,17 +137,29 @@ def turno_abierto(db: Session, ctx: Contexto, punto_venta_id: int | None = None)
     return db.scalars(consulta.order_by(TurnoCaja.id.desc())).first()
 
 
+def _cuenta_en_el_turno(turno: TurnoCaja):
+    """Ventas que suman en la caja: las activas y, si la caja ya se cerro, tambien
+    las que se anularon despues del cierre (ese dinero estaba al contar).
+
+    Se compara con >= porque DATETIME guarda segundos enteros: si la anulacion y el
+    cierre caen en el mismo segundo, la venta se cuenta como anulada despues del cierre.
+    """
+    if turno.cerrado_en is None:
+        return Venta.estado == "activa"
+    return or_(Venta.estado == "activa", Venta.anulada_en >= turno.cerrado_en)
+
+
 def totales_turno(db: Session, turno: TurnoCaja) -> dict:
     ventas, total = db.execute(
         select(func.count(Venta.id), func.coalesce(func.sum(Venta.total), 0)).where(
-            Venta.turno_id == turno.id, Venta.estado == "activa"
+            Venta.turno_id == turno.id, _cuenta_en_el_turno(turno)
         )
     ).one()
 
     efectivo = db.scalar(
         select(func.coalesce(func.sum(VentaPago.monto), 0))
         .join(Venta, VentaPago.venta_id == Venta.id)
-        .where(Venta.turno_id == turno.id, Venta.estado == "activa", VentaPago.es_efectivo.is_(True))
+        .where(Venta.turno_id == turno.id, _cuenta_en_el_turno(turno), VentaPago.es_efectivo.is_(True))
     ) or 0
 
     return {
@@ -409,6 +421,12 @@ def anular_venta(db: Session, ctx: Contexto, venta: Venta, motivo: str) -> None:
         if turno is None or venta.turno_id != turno.id:
             raise sin_permiso("Solo puedes anular ventas de tu turno abierto")
 
+    # Con la caja ya cerrada, solo quien responde por toda la cuenta
+    turno_venta = db.get(TurnoCaja, venta.turno_id) if venta.turno_id else None
+    caja_cerrada = turno_venta is not None and turno_venta.estado == "cerrado"
+    if caja_cerrada and not ctx.ve_toda_la_cuenta:
+        raise sin_permiso("Esa venta es de una caja ya cerrada: solo el propietario o el administrador pueden anularla")
+
     for detalle in venta.detalles:
         if detalle.clase == "huevo" and detalle.tipo_huevo_id and venta.finca_id:
             mover_stock_huevos(db, venta.finca_id, detalle.tipo_huevo_id, detalle.unidades)
@@ -439,5 +457,6 @@ def anular_venta(db: Session, ctx: Contexto, venta: Venta, motivo: str) -> None:
 
     registrar(
         db, ctx, "anular", "ventas", venta.id,
-        f"Anulo la venta {venta.numero} por {venta.total}", {"motivo": motivo},
+        f"Anulo la venta {venta.numero} por {venta.total}" + (" (caja ya cerrada)" if caja_cerrada else ""),
+        {"motivo": motivo, "caja_cerrada": caja_cerrada},
     )

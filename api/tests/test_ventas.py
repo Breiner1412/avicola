@@ -465,6 +465,39 @@ def test_cerrar_la_caja_calcula_la_diferencia(cliente, tienda):
     )
 
 
+def test_anular_con_la_caja_cerrada(cliente, tienda):
+    turnos = cliente.get(f"{API}/caja/turnos", headers=tienda["cab"]).json()
+    turno = next(t for t in turnos if t["estado"] == "cerrado" and t["ventas"] > 0)
+    activas = cliente.get(
+        f"{API}/ventas", headers=tienda["cab"], params={"turno_id": turno["id"], "incluir_anuladas": False}
+    ).json()["datos"]
+    venta = activas[0]
+
+    # El supervisor (y el cajero) ya no pueden: la caja se cerro
+    supervisor = cliente.post(
+        f"{API}/usuarios",
+        headers=tienda["cab"],
+        json={"nombres": "Super", "email": f"{unico('sup')}@avicola.com", "rol": "supervisor", "clave": CLAVE,
+              "debe_cambiar_clave": False, "fincas": [{"finca_id": tienda["finca_id"], "solo_lectura": False}]},
+    ).json()
+    token = cliente.post(f"{API}/auth/login", json={"email": supervisor["email"], "clave": CLAVE}).json()["token"]
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular",
+        headers=cabeceras(token, tienda["finca_id"]),
+        json={"motivo": "se cobro de mas al cliente"},
+    )
+    assert respuesta.status_code == 403
+
+    # El administrador si, y el cierre de la caja no cambia
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab"], json={"motivo": "se cobro de mas al cliente"}
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    despues = next(t for t in cliente.get(f"{API}/caja/turnos", headers=tienda["cab"]).json() if t["id"] == turno["id"])
+    assert despues["esperado_en_caja"] == turno["esperado_en_caja"]
+    assert despues["ventas"] == turno["ventas"]
+
+
 def test_resumen_de_ventas(cliente, tienda):
     resumen = cliente.get(f"{API}/ventas/resumen", headers=tienda["cab"]).json()
     assert resumen["ventas"] >= 1
