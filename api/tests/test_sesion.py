@@ -182,3 +182,15 @@ def test_una_ip_enorme_no_rompe_el_inicio_de_sesion(cliente, victima):
     assert mala.status_code == 401
     buena = cliente.post(f"{API}/auth/login", json={"email": victima["email"], "clave": CLAVE}, headers=cabecera)
     assert buena.status_code == 200, buena.text
+
+
+def test_sin_smtp_en_produccion_el_codigo_no_queda_en_el_log(monkeypatch, caplog):
+    from app.core import correo
+    from app.core.config import config as ajustes
+
+    monkeypatch.setattr(ajustes, "entorno", "produccion")
+    monkeypatch.setattr(ajustes, "smtp_host", "")
+    with caplog.at_level("WARNING", logger="avicola.correo"):
+        correo.enviar("alguien@avicola.com", "Codigo", "Tu codigo es 123456")
+    assert "123456" not in caplog.text
+    assert "no se envio" in caplog.text

@@ -1,4 +1,9 @@
-"""Envio de correo. Si no hay SMTP configurado, solo deja el mensaje en el log."""
+"""Envio de correo.
+
+Si no hay SMTP configurado, en desarrollo deja el mensaje en el log para poder
+probar; en produccion solo avisa que no se envio: el cuerpo puede llevar un codigo
+de recuperacion y no debe quedar en los logs.
+"""
 
 import logging
 import smtplib
@@ -11,7 +16,10 @@ log = logging.getLogger("avicola.correo")
 
 def enviar(destino: str, asunto: str, cuerpo: str) -> bool:
     if not config.smtp_host or not config.smtp_user:
-        log.warning("Sin SMTP configurado. Correo para %s: %s | %s", destino, asunto, cuerpo)
+        if config.es_produccion:
+            log.error("Sin SMTP configurado: no se envio el correo '%s' a %s", asunto, destino)
+        else:
+            log.warning("Sin SMTP configurado. Correo para %s: %s | %s", destino, asunto, cuerpo)
         return False
 
     mensaje = EmailMessage()
