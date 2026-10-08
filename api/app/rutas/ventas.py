@@ -359,7 +359,7 @@ def cerrar(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("caja", "editar")),
 ):
-    turno = turno_abierto(db, ctx)
+    turno = turno_abierto(db, ctx, bloquear_turno=True)
     if turno is None:
         raise datos_invalidos("No tienes ningun turno abierto")
 
@@ -489,7 +489,7 @@ def vender(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("ventas", "crear")),
 ):
-    turno = turno_abierto(db, ctx)
+    turno = turno_abierto(db, ctx, bloquear_turno=True)
     if turno is None:
         raise datos_invalidos("Primero abre la caja")
 

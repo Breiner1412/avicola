@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
-from app.core.db import obtener_db
+from app.core.db import bloquear, obtener_db
 from app.core.errores import conflicto, datos_invalidos, no_encontrado
 from app.esquemas.comunes import Mensaje
 from app.esquemas.importacion import (
@@ -278,6 +278,7 @@ def validar(
     ctx: Contexto = Depends(requiere("importacion", "crear")),
 ):
     importacion = _importacion_de(db, ctx, importacion_id)
+    bloquear(db, Importacion, importacion.id)  # dos clics no la aplican dos veces
     if importacion.estado != "pendiente":
         raise datos_invalidos("Esa importacion ya fue aplicada")
 
@@ -311,6 +312,7 @@ def aplicar(
     ctx: Contexto = Depends(requiere("importacion", "crear")),
 ):
     importacion = _importacion_de(db, ctx, importacion_id)
+    bloquear(db, Importacion, importacion.id)  # dos clics no la aplican dos veces
     if importacion.estado != "pendiente":
         raise datos_invalidos("Esa importacion ya fue aplicada")
 
@@ -346,6 +348,7 @@ def revertir(
     ctx: Contexto = Depends(requiere("importacion", "editar")),
 ):
     importacion = _importacion_de(db, ctx, importacion_id)
+    bloquear(db, Importacion, importacion.id)  # dos clics no la revierten dos veces
     if importacion.estado != "aplicada":
         raise datos_invalidos("Solo se puede deshacer una importacion que ya fue aplicada")
 

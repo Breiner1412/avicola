@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app.core.config import config
 from app.core.db import motor
@@ -77,6 +78,16 @@ async def validacion(peticion: Request, error: RequestValidationError):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"codigo": "datos_invalidos", "mensaje": "Revisa los datos enviados", "detalles": campos},
+    )
+
+
+@app.exception_handler(IntegrityError)
+async def conflicto_en_la_base(peticion: Request, error: IntegrityError):
+    """Un indice unico freno un dato repetido (por ejemplo, dos clics a la vez)."""
+    log.warning("Conflicto de integridad en %s %s: %s", peticion.method, peticion.url.path, error.orig)
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": {"codigo": "conflicto", "mensaje": "Ese cambio choca con otro que se hizo al mismo tiempo. Recarga e intenta de nuevo.", "detalles": {}}},
     )
 
 

@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto
+from app.core.db import bloquear
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.ventas import VentaCrear
+from app.modelos.acceso import Usuario
 from app.modelos.aves import Lote, MovimientoAves
 from app.modelos.organizacion import Cuenta
 from app.modelos.ventas import (
@@ -130,23 +132,31 @@ def guardar_precio(
 
 
 # --- Turnos de caja ---
-def turno_abierto(db: Session, ctx: Contexto, punto_venta_id: int | None = None) -> TurnoCaja | None:
+def turno_abierto(
+    db: Session, ctx: Contexto, punto_venta_id: int | None = None, bloquear_turno: bool = False
+) -> TurnoCaja | None:
+    """Turno abierto del usuario. Con bloquear_turno, vender y cerrar la caja se turnan:
+    una venta no entra en una caja que se esta cerrando."""
     consulta = select(TurnoCaja).where(TurnoCaja.usuario_id == ctx.usuario.id, TurnoCaja.estado == "abierto")
     if punto_venta_id is not None:
         consulta = consulta.where(TurnoCaja.punto_venta_id == punto_venta_id)
-    return db.scalars(consulta.order_by(TurnoCaja.id.desc())).first()
+    if bloquear_turno:
+        consulta = consulta.with_for_update().execution_options(populate_existing=True)
+    turno = db.scalars(consulta.order_by(TurnoCaja.id.desc())).first()
+    # Tras esperar el bloqueo, InnoDB puede devolver la fila ya cerrada por otro
+    if turno is not None and turno.estado != "abierto":
+        return None
+    return turno
 
 
 def _cuenta_en_el_turno(turno: TurnoCaja):
     """Ventas que suman en la caja: las activas y, si la caja ya se cerro, tambien
     las que se anularon despues del cierre (ese dinero estaba al contar).
-
-    Se compara con >= porque DATETIME guarda segundos enteros: si la anulacion y el
-    cierre caen en el mismo segundo, la venta se cuenta como anulada despues del cierre.
+    Ambas horas se guardan con microsegundos para poder compararlas.
     """
     if turno.cerrado_en is None:
         return Venta.estado == "activa"
-    return or_(Venta.estado == "activa", Venta.anulada_en >= turno.cerrado_en)
+    return or_(Venta.estado == "activa", Venta.anulada_en > turno.cerrado_en)
 
 
 def totales_turno(db: Session, turno: TurnoCaja) -> dict:
@@ -171,6 +181,8 @@ def totales_turno(db: Session, turno: TurnoCaja) -> dict:
 
 
 def abrir_turno(db: Session, ctx: Contexto, punto: PuntoVenta, base: float, observaciones: str | None) -> TurnoCaja:
+    # Dos clics en "abrir caja": el segundo espera y ve el turno que abrio el primero
+    bloquear(db, Usuario, ctx.usuario.id)
     if turno_abierto(db, ctx) is not None:
         raise datos_invalidos("Ya tienes un turno abierto. Cierralo antes de abrir otro.")
 
@@ -212,7 +224,9 @@ def cerrar_turno(db: Session, ctx: Contexto, turno: TurnoCaja, contado: float, o
 
 # --- Ventas ---
 def siguiente_numero(db: Session, punto_id: int) -> tuple[str, PuntoVenta]:
-    punto = db.execute(select(PuntoVenta).where(PuntoVenta.id == punto_id).with_for_update()).scalar_one()
+    # bloquear() refresca el punto: si ya estaba cargado, sin eso se leeria un
+    # consecutivo viejo y dos ventas a la vez sacarian el mismo numero
+    punto = bloquear(db, PuntoVenta, punto_id)
     punto.consecutivo += 1
     prefijo = punto.prefijo or punto.codigo
     return f"{prefijo}-{punto.consecutivo:06d}", punto
@@ -237,7 +251,7 @@ def _descontar_item(db: Session, ctx: Contexto, venta: Venta, producto: Producto
         if item.lote_id is None:
             raise datos_invalidos(f"Indica de que lote salen las aves de {producto.nombre}")
 
-        lote = db.get(Lote, item.lote_id)
+        lote = bloquear(db, Lote, item.lote_id)
         if lote is None or lote.cuenta_id != venta.cuenta_id:
             raise no_encontrado("El lote no existe")
         # Las aves salen de la finca del punto de venta (o, si el punto es central,
@@ -412,6 +426,8 @@ def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja,
 
 
 def anular_venta(db: Session, ctx: Contexto, venta: Venta, motivo: str) -> None:
+    # Dos clics a la vez: el segundo espera aqui y ve la venta ya anulada
+    bloquear(db, Venta, venta.id)
     if venta.estado == "anulada":
         raise datos_invalidos("Esa venta ya esta anulada")
 
@@ -432,10 +448,8 @@ def anular_venta(db: Session, ctx: Contexto, venta: Venta, motivo: str) -> None:
             mover_stock_huevos(db, venta.finca_id, detalle.tipo_huevo_id, detalle.unidades)
 
         elif detalle.clase in ("ave_descarte", "ave_engorde") and detalle.lote_id:
-            lote = db.get(Lote, detalle.lote_id)
-            movimiento = (
-                db.get(MovimientoAves, detalle.movimiento_aves_id) if detalle.movimiento_aves_id else None
-            )
+            lote = bloquear(db, Lote, detalle.lote_id)
+            movimiento = bloquear(db, MovimientoAves, detalle.movimiento_aves_id)
             if lote is None:
                 continue
             # Si esa salida ya se deshizo por otro lado, las aves ya volvieron al lote

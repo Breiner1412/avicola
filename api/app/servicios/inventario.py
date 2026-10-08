@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto
+from app.core.db import bloquear
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.inventario import MovimientoCrear
 from app.modelos.inventario import (
@@ -201,6 +202,7 @@ def crear_movimiento(db: Session, ctx: Contexto, datos: MovimientoCrear) -> Movi
 
 def anular_movimiento(db: Session, ctx: Contexto, movimiento: MovimientoInventario, motivo: str) -> None:
     """Devuelve las existencias como estaban y deja el movimiento marcado como anulado."""
+    bloquear(db, MovimientoInventario, movimiento.id)
     if movimiento.anulado:
         raise datos_invalidos("Ese movimiento ya estaba anulado")
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
-from app.core.db import obtener_db
+from app.core.db import bloquear, obtener_db
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.comunes import Mensaje
 from app.esquemas.trabajo import (
@@ -392,7 +392,7 @@ def crear_novedad(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("novedades", "crear", con_finca=True)),
 ):
-    lote = db.get(Lote, datos.lote_id) if datos.lote_id else None
+    lote = bloquear(db, Lote, datos.lote_id)
     if datos.lote_id and (lote is None or lote.finca_id != ctx.finca_id):
         raise datos_invalidos("El lote no existe en esta finca")
 

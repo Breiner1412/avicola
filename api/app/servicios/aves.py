@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto
+from app.core.db import bloquear
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.aves import MovimientoAvesCrear
 from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, Raza, StockHuevos, TipoHuevo
@@ -139,6 +140,7 @@ def crear_lote(db: Session, ctx: Contexto, datos) -> Lote:
 
 
 def cerrar_lote(db: Session, ctx: Contexto, lote: Lote, fecha: date, observaciones: str | None) -> None:
+    bloquear(db, Lote, lote.id)
     if lote.estado == "cerrado":
         raise datos_invalidos("Ese lote ya esta cerrado")
     if lote.aves_actuales > 0 or lote.aves_descarte > 0:
@@ -192,6 +194,7 @@ def _aplicar(db: Session, lote: Lote, tipo: str, cantidad: int, desde_descarte: 
 
 def crear_movimiento_aves(db: Session, ctx: Contexto, datos: MovimientoAvesCrear) -> MovimientoAves:
     lote = lote_de(db, ctx, datos.lote_id)
+    bloquear(db, Lote, lote.id)
     if lote.estado == "cerrado":
         raise datos_invalidos("El lote esta cerrado")
 
@@ -228,6 +231,7 @@ def crear_movimiento_aves(db: Session, ctx: Contexto, datos: MovimientoAvesCrear
 
 
 def anular_movimiento_aves(db: Session, ctx: Contexto, movimiento: MovimientoAves, motivo: str) -> None:
+    bloquear(db, MovimientoAves, movimiento.id)
     if movimiento.anulado:
         raise datos_invalidos("Ese movimiento ya estaba anulado")
 
@@ -240,7 +244,7 @@ def anular_movimiento_aves(db: Session, ctx: Contexto, movimiento: MovimientoAve
     if venta is not None:
         raise datos_invalidos(f"Estas aves salieron en la venta {venta}: anula la venta desde la caja")
 
-    lote = db.get(Lote, movimiento.lote_id)
+    lote = bloquear(db, Lote, movimiento.lote_id)
     if lote is None:
         raise no_encontrado("El lote no existe")
 
