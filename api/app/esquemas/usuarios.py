@@ -19,7 +19,7 @@ class UsuarioCrear(BaseModel):
     rol: str = Field(min_length=3, max_length=30)
     clave: str = Field(min_length=8, max_length=72)
     debe_cambiar_clave: bool = True
-    fincas: list[FincaAsignada] = []
+    fincas: list[FincaAsignada] = Field(default_factory=list, max_length=200)
     cuenta_id: int | None = None  # solo lo usa el rol de plataforma
 
 
@@ -31,7 +31,7 @@ class UsuarioActualizar(BaseModel):
     telefono: str | None = Field(default=None, max_length=30)
     rol: str | None = Field(default=None, min_length=3, max_length=30)
     activo: bool | None = None
-    fincas: list[FincaAsignada] | None = None
+    fincas: list[FincaAsignada] | None = Field(default=None, max_length=200)
 
 
 class ClaveNueva(BaseModel):

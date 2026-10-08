@@ -164,6 +164,20 @@ def test_abrir_caja(cliente, tienda):
     )
 
 
+@pytest.mark.parametrize(
+    "cuerpo",
+    [
+        {"items": [{"producto_id": 1, "cantidad": 1}], "pagos": [{"metodo_pago_id": 1, "monto": 10**15}]},
+        {"items": [{"producto_id": 1, "cantidad": 1}], "descuento": 10**15},
+        {"items": [{"producto_id": 1, "cantidad": 1}] * 101},
+        {"items": [{"producto_id": 1, "cantidad": 1}], "pagos": [{"metodo_pago_id": 1, "monto": 1}] * 11},
+    ],
+)
+def test_valores_y_listas_enormes_se_rechazan(cliente, tienda, cuerpo):
+    respuesta = cliente.post(f"{API}/ventas", headers=tienda["cab_cajero"], json=cuerpo)
+    assert respuesta.status_code == 422
+
+
 def test_el_cajero_no_pone_el_precio(cliente, tienda):
     respuesta = cliente.post(
         f"{API}/ventas",

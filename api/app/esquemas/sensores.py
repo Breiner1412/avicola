@@ -4,12 +4,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.esquemas.comunes import LECTURA_MAXIMA
+
 
 class TipoSensorCrear(BaseModel):
     nombre: str = Field(min_length=2, max_length=60)
     unidad: str = Field(default="", max_length=20)
-    min_ok: float | None = None
-    max_ok: float | None = None
+    min_ok: float | None = Field(default=None, ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
+    max_ok: float | None = Field(default=None, ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
 
 
 class TipoSensorSalida(BaseModel):
@@ -29,8 +31,8 @@ class SensorCrear(BaseModel):
     tipo_id: int
     galpon_id: int | None = None
     ubicacion: str | None = Field(default=None, max_length=120)
-    min_ok: float | None = None
-    max_ok: float | None = None
+    min_ok: float | None = Field(default=None, ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
+    max_ok: float | None = Field(default=None, ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
 
 
 class SensorActualizar(BaseModel):
@@ -38,19 +40,19 @@ class SensorActualizar(BaseModel):
     nombre: str | None = Field(default=None, min_length=2, max_length=100)
     galpon_id: int | None = None
     ubicacion: str | None = Field(default=None, max_length=120)
-    min_ok: float | None = None
-    max_ok: float | None = None
+    min_ok: float | None = Field(default=None, ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
+    max_ok: float | None = Field(default=None, ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
     activo: bool | None = None
 
 
 class LecturaCrear(BaseModel):
-    valor: float
+    valor: float = Field(ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
     medido_en: datetime | None = None
 
 
 class LecturaEquipo(BaseModel):
     codigo: str = Field(min_length=1, max_length=30)
-    valor: float
+    valor: float = Field(ge=-LECTURA_MAXIMA, le=LECTURA_MAXIMA)
     medido_en: datetime | None = None
 
 
