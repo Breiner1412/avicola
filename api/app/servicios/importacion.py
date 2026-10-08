@@ -160,8 +160,9 @@ def leer_archivo(contenido: bytes, nombre: str) -> tuple[str | None, list[str], 
         try:
             dialecto = csv.Sniffer().sniff(muestra, delimiters=",;\t|")
         except csv.Error:
-            dialecto = csv.excel
-            dialecto.delimiter = ";" if muestra.count(";") > muestra.count(",") else ","
+            # Una subclase propia: cambiar csv.excel afectaria a todo el proceso
+            separador = ";" if muestra.count(";") > muestra.count(",") else ","
+            dialecto = type("DialectoArchivo", (csv.excel,), {"delimiter": separador})
 
         lector = csv.reader(io.StringIO(texto), dialecto)
         filas_brutas = [fila for fila in lector if any(str(c).strip() for c in fila)]

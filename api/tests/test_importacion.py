@@ -458,3 +458,13 @@ def test_ninguna_ruta_bloquea_el_worker_con_trabajo_sincrono():
         if ruta.path.startswith("/api/v1") and inspect.iscoroutinefunction(getattr(ruta, "endpoint", None))
     ]
     assert asincronas == []
+
+
+def test_leer_un_csv_no_cambia_el_dialecto_global():
+    import csv
+
+    from app.servicios.importacion import leer_archivo
+
+    leer_archivo("solo una columna\nvalor\n".encode(), "x.csv")
+    leer_archivo("a;b\n1;2\n".encode(), "y.csv")
+    assert csv.excel.delimiter == ","
