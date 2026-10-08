@@ -164,6 +164,16 @@ def test_abrir_caja(cliente, tienda):
     )
 
 
+def test_el_cajero_no_pone_el_precio(cliente, tienda):
+    respuesta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["panal"]["id"], "cantidad": 1, "precio_unitario": 0}]},
+    )
+    assert respuesta.status_code == 422
+
+
+
 def test_vender_panales_descuenta_huevos(cliente, tienda):
     antes = stock_aaa(cliente, tienda)
     respuesta = cliente.post(

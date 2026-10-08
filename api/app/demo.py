@@ -637,18 +637,17 @@ class Demo:
         for n, cliente in enumerate(clientes):
             if not self.a_las(dia, 8 + n, random.randint(0, 50)):
                 break
-            items = []
+            items, total = [], 0.0
             for tipo in COMERCIALES:
                 reserva = 240 if tipo in ("AA", "A") else 60
                 panales = max(0, (stock[tipo] - reserva) // 30 // (len(clientes) - n))
                 if panales:
                     producto = self.productos[f"panal_{tipo}"]
-                    precio = round(producto["precio"] * self.factor_precio(dia) * 0.88, -2)
-                    items.append(ItemVenta(producto_id=producto["id"], cantidad=panales, precio_unitario=precio))
+                    items.append(ItemVenta(producto_id=producto["id"], cantidad=panales))
+                    total += panales * float(self.precio_vigente(producto["id"]))
                     stock[tipo] -= panales * 30
             if not items:
                 continue
-            total = sum(i.cantidad * i.precio_unitario for i in items)
             metodo = "Credito" if random.random() < 0.35 else "Transferencia"
             self.vender(ctx, items, [PagoVenta(metodo_pago_id=self.pagos[metodo], monto=total,
                                                referencia=f"Factura {random.randint(1000, 9999)}" if metodo == "Credito" else f"Bancolombia {random.randint(100000, 999999)}")],

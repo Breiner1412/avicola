@@ -294,7 +294,7 @@ def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja,
             raise datos_invalidos("Ese producto no esta disponible")
 
         cantidad = dec(item.cantidad)
-        precio = dec(item.precio_unitario) if item.precio_unitario is not None else precio_vigente(db, producto.id, punto.id)
+        precio = precio_vigente(db, producto.id, punto.id)
         if precio is None:
             raise datos_invalidos(f"El producto {producto.nombre} no tiene precio")
 

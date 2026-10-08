@@ -135,10 +135,13 @@ class TurnoSalida(BaseModel):
 
 # --- Ventas ---
 class ItemVenta(BaseModel):
+    # El precio no viene de quien vende: sale siempre de la lista de precios.
+    # Campos de mas (como precio_unitario) se rechazan en vez de ignorarse.
+    model_config = {"extra": "forbid"}
+
     producto_id: int
     # Presentaciones (panales, docenas, unidades) o kilos si se cobra por kg
     cantidad: float = Field(gt=0, le=1_000_000)
-    precio_unitario: float | None = Field(default=None, ge=0)
     lote_id: int | None = None
     aves: int | None = Field(default=None, ge=0)
 
