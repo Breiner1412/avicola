@@ -115,7 +115,7 @@ class TurnoCaja(Base):
     __table_args__ = (UniqueConstraint("abierto_de", name="uq_turno_abierto_por_usuario"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
+    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
     punto_venta_id: Mapped[int] = mapped_column(ForeignKey("puntos_venta.id"), nullable=False, index=True)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False, index=True)
     usuario_nombre: Mapped[str | None] = mapped_column(String(160))
@@ -141,8 +141,8 @@ class Venta(Base):
     __table_args__ = (UniqueConstraint("punto_venta_id", "numero", name="uq_venta_numero"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
-    finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="SET NULL"), index=True)
+    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="RESTRICT"), index=True)
     punto_venta_id: Mapped[int] = mapped_column(ForeignKey("puntos_venta.id"), nullable=False, index=True)
     turno_id: Mapped[int | None] = mapped_column(ForeignKey("turnos_caja.id"), index=True)
     numero: Mapped[str] = mapped_column(String(30), nullable=False)

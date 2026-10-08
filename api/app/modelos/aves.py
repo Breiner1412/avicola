@@ -72,7 +72,7 @@ class MovimientoAves(Base):
     __tablename__ = "movimientos_aves"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    lote_id: Mapped[int] = mapped_column(ForeignKey("lotes.id", ondelete="CASCADE"), nullable=False, index=True)
+    lote_id: Mapped[int] = mapped_column(ForeignKey("lotes.id", ondelete="RESTRICT"), nullable=False, index=True)
     fecha: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     tipo: Mapped[str] = mapped_column(Enum(*TIPOS_MOVIMIENTO_AVES, name="tipo_mov_aves"), nullable=False, index=True)
     cantidad: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -112,9 +112,9 @@ class ProduccionHuevos(Base):
     __table_args__ = (UniqueConstraint("lote_id", "fecha", "tipo_huevo_id", name="uq_produccion_dia"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
-    finca_id: Mapped[int] = mapped_column(ForeignKey("fincas.id", ondelete="CASCADE"), nullable=False, index=True)
-    lote_id: Mapped[int] = mapped_column(ForeignKey("lotes.id", ondelete="CASCADE"), nullable=False, index=True)
+    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    finca_id: Mapped[int] = mapped_column(ForeignKey("fincas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    lote_id: Mapped[int] = mapped_column(ForeignKey("lotes.id", ondelete="RESTRICT"), nullable=False, index=True)
     tipo_huevo_id: Mapped[int] = mapped_column(ForeignKey("tipos_huevo.id"), nullable=False)
     fecha: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     cantidad: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -180,9 +180,9 @@ class AplicacionSanitaria(Base):
     __tablename__ = "aplicaciones_sanitarias"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
-    finca_id: Mapped[int] = mapped_column(ForeignKey("fincas.id", ondelete="CASCADE"), nullable=False, index=True)
-    lote_id: Mapped[int | None] = mapped_column(ForeignKey("lotes.id", ondelete="SET NULL"), index=True)
+    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    finca_id: Mapped[int] = mapped_column(ForeignKey("fincas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    lote_id: Mapped[int | None] = mapped_column(ForeignKey("lotes.id", ondelete="RESTRICT"), index=True)
     galpon_id: Mapped[int | None] = mapped_column(ForeignKey("galpones.id", ondelete="SET NULL"))
     fecha: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     tipo: Mapped[str] = mapped_column(Enum(*TIPOS_SANIDAD, name="tipo_sanidad"), default="vacuna", nullable=False)
