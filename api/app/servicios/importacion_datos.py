@@ -151,7 +151,11 @@ def aplicar(
             resumen["creados"] += 1
 
     elif tipo == "entrada_inventario":
-        bodega = bodega_de(db, ctx, int(opciones.get("bodega_id") or 0))
+        try:
+            bodega_id = int(opciones.get("bodega_id") or 0)
+        except (TypeError, ValueError) as error:
+            raise datos_invalidos("Elige la bodega a la que entra el inventario") from error
+        bodega = bodega_de(db, ctx, bodega_id)
         crear_articulos = bool(opciones.get("crear_articulos", True))
 
         articulos_creados: list[int] = []

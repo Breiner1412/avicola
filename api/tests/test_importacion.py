@@ -352,3 +352,51 @@ def test_una_hoja_con_un_millon_de_filas_vacias_no_se_recorre_entera(cliente, fi
     assert time.monotonic() - inicio < 20
     assert respuesta.status_code == 201, respuesta.text
     assert respuesta.json()["filas_totales"] == 1
+
+
+@pytest.mark.parametrize(
+    "valor, esperado",
+    [
+        ("1.500", "1500"),
+        ("1.234,56", "1234.56"),
+        ("1,234.56", "1234.56"),
+        ("2,5", "2.5"),
+        ("2.5", "2.5"),
+        ("1,500,000", "1500000"),
+        ("$ 18.000", "18000"),
+        (1.125, "1.125"),
+        (40, "40"),
+    ],
+)
+def test_lee_los_numeros_como_se_escriben_en_colombia(valor, esperado):
+    from decimal import Decimal
+
+    from app.servicios.importacion import numero
+
+    assert numero(valor, "Cantidad") == Decimal(esperado)
+
+
+@pytest.mark.parametrize("valor", ["NaN", "Infinity", "-inf", "1e999999", "abc", True])
+def test_rechaza_lo_que_no_es_un_numero(valor):
+    from app.servicios.importacion import numero
+
+    with pytest.raises(ValueError):
+        numero(valor, "Cantidad")
+
+
+def test_un_csv_de_excel_en_windows_conserva_las_tildes(cliente, finca):
+    contenido = "Codigo;Nombre;Unidad\nV1;Vacuna Gumboro dosis única;dosis\n".encode("cp1252")
+    respuesta = subir(cliente, finca, "articulos", contenido, nombre="vacunas.csv")
+    assert respuesta.status_code == 201, respuesta.text
+    assert respuesta.json()["vista_previa"][0]["Nombre"] == "Vacuna Gumboro dosis única"
+
+
+def test_una_bodega_que_no_es_numero_no_rompe_la_importacion(cliente, finca):
+    contenido = excel(["Articulo", "Cantidad"], [["Concentrado", 10]])
+    analisis = subir(cliente, finca, "entrada_inventario", contenido).json()
+    respuesta = cliente.post(
+        f"{API}/importacion/{analisis['id']}/aplicar",
+        headers=finca["cab"],
+        json={"mapeo": analisis["mapeo_sugerido"], "opciones": {"bodega_id": "la central"}},
+    )
+    assert respuesta.status_code == 400
