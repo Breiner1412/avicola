@@ -172,3 +172,13 @@ def test_una_cuenta_desactivada_queda_por_fuera_de_inmediato(cliente, token_plat
     respuesta = cliente.delete(f"{API}/cuentas/{datos['cuenta_id']}", headers=cabeceras(token_plataforma))
     assert respuesta.status_code == 200, respuesta.text
     assert cliente.get(f"{API}/auth/yo", headers=cabeceras(datos["token"])).status_code == 401
+
+
+def test_una_ip_enorme_no_rompe_el_inicio_de_sesion(cliente, victima):
+    from tests.test_multicuenta import CLAVE
+
+    cabecera = {"X-Forwarded-For": "1" * 300}
+    mala = cliente.post(f"{API}/auth/login", json={"email": victima["email"], "clave": "mala"}, headers=cabecera)
+    assert mala.status_code == 401
+    buena = cliente.post(f"{API}/auth/login", json={"email": victima["email"], "clave": CLAVE}, headers=cabecera)
+    assert buena.status_code == 200, buena.text

@@ -38,7 +38,7 @@ def abrir_sesion(db: Session, usuario: Usuario, finca_id: int | None, ip: str | 
         usuario_id=usuario.id,
         huella=marca,
         finca_id=finca_id,
-        ip=ip,
+        ip=(ip or "")[:45] or None,
         agente=(agente or "")[:255] or None,
         expira_en=ahora_simple() + timedelta(days=config.dias_refresco),
         creado_en=ahora_simple(),
