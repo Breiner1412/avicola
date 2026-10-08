@@ -12,6 +12,7 @@ from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.aves import MovimientoAvesCrear
 from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, Raza, StockHuevos, TipoHuevo
 from app.modelos.organizacion import Galpon
+from app.modelos.ventas import Venta, VentaDetalle
 from app.servicios.alcance import cuenta_filtro, de_la_cuenta, ids_fincas_visibles
 
 # Movimientos que sacan aves del galpon
@@ -229,6 +230,15 @@ def crear_movimiento_aves(db: Session, ctx: Contexto, datos: MovimientoAvesCrear
 def anular_movimiento_aves(db: Session, ctx: Contexto, movimiento: MovimientoAves, motivo: str) -> None:
     if movimiento.anulado:
         raise datos_invalidos("Ese movimiento ya estaba anulado")
+
+    # La salida de una venta se deshace anulando la venta (que tambien devuelve el dinero);
+    # si se anulara aqui, al anular despues la venta las aves volverian dos veces.
+    venta = db.scalars(
+        select(Venta.numero).join(VentaDetalle, VentaDetalle.venta_id == Venta.id)
+        .where(VentaDetalle.movimiento_aves_id == movimiento.id)
+    ).first()
+    if venta is not None:
+        raise datos_invalidos(f"Estas aves salieron en la venta {venta}: anula la venta desde la caja")
 
     lote = db.get(Lote, movimiento.lote_id)
     if lote is None:

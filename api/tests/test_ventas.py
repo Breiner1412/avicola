@@ -410,8 +410,19 @@ def test_anular_devuelve_las_gallinas(cliente, tienda):
     antes = lote(cliente, tienda)
     venta = tienda["venta_gallinas"]
 
+    # La salida de la venta no se puede anular por separado (las aves volverian dos veces)
+    salidas = cliente.get(
+        f"{API}/movimientos-aves", headers=tienda["cab"], params={"lote_id": tienda["lote"]["id"], "tipo": "venta"}
+    ).json()
+    salida = next(m for m in salidas if venta["numero"] in (m["motivo"] or ""))
     respuesta = cliente.post(
-        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "Se cobro mal"}
+        f"{API}/movimientos-aves/{salida['id']}/anular", headers=tienda["cab"], json={"motivo": "deshacer la salida"}
+    )
+    assert respuesta.status_code == 400
+    assert lote(cliente, tienda)["aves_descarte"] == antes["aves_descarte"]
+
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "Se cobro mal la venta"}
     )
     assert respuesta.status_code == 200, respuesta.text
     assert lote(cliente, tienda)["aves_descarte"] == antes["aves_descarte"] + 10

@@ -438,6 +438,9 @@ def anular_venta(db: Session, ctx: Contexto, venta: Venta, motivo: str) -> None:
             )
             if lote is None:
                 continue
+            # Si esa salida ya se deshizo por otro lado, las aves ya volvieron al lote
+            if movimiento is not None and movimiento.anulado:
+                continue
             if detalle.clase == "ave_descarte":
                 lote.aves_descarte += detalle.unidades
             else:
