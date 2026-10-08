@@ -2,7 +2,7 @@ name: Pruebas
 
 on:
   push:
-    branches: [main]
+    branches: [main, auditoria]
   pull_request:
 
 jobs:
@@ -29,6 +29,7 @@ jobs:
       JWT_SECRET: clave-de-pruebas-larga-1234567890abcdefghij
       ADMIN_EMAIL: admin@avicola.com
       ADMIN_PASSWORD: Admin12345
+      ENTORNO: pruebas
       REDIS_URL: ""
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +46,9 @@ jobs:
         run: |
           alembic upgrade head
           python -m app.semilla
+      - name: Los modelos y las migraciones coinciden
+        working-directory: api
+        run: alembic check
       - name: Pruebas
         working-directory: api
         run: python -m pytest -q
@@ -61,6 +65,9 @@ jobs:
       - name: Instalar dependencias
         working-directory: web
         run: npm ci
+      - name: Revisar los tipos
+        working-directory: web
+        run: npx tsc --noEmit
       - name: Compilar
         working-directory: web
         run: npm run build

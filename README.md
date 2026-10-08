@@ -122,7 +122,7 @@ Todas las pantallas están en el [manual de usuario](docs/manual/MANUAL_DE_USUAR
 **Infraestructura**
 
 - **Docker Compose**: base de datos, caché, API y web
-- Flujo de GitHub Actions listo para correr las pruebas (`docs/github-actions-pruebas.yml`)
+- GitHub Actions corre las pruebas, revisa las migraciones y compila la web en cada push (`.github/workflows/pruebas.yml`)
 
 ---
 
@@ -357,7 +357,8 @@ importación desde Excel, tareas y novedades, sensores (incluido el envío por c
 el registro de cambios; y, lo más importante, que **una cuenta no pueda ver ni tocar los datos de
 otra**.
 
-Para correrlas en GitHub, copia `docs/github-actions-pruebas.yml` a `.github/workflows/pruebas.yml`.
+En GitHub corren solas en cada push y pull request (`.github/workflows/pruebas.yml`), junto con
+`alembic check` y la compilación de la web.
 
 ---
 
@@ -365,12 +366,15 @@ Para correrlas en GitHub, copia `docs/github-actions-pruebas.yml` a `.github/wor
 
 ```
 avicola/
-├── docker-compose.yml        # base de datos + caché + API + web
+├── docker-compose.yml           # producción: base + caché + API + web, sin puertos publicados
+├── docker-compose.local.yml     # desarrollo: publica los puertos en 127.0.0.1
 ├── .env.example                 # variables de entorno (copiar a .env)
+├── .github/workflows/pruebas.yml
+├── db/inicio/                   # crea el usuario de la aplicación en MySQL
+├── scripts/                     # respaldo y demo (reinicio nocturno)
 ├── docs/
 │   ├── manual/                  # manual de usuario con capturas
-│   ├── DISENO_V2.md             # diseño del sistema
-│   └── github-actions-pruebas.yml
+│   └── DISENO_V2.md             # diseño del sistema
 ├── api/
 │   ├── app/
 │   │   ├── main.py              # aplicación FastAPI
