@@ -121,6 +121,12 @@ def crear(
     movimiento_id = None
     costo = dec(0)
 
+    # El articulo y la bodega siempre deben ser de la cuenta, se descuente o no
+    if datos.articulo_id:
+        articulo_de(db, ctx, datos.articulo_id)
+    if datos.bodega_id:
+        bodega_de(db, ctx, datos.bodega_id)
+
     # Si se indica el articulo, tambien se descuenta de la bodega
     if datos.articulo_id and datos.cantidad_usada:
         if not datos.bodega_id:

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
-from app.core.errores import conflicto, datos_invalidos, no_encontrado
+from app.core.errores import conflicto, no_encontrado
 from app.esquemas.comunes import Mensaje
 from app.esquemas.sensores import (
     LecturaCrear,
@@ -24,7 +24,7 @@ from app.esquemas.sensores import (
 )
 from app.modelos.organizacion import Galpon
 from app.modelos.sensores import LecturaSensor, Sensor, TipoSensor
-from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, ids_fincas_visibles
+from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, de_la_cuenta, de_la_finca, ids_fincas_visibles
 
 router = APIRouter(tags=["Sensores"])
 
@@ -162,13 +162,8 @@ def crear(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("sensores", "crear", con_finca=True)),
 ):
-    tipo = db.get(TipoSensor, datos.tipo_id)
-    if tipo is None:
-        raise datos_invalidos("Ese tipo de sensor no existe")
-    if datos.galpon_id:
-        galpon = db.get(Galpon, datos.galpon_id)
-        if galpon is None or galpon.finca_id != ctx.finca_id:
-            raise datos_invalidos("El galpon no existe en esta finca")
+    de_la_cuenta(db, TipoSensor, datos.tipo_id, ctx.cuenta_activa_id or ctx.cuenta_id, "Ese tipo de sensor", compartido=True)
+    de_la_finca(db, Galpon, datos.galpon_id, ctx.finca_id, "El galpon")
     if db.scalars(
         select(Sensor.id).where(Sensor.finca_id == ctx.finca_id, Sensor.codigo == datos.codigo)
     ).first():
@@ -197,6 +192,9 @@ def editar(
 ):
     sensor = sensor_de(db, ctx, sensor_id)
     cambios = datos.model_dump(exclude_unset=True)
+    de_la_finca(db, Galpon, cambios.get("galpon_id"), sensor.finca_id, "El galpon")
+    if cambios.get("tipo_id") is not None:
+        de_la_cuenta(db, TipoSensor, cambios["tipo_id"], sensor.cuenta_id, "Ese tipo de sensor", compartido=True)
     for campo, valor in cambios.items():
         setattr(sensor, campo, valor)
     registrar(db, ctx, "editar", "sensores", sensor.id, f"Edito el sensor {sensor.nombre}", cambios)

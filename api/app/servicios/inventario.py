@@ -16,8 +16,9 @@ from app.modelos.inventario import (
     Existencia,
     MovimientoInventario,
     MovimientoItem,
+    Proveedor,
 )
-from app.servicios.alcance import cuenta_filtro, ids_fincas_visibles
+from app.servicios.alcance import cuenta_filtro, de_la_cuenta, ids_fincas_visibles
 
 CERO = Decimal("0")
 
@@ -126,6 +127,8 @@ def _validar_cabecera(db: Session, ctx: Contexto, datos: MovimientoCrear) -> tup
 
 def crear_movimiento(db: Session, ctx: Contexto, datos: MovimientoCrear) -> MovimientoInventario:
     origen, destino = _validar_cabecera(db, ctx, datos)
+    if datos.tipo == "entrada":
+        de_la_cuenta(db, Proveedor, datos.proveedor_id, origen.cuenta_id, "El proveedor")
 
     movimiento = MovimientoInventario(
         cuenta_id=origen.cuenta_id,

@@ -39,7 +39,7 @@ from app.modelos.aves import (
     Raza,
 )
 from app.modelos.organizacion import Galpon
-from app.servicios.alcance import cuenta_filtro, cuenta_objetivo
+from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, de_la_cuenta
 from app.servicios.aves import (
     ahora,
     anular_movimiento_aves,
@@ -157,6 +157,8 @@ def editar_lote(
         select(Lote.id).where(Lote.finca_id == lote.finca_id, Lote.codigo == cambios["codigo"], Lote.id != lote.id)
     ).first():
         raise conflicto("Ya existe otro lote con ese codigo en la finca")
+    if cambios.get("raza_id") is not None:
+        de_la_cuenta(db, Raza, cambios["raza_id"], lote.cuenta_id, "La raza", compartido=True)
 
     for campo, valor in cambios.items():
         setattr(lote, campo, dec(valor) if campo == "costo_ave" else valor)

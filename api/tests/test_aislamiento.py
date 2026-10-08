@@ -144,3 +144,51 @@ def test_no_escribe_en_finca_de_solo_lectura_desde_otra_finca(cliente, superviso
         json={"nombre": "Cambiado"},
     )
     assert respuesta.status_code in (403, 404)
+
+
+def test_ids_de_otra_empresa_en_el_cuerpo_se_rechazan(cliente, propietario_a, propietario_b):
+    cab_a = cabeceras(propietario_a["token"], propietario_a["finca_id"])
+    cab_b = cabeceras(propietario_b["token"], propietario_b["finca_id"])
+
+    # Raza propia de B usada en un lote de A
+    raza_b = cliente.post(f"{API}/razas", headers=cab_b, json={"nombre": unico("RazaB")}).json()
+    galpon_a = cliente.post(
+        f"{API}/galpones", headers=cab_a, json={"codigo": unico("G")[:20], "nombre": "Galpon A", "capacidad": 500}
+    ).json()
+    lote = cliente.post(
+        f"{API}/lotes",
+        headers=cab_a,
+        json={"codigo": "LX", "galpon_id": galpon_a["id"], "raza_id": raza_b["id"],
+              "fecha_ingreso": "2026-01-05", "aves_iniciales": 10},
+    )
+    assert lote.status_code == 400, lote.text
+
+    # Proveedor de B en una entrada de inventario de A
+    proveedor_b = cliente.post(f"{API}/proveedores", headers=cab_b, json={"nombre": unico("ProvB")}).json()
+    bodega_a = cliente.post(
+        f"{API}/bodegas", headers=cab_a, json={"codigo": unico("BX")[:20], "nombre": "Bodega A"}
+    ).json()
+    categoria = cliente.get(f"{API}/categorias-articulo", headers=cab_a).json()[0]
+    articulo_a = cliente.post(
+        f"{API}/articulos",
+        headers=cab_a,
+        json={"codigo": unico("AX")[:30], "nombre": "Articulo A", "categoria_id": categoria["id"], "unidad": "kg"},
+    ).json()
+    entrada = cliente.post(
+        f"{API}/movimientos",
+        headers=cab_a,
+        json={"tipo": "entrada", "fecha": "2026-02-01", "bodega_id": bodega_a["id"], "proveedor_id": proveedor_b["id"],
+              "items": [{"articulo_id": articulo_a["id"], "cantidad": 1, "costo_unitario": 100}]},
+    )
+    assert entrada.status_code == 400, entrada.text
+
+    # Galpon de B en una tarea de A
+    galpon_b = cliente.post(
+        f"{API}/galpones", headers=cab_b, json={"codigo": unico("G")[:20], "nombre": "Galpon B", "capacidad": 500}
+    ).json()
+    tarea = cliente.post(
+        f"{API}/tareas",
+        headers=cab_a,
+        json={"titulo": "Revisar galpon", "fecha": "2026-02-01", "galpon_id": galpon_b["id"]},
+    )
+    assert tarea.status_code == 400, tarea.text

@@ -33,7 +33,7 @@ from app.esquemas.ventas import (
     VentaCrear,
     VentaSalida,
 )
-from app.modelos.aves import StockHuevos
+from app.modelos.aves import StockHuevos, TipoHuevo
 from app.modelos.ventas import (
     UNIDADES_POR_PRESENTACION,
     MetodoPago,
@@ -45,7 +45,7 @@ from app.modelos.ventas import (
     VentaDetalle,
     VentaPago,
 )
-from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, ids_fincas_visibles
+from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, de_la_cuenta, ids_fincas_visibles
 from app.servicios.ventas import (
     abrir_turno,
     anular_venta,
@@ -202,6 +202,7 @@ def crear_producto(
         raise conflicto("Ya existe un producto con ese nombre")
     if datos.clase == "huevo" and datos.tipo_huevo_id is None:
         raise datos_invalidos("Indica que tipo de huevo se vende")
+    de_la_cuenta(db, TipoHuevo, datos.tipo_huevo_id, cuenta_id, "Ese tipo de huevo", compartido=True)
 
     cobro = "kg" if datos.presentacion == "kg" else datos.cobro_por
     producto = ProductoVenta(
@@ -239,6 +240,8 @@ def editar_producto(
         raise no_encontrado("El producto no existe")
 
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("tipo_huevo_id") is not None:
+        de_la_cuenta(db, TipoHuevo, cambios["tipo_huevo_id"], producto.cuenta_id, "Ese tipo de huevo", compartido=True)
     for campo, valor in cambios.items():
         setattr(producto, campo, valor)
     registrar(db, ctx, "editar", "productos_venta", producto.id, f"Edito el producto {producto.nombre}", cambios)

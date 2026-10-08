@@ -10,9 +10,9 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.aves import MovimientoAvesCrear
-from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, StockHuevos, TipoHuevo
+from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, Raza, StockHuevos, TipoHuevo
 from app.modelos.organizacion import Galpon
-from app.servicios.alcance import cuenta_filtro, ids_fincas_visibles
+from app.servicios.alcance import cuenta_filtro, de_la_cuenta, ids_fincas_visibles
 
 # Movimientos que sacan aves del galpon
 SALEN_DEL_GALPON = ("muerte", "fuga", "robo", "venta", "consumo", "regalo")
@@ -97,6 +97,7 @@ def crear_lote(db: Session, ctx: Contexto, datos) -> Lote:
     if repetido:
         raise datos_invalidos(f"Ya existe un lote con el codigo {datos.codigo} en esta finca")
 
+    de_la_cuenta(db, Raza, datos.raza_id, ctx.cuenta_activa_id or ctx.cuenta_id, "La raza", compartido=True)
     lote = Lote(
         cuenta_id=ctx.cuenta_activa_id or ctx.cuenta_id,
         finca_id=ctx.finca_id,
