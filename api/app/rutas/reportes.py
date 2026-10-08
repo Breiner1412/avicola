@@ -197,11 +197,25 @@ def resumen(
     }
 
 
+INICIOS_DE_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _celda_segura(valor):
+    """Un texto que empieza como formula (=, +, -, @) se abre en Excel como texto.
+
+    Evita que, por ejemplo, una novedad titulada =HYPERLINK(...) se ejecute al abrir
+    el reporte. Los numeros se dejan tal cual.
+    """
+    if isinstance(valor, str) and valor.startswith(INICIOS_DE_FORMULA):
+        return "'" + valor
+    return valor
+
+
 def _csv(nombre: str, encabezados: list[str], filas: list[list]) -> StreamingResponse:
     memoria = io.StringIO()
     escritor = csv.writer(memoria, delimiter=";")
     escritor.writerow(encabezados)
-    escritor.writerows(filas)
+    escritor.writerows([_celda_segura(valor) for valor in fila] for fila in filas)
     memoria.seek(0)
     # BOM para que Excel abra bien las tildes
     contenido = io.BytesIO(("﻿" + memoria.getvalue()).encode("utf-8"))
