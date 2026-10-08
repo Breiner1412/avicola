@@ -4,12 +4,15 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
+    CheckConstraint,
     Computed,
     Date,
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -112,7 +115,10 @@ class TurnoCaja(Base):
     """Cada jornada de un cajero en un punto de venta."""
 
     __tablename__ = "turnos_caja"
-    __table_args__ = (UniqueConstraint("abierto_de", name="uq_turno_abierto_por_usuario"),)
+    __table_args__ = (
+        UniqueConstraint("abierto_de", name="uq_turno_abierto_por_usuario"),
+        Index("ix_turnos_usuario_estado", "usuario_id", "estado"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
@@ -138,7 +144,13 @@ class Venta(Base):
     """Una venta. No se borra: se anula y queda registrada."""
 
     __tablename__ = "ventas"
-    __table_args__ = (UniqueConstraint("punto_venta_id", "numero", name="uq_venta_numero"),)
+    __table_args__ = (
+        UniqueConstraint("punto_venta_id", "numero", name="uq_venta_numero"),
+        CheckConstraint("subtotal >= 0 and descuento >= 0 and total >= 0", name="ck_venta_valores_no_negativos"),
+        Index("ix_ventas_cuenta_fecha", "cuenta_id", "fecha"),
+        Index("ix_ventas_punto_fecha", "punto_venta_id", "fecha"),
+        Index("ix_ventas_turno_estado", "turno_id", "estado"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
@@ -171,7 +183,7 @@ class Venta(Base):
 class VentaDetalle(Base):
     __tablename__ = "venta_detalles"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     venta_id: Mapped[int] = mapped_column(ForeignKey("ventas.id", ondelete="CASCADE"), nullable=False, index=True)
     producto_id: Mapped[int] = mapped_column(ForeignKey("productos_venta.id"), nullable=False)
     descripcion: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -192,6 +204,7 @@ class VentaDetalle(Base):
 
 class VentaPago(Base):
     __tablename__ = "venta_pagos"
+    __table_args__ = (CheckConstraint("monto > 0", name="ck_pago_positivo"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     venta_id: Mapped[int] = mapped_column(ForeignKey("ventas.id", ondelete="CASCADE"), nullable=False, index=True)

@@ -35,3 +35,11 @@ def test_no_se_borra_un_lote_con_historial(cliente, token_plataforma):
         db.commit()
     with SesionLocal() as db:
         assert db.scalar(select(Lote.id).where(Lote.id == lote["id"])) is not None
+
+
+def test_la_base_no_deja_existencias_ni_aves_negativas():
+    from sqlalchemy import text
+
+    with SesionLocal() as db, pytest.raises(Exception, match="ck_galpon_aves_no_negativas|3819"):
+        db.execute(text("UPDATE galpones SET aves_actuales = -1 LIMIT 1"))
+        db.commit()

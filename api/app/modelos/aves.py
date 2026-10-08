@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -43,7 +44,10 @@ class Lote(Base, Marcas):
     """Un grupo de aves que entra junto a un galpon."""
 
     __tablename__ = "lotes"
-    __table_args__ = (UniqueConstraint("finca_id", "codigo", name="uq_lote_codigo"),)
+    __table_args__ = (
+        UniqueConstraint("finca_id", "codigo", name="uq_lote_codigo"),
+        CheckConstraint("aves_actuales >= 0 and aves_descarte >= 0", name="ck_lote_aves_no_negativas"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -128,6 +132,7 @@ class StockHuevos(Base):
     """Huevos disponibles por finca y tipo (suman al recolectar, restan al vender)."""
 
     __tablename__ = "stock_huevos"
+    __table_args__ = (CheckConstraint("cantidad >= 0", name="ck_stock_huevos_no_negativo"),)
 
     finca_id: Mapped[int] = mapped_column(ForeignKey("fincas.id", ondelete="CASCADE"), primary_key=True)
     tipo_huevo_id: Mapped[int] = mapped_column(ForeignKey("tipos_huevo.id", ondelete="CASCADE"), primary_key=True)

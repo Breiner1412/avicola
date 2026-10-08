@@ -6,7 +6,7 @@ claves foraneas: un ON DELETE SET NULL reescribiria filas sin pasar por los trig
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Index, Integer, String
+from sqlalchemy import BigInteger, DateTime, Index, Integer, String
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,9 +18,10 @@ class Auditoria(Base):
     __table_args__ = (
         Index("ix_auditoria_cuenta_fecha", "cuenta_id", "creado_en"),
         Index("ix_auditoria_entidad", "entidad", "entidad_id"),
+        Index("ix_auditoria_cuenta_finca_fecha", "cuenta_id", "finca_id", "creado_en"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     cuenta_id: Mapped[int | None] = mapped_column(Integer)  # indice en ix_auditoria_cuenta_fecha
     finca_id: Mapped[int | None] = mapped_column(Integer, index=True)
     usuario_id: Mapped[int | None] = mapped_column(Integer, index=True)

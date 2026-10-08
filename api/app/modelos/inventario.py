@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -91,6 +92,7 @@ class Existencia(Base):
     """Cuanto hay de cada articulo en cada bodega."""
 
     __tablename__ = "existencias"
+    __table_args__ = (CheckConstraint("cantidad >= 0", name="ck_existencia_no_negativa"),)
 
     bodega_id: Mapped[int] = mapped_column(ForeignKey("bodegas.id", ondelete="CASCADE"), primary_key=True)
     articulo_id: Mapped[int] = mapped_column(ForeignKey("articulos.id", ondelete="CASCADE"), primary_key=True)

@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Enum, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modelos.base import Base, Marcas
@@ -53,7 +53,10 @@ class Finca(Base, Marcas):
 
 class Galpon(Base, Marcas):
     __tablename__ = "galpones"
-    __table_args__ = (UniqueConstraint("finca_id", "codigo", name="uq_galpon_codigo"),)
+    __table_args__ = (
+        UniqueConstraint("finca_id", "codigo", name="uq_galpon_codigo"),
+        CheckConstraint("aves_actuales >= 0", name="ck_galpon_aves_no_negativas"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     finca_id: Mapped[int] = mapped_column(ForeignKey("fincas.id", ondelete="CASCADE"), nullable=False, index=True)
