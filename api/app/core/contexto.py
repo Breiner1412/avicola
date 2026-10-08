@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import Depends, Header, Request
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.db import obtener_db
@@ -121,24 +121,36 @@ def contexto_actual(
     )
 
 
-def permisos_de_rol(db: Session, rol_id: int) -> dict[str, dict[str, bool]]:
+def _alcance(cuenta_id: int | None):
+    """Permisos de fabrica mas los propios de la cuenta (si la hay)."""
+    if cuenta_id is None:
+        return Permiso.cuenta_id.is_(None)
+    return or_(Permiso.cuenta_id.is_(None), Permiso.cuenta_id == cuenta_id)
+
+
+def permisos_de_rol(db: Session, rol_id: int, cuenta_id: int | None = None) -> dict[str, dict[str, bool]]:
+    """Matriz de un rol para una cuenta: lo de la cuenta manda sobre lo de fabrica."""
     filas = db.execute(
         select(Modulo.clave, Permiso.ver, Permiso.crear, Permiso.editar, Permiso.borrar)
         .join(Permiso, Permiso.modulo_id == Modulo.id)
-        .where(Permiso.rol_id == rol_id)
-        .order_by(Modulo.orden)
+        .where(Permiso.rol_id == rol_id, _alcance(cuenta_id))
+        # Primero los de fabrica y despues los de la cuenta, que los reemplazan
+        .order_by(Permiso.cuenta_id.is_not(None), Modulo.orden)
     ).all()
-    return {
-        clave: {"ver": bool(ver), "crear": bool(crear), "editar": bool(editar), "borrar": bool(borrar)}
-        for clave, ver, crear, editar, borrar in filas
-        if ver or crear or editar or borrar
-    }
+    matriz: dict[str, dict[str, bool]] = {}
+    for clave, ver, crear, editar, borrar in filas:
+        matriz[clave] = {"ver": bool(ver), "crear": bool(crear), "editar": bool(editar), "borrar": bool(borrar)}
+    return {clave: acciones for clave, acciones in matriz.items() if any(acciones.values())}
 
 
-def tiene_permiso(db: Session, rol_id: int, modulo: str, accion: str) -> bool:
+def tiene_permiso(db: Session, rol_id: int, modulo: str, accion: str, cuenta_id: int | None = None) -> bool:
     columna = {"ver": Permiso.ver, "crear": Permiso.crear, "editar": Permiso.editar, "borrar": Permiso.borrar}[accion]
     valor = db.execute(
-        select(columna).join(Modulo, Permiso.modulo_id == Modulo.id).where(Permiso.rol_id == rol_id, Modulo.clave == modulo)
+        select(columna)
+        .join(Modulo, Permiso.modulo_id == Modulo.id)
+        .where(Permiso.rol_id == rol_id, Modulo.clave == modulo, _alcance(cuenta_id))
+        .order_by(Permiso.cuenta_id.is_(None))
+        .limit(1)
     ).scalar_one_or_none()
     return bool(valor)
 
@@ -152,7 +164,7 @@ def requiere(modulo: str, accion: str = "ver", con_finca: bool = False):
     ) -> Contexto:
         if accion != "ver" and ctx.solo_lectura:
             raise sin_permiso("Solo puedes consultar esta finca")
-        if not tiene_permiso(db, ctx.usuario.rol_id, modulo, accion):
+        if not tiene_permiso(db, ctx.usuario.rol_id, modulo, accion, ctx.cuenta_id):
             raise sin_permiso(f"Tu rol no puede {accion} en {modulo}")
         if con_finca and ctx.finca_id is None:
             raise datos_invalidos("Primero elige la finca en la que vas a trabajar")

@@ -66,7 +66,10 @@ def sembrar_roles(db: Session) -> dict[str, Rol]:
 
 def sembrar_permisos(db: Session, roles: dict[str, Rol], modulos: dict[str, Modulo], forzar: bool) -> None:
     """Crea los permisos que falten. Con --forzar-permisos vuelve a dejar los de fabrica."""
-    actuales = {(p.rol_id, p.modulo_id): p for p in db.scalars(select(Permiso)).all()}
+    # Solo los de fabrica: los de cada empresa no se tocan
+    actuales = {
+        (p.rol_id, p.modulo_id): p for p in db.scalars(select(Permiso).where(Permiso.cuenta_id.is_(None))).all()
+    }
 
     for rol_clave, asignaciones in PERMISOS.items():
         rol = roles.get(rol_clave)

@@ -36,3 +36,34 @@ def test_propietario_no_puede_darse_el_modulo_de_cuentas(cliente, propietario_a,
 def test_plataforma_si_administra_cuentas(cliente, token_plataforma, propietario_b):
     respuesta = cliente.get(f"{API}/cuentas/{propietario_b['cuenta_id']}", headers=cabeceras(token_plataforma))
     assert respuesta.status_code == 200
+
+
+def test_los_permisos_de_una_empresa_no_cambian_los_de_otra(cliente, propietario_a, propietario_b):
+    quitar = {"ver": False, "crear": False, "editar": False, "borrar": False}
+    respuesta = cliente.put(f"{API}/permisos/cajero/ventas", headers=cabeceras(propietario_a["token"]), json=quitar)
+    assert respuesta.status_code == 200, respuesta.text
+
+    propia = cliente.get(f"{API}/permisos", headers=cabeceras(propietario_a["token"])).json()
+    ajena = cliente.get(f"{API}/permisos", headers=cabeceras(propietario_b["token"])).json()
+    assert "ventas" not in propia["cajero"]
+    assert ajena["cajero"]["ventas"]["crear"] is True
+
+
+def test_una_empresa_no_ve_la_matriz_de_otra(cliente, propietario_a, propietario_b):
+    respuesta = cliente.get(
+        f"{API}/permisos",
+        headers=cabeceras(propietario_a["token"]),
+        params={"cuenta_id": propietario_b["cuenta_id"]},
+    )
+    assert respuesta.status_code == 403
+
+
+def test_nadie_cambia_los_permisos_de_su_propio_rol(cliente, propietario_a):
+    respuesta = cliente.put(
+        f"{API}/permisos/propietario/roles",
+        headers=cabeceras(propietario_a["token"]),
+        json={"ver": False, "crear": False, "editar": False, "borrar": False},
+    )
+    assert respuesta.status_code == 403
+    matriz = cliente.get(f"{API}/permisos", headers=cabeceras(propietario_a["token"]))
+    assert matriz.status_code == 200
