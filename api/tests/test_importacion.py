@@ -444,3 +444,17 @@ def test_revertir_deja_el_dia_como_estaba_antes_de_importar(cliente, finca):
             )
         ).first()
         assert dia is not None and dia.cantidad == 200
+
+
+def test_ninguna_ruta_bloquea_el_worker_con_trabajo_sincrono():
+    """Las rutas usan la base de datos sincrona: deben ser def para correr en hilos."""
+    import inspect
+
+    from app.main import app
+
+    asincronas = [
+        ruta.path
+        for ruta in app.routes
+        if ruta.path.startswith("/api/v1") and inspect.iscoroutinefunction(getattr(ruta, "endpoint", None))
+    ]
+    assert asincronas == []
