@@ -33,6 +33,7 @@ La demo tiene dos fincas con seis meses de trabajo simulado. Entra con cualquier
 | `caja@demo-avicola.com` | Cajero | Caja con turno abierto |
 
 > La demo se restaura sola cada noche: lo que cambies se borra y vuelve a quedar como al principio.
+> En la demo no se pueden cambiar contraseñas, correos ni permisos (ver [Demo pública](#demo-pública)).
 
 ## Contenido
 
@@ -248,6 +249,36 @@ Todo se registra con las mismas reglas del sistema, así que el inventario, las 
 Contraseña de todos: **`Granja2026`**. Los datos se cargan una sola vez por base de datos; para volver a
 cargarlos hay que empezar de cero (`down -v`).
 
+### Demo pública
+
+La demo publicada usa **su propia base** (`DB_NAME=avicola_demo`) y `DEMO=true`. Con eso la API no deja
+cambiar contraseñas (propias ni ajenas), correos, roles, permisos ni cuentas, ni desactivar usuarios o
+fincas: nadie puede dejar a los demás sin entrar. Todo lo demás se puede probar, y cada noche los datos
+vuelven a quedar como al principio.
+
+El reinicio usa un **volcado base** y dos scripts que se corren desde la raíz del proyecto en la VM. Los
+dos se niegan a trabajar si `DEMO` no es `true` o si `DB_NAME` no termina en `_demo`.
+
+```bash
+# 1. Una vez (y cada semana, para que las fechas no envejezcan): crea la demo y guarda el volcado
+sh scripts/demo/crear_base.sh          # 180 días; deja demo/base_demo.sql.gz
+
+# 2. Cada noche: borra la base, carga el volcado, vacía Redis y vuelve a levantar la API (~10 s)
+sh scripts/demo/reiniciar.sh
+```
+
+Cron del host (`crontab -e` del usuario que maneja Docker; ajusta la ruta del proyecto):
+
+```cron
+# Reinicio de la demo todas las noches a las 3:00
+0 3 * * *  cd /opt/avicola && sh scripts/demo/reiniciar.sh >> /var/log/avicola-demo.log 2>&1
+# Volcado base nuevo cada domingo a las 2:30 (las fechas de la demo terminan ese dia)
+30 2 * * 0 cd /opt/avicola && sh scripts/demo/crear_base.sh >> /var/log/avicola-demo.log 2>&1
+```
+
+Variables opcionales de los scripts: `ENV_FILE` (por defecto `.env`), `COMPOSE_FILE` y `DEMO_BASE`
+(por defecto `demo/base_demo.sql.gz`, fuera del repositorio).
+
 ---
 
 ## Variables de entorno
@@ -261,6 +292,7 @@ no uses el signo `$` en las contraseñas: Docker Compose lo interpreta como vari
 | `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos y usuario de la aplicación (solo lee y escribe datos) | `avicola`, `avicola_app` |
 | `DB_MIGRA_USER`, `DB_MIGRA_PASSWORD` | Dueño del esquema, solo para las migraciones (vacíos = usan `DB_USER`) | `avicola` |
 | `DB_HOST`, `DB_PORT` | Dónde está MySQL | `db`, `3306` |
+| `DEMO` | `true` solo en la demo pública (ver [Demo pública](#demo-pública)) | `false` |
 | `JWT_SECRET` | Clave para firmar las sesiones (**mínimo 32 caracteres**) | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `MINUTOS_ACCESO` | Duración del token de acceso | `30` |
 | `DIAS_REFRESCO` | Días que dura la sesión sin volver a entrar | `14` |

@@ -43,7 +43,7 @@ services:
   api:
     build: ./api
     restart: unless-stopped
-    env_file: .env
+    env_file: ${ENV_FILE:-.env}
     environment:
       DB_HOST: db
       DB_PORT: "3306"
