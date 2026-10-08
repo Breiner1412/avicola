@@ -486,6 +486,11 @@ En el `Caddyfile` del Caddy compartido (que debe estar en la red `proxy`):
 granja.ejemplo.com {
 	encode zstd gzip
 
+	# HSTS solo para este dominio (sin includeSubDomains: otras apps comparten el dominio padre).
+	# Las demas cabeceras de seguridad (CSP, nosniff, frame-ancestors...) las pone la aplicacion.
+	header Strict-Transport-Security "max-age=31536000"
+	header -Server
+
 	# La API va directo a su contenedor: Caddy le pasa la IP real del visitante
 	# (los limites de intentos y el registro de cambios la usan)
 	handle /api/* {

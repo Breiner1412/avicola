@@ -206,3 +206,9 @@ def test_un_x_forwarded_for_falso_no_salta_el_limite(cliente, victima):
         for n in range(9)
     ]
     assert codigos[8] == 429
+
+
+def test_la_api_responde_con_cabeceras_de_seguridad(cliente):
+    respuesta = cliente.get(f"{API}/salud")
+    assert respuesta.headers["X-Content-Type-Options"] == "nosniff"
+    assert respuesta.headers["Cache-Control"] == "no-store"

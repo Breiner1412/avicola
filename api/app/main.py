@@ -79,6 +79,17 @@ async def capturar_errores(peticion: Request, siguiente):
 
 
 @app.middleware("http")
+async def cabeceras_de_seguridad(peticion: Request, siguiente):
+    """La API responde JSON: que el navegador no lo interprete como otra cosa ni lo enmarque."""
+    respuesta = await siguiente(peticion)
+    respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
+    respuesta.headers.setdefault("X-Frame-Options", "DENY")
+    respuesta.headers.setdefault("Referrer-Policy", "no-referrer")
+    respuesta.headers.setdefault("Cache-Control", "no-store")
+    return respuesta
+
+
+@app.middleware("http")
 async def limitar_peticiones(peticion: Request, siguiente):
     """Tope general de cambios, subidas y descargas por usuario o por conexion."""
     aplican = limites.limites_de_peticion(peticion.method, peticion.url.path)
