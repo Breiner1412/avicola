@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import bloquear, obtener_db
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
+from app.core.tiempo import hoy
 from app.esquemas.comunes import Mensaje
 from app.esquemas.trabajo import (
     CerrarNovedad,
@@ -297,7 +298,7 @@ def generar(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("tareas", "crear", con_finca=True)),
 ):
-    dia = datos.fecha or date.today()
+    dia = datos.fecha or hoy()
     rutinas = db.scalars(
         select(Rutina).where(Rutina.finca_id == ctx.finca_id, Rutina.activo.is_(True))
     ).all()

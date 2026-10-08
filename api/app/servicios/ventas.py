@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto
 from app.core.db import bloquear
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
+from app.core.tiempo import hoy as hoy_en_la_granja
 from app.esquemas.ventas import VentaCrear
 from app.modelos.acceso import Usuario
 from app.modelos.aves import Lote, MovimientoAves
@@ -103,7 +104,7 @@ def precio_vigente(db: Session, producto_id: int, punto_venta_id: int | None) ->
 def guardar_precio(
     db: Session, ctx: Contexto, producto_id: int, precio: float, punto_venta_id: int | None, desde: date | None
 ) -> Precio:
-    hoy = desde or date.today()
+    hoy = desde or hoy_en_la_granja()
 
     anteriores = db.scalars(
         select(Precio).where(
@@ -321,7 +322,7 @@ def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja,
         punto_venta_id=punto.id,
         turno_id=turno.id,
         numero=numero,
-        fecha=date.today(),
+        fecha=hoy_en_la_granja(),
         estado="activa",
         observaciones=datos.observaciones,
         usuario_id=ctx.usuario.id,

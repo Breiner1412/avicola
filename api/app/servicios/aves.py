@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto
 from app.core.db import bloquear
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
+from app.core.tiempo import hoy
 from app.esquemas.aves import MovimientoAvesCrear
 from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, Raza, StockHuevos, TipoHuevo
 from app.modelos.organizacion import Galpon
@@ -29,7 +30,7 @@ def dec(valor) -> Decimal:
 
 
 def edad_dias(lote: Lote, hasta: date | None = None) -> int:
-    referencia = hasta or (lote.fecha_cierre or date.today())
+    referencia = hasta or (lote.fecha_cierre or hoy())
     return max(0, (referencia - lote.fecha_ingreso).days + lote.edad_dias_ingreso)
 
 

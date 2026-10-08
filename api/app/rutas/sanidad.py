@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
 from app.core.errores import datos_invalidos, no_encontrado
+from app.core.tiempo import hoy
 from app.esquemas.aves import SanidadCrear, SanidadSalida
 from app.esquemas.comunes import Mensaje
 from app.esquemas.inventario import ItemEntrada, MovimientoCrear
@@ -89,7 +90,7 @@ def proximas(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("sanidad", "ver")),
 ):
-    limite = date.today() + timedelta(days=dias)
+    limite = hoy() + timedelta(days=dias)
     consulta = select(AplicacionSanitaria).where(
         AplicacionSanitaria.proximo_refuerzo.is_not(None),
         AplicacionSanitaria.proximo_refuerzo <= limite,

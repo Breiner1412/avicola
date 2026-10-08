@@ -16,6 +16,7 @@ services:
       --collation-server=utf8mb4_unicode_ci
       --log-bin-trust-function-creators=1
     environment:
+      TZ: ${TZ:-America/Bogota}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME:-avicola}
       # Duenio del esquema: solo lo usan las migraciones
@@ -39,6 +40,8 @@ services:
     restart: unless-stopped
     networks: [interna]
     command: ["redis-server", "--appendonly", "no", "--save", ""]
+    environment:
+      TZ: ${TZ:-America/Bogota}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -59,6 +62,7 @@ services:
       DB_PORT: "3306"
       REDIS_URL: redis://avicola-cache:6379/0
       TZ: ${TZ:-America/Bogota}
+      ZONA_HORARIA: ${ZONA_HORARIA:-America/Bogota}
       # Solo se cree X-Forwarded-For de quien esta en las redes privadas de Docker
       # (Caddy y la web): la API no tiene puertos publicados
       FORWARDED_ALLOW_IPS: ${PROXY_CONFIABLE:-172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}
@@ -79,6 +83,7 @@ services:
     networks: [interna, proxy]
     environment:
       API_INTERNA: http://avicola-api:8000
+      TZ: ${TZ:-America/Bogota}
     depends_on:
       - api
 

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
 from app.core.errores import datos_invalidos
+from app.core.tiempo import hoy
 from app.modelos.aves import ConsumoAlimento, Lote, MovimientoAves, ProduccionHuevos, TipoHuevo
 from app.modelos.inventario import Articulo, Bodega, Existencia
 from app.modelos.trabajo import Novedad, Tarea
@@ -25,7 +26,7 @@ TIPOS_CSV = ("produccion", "ventas", "aves", "alimento", "existencias", "novedad
 
 
 def _rango(desde: date | None, hasta: date | None) -> tuple[date, date]:
-    fin = hasta or date.today()
+    fin = hasta or hoy()
     inicio = desde or (fin - timedelta(days=29))
     if inicio > fin:
         raise datos_invalidos("La fecha inicial no puede ser mayor que la final")

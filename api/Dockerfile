@@ -23,6 +23,9 @@ RUN sed -i 's/\r$//' docker-entrypoint.sh \
 USER avicola
 EXPOSE 8000
 
+# Hora de los logs; las fechas de negocio usan ZONA_HORARIA (app/core/tiempo.py)
+ENV TZ=America/Bogota
+
 # Proxies de los que se cree X-Forwarded-For (IPs o redes, separadas por comas).
 # Por defecto ninguno; docker-compose lo define para la red interna de Docker.
 ENV FORWARDED_ALLOW_IPS=127.0.0.1

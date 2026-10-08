@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
+from app.core.tiempo import hoy as hoy_en_la_granja
 from app.modelos.acceso import Usuario, UsuarioFinca
 from app.modelos.alertas import Alerta
 from app.modelos.aves import Lote, ProduccionHuevos, StockHuevos
@@ -28,7 +29,7 @@ def resumen(
     ctx: Contexto = Depends(requiere("panel", "ver")),
 ):
     fincas = ids_fincas_visibles(db, ctx)
-    hoy = date.today()
+    hoy = hoy_en_la_granja()
     inicio = hoy - timedelta(days=dias - 1)
 
     galpones = aves = capacidad = 0

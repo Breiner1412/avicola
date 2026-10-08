@@ -21,6 +21,8 @@ class Configuracion(BaseSettings):
     # Demo publica: bloquea contrasenas, correos, permisos, cuentas y desactivaciones
     # para que ningun visitante la rompa para los demas (los datos se reinician cada noche)
     demo: bool = False
+    # Zona de la granja: define "hoy" y los dias de los reportes (las horas se guardan en UTC)
+    zona_horaria: str = "America/Bogota"
 
     # --- Base de datos ---
     db_host: str = "localhost"

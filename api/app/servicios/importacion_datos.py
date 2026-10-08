@@ -1,6 +1,5 @@
 """Lo que hace la importacion en la base de datos, y como deshacerla."""
 
-from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto
 from app.core.errores import datos_invalidos
+from app.core.tiempo import hoy
 from app.esquemas.inventario import ItemEntrada, MovimientoCrear
 from app.modelos.aves import AplicacionSanitaria, Lote, ProduccionHuevos, TipoHuevo
 from app.modelos.importacion import FilaImportacion, Importacion
@@ -172,7 +172,7 @@ def aplicar(
                 continue
             valores["_articulo_id"] = articulo.id
             clave = (
-                valores.get("fecha") or date.today(),
+                valores.get("fecha") or hoy(),
                 str(valores.get("documento") or ""),
                 str(valores.get("proveedor") or ""),
             )

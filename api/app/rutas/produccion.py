@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
 from app.core.errores import conflicto, datos_invalidos
+from app.core.tiempo import hoy
 from app.esquemas.aves import (
     ProduccionCrear,
     ProduccionDia,
@@ -114,7 +115,7 @@ def registrar_produccion(
     lote = lote_de(db, ctx, datos.lote_id)
     if lote.estado == "cerrado":
         raise datos_invalidos("El lote esta cerrado")
-    if datos.fecha > date.today():
+    if datos.fecha > hoy():
         raise datos_invalidos("No se puede registrar produccion de una fecha futura")
 
     tipos = {t.id: t for t in tipos_huevo_de(db, ctx)}

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto
 from app.core.db import bloquear
+from app.core.tiempo import hoy as hoy_en_la_granja, inicio_del_dia
 from app.modelos.alertas import Alerta
 from app.modelos.aves import AplicacionSanitaria
 from app.modelos.inventario import Articulo, Bodega, Existencia
@@ -41,7 +42,7 @@ def ahora() -> datetime:
 
 
 def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) -> list[dict]:
-    hoy = date.today()
+    hoy = hoy_en_la_granja()
     encontradas: list[dict] = []
 
     # 1. Articulos por debajo del minimo
@@ -207,7 +208,7 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
             select(TurnoCaja).where(
                 TurnoCaja.punto_venta_id.in_(puntos),
                 TurnoCaja.estado == "abierto",
-                TurnoCaja.abierto_en < datetime.combine(hoy, datetime.min.time()),
+                TurnoCaja.abierto_en < inicio_del_dia(hoy),
             )
         ).all()
         for turno in turnos:

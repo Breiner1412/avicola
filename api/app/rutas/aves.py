@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
 from app.core.errores import conflicto, datos_invalidos, no_encontrado
+from app.core.tiempo import hoy
 from app.esquemas.aves import (
     AnularMovimientoAves,
     BalanceLote,
@@ -474,7 +475,7 @@ def balance(lote_id: int, db: Session = Depends(obtener_db), ctx: Contexto = Dep
     lote = lote_de(db, ctx, lote_id)
     salida = _lote_salida(db, lote)
 
-    dias = max(1, (  (lote.fecha_cierre or date.today()) - lote.fecha_ingreso).days)
+    dias = max(1, (  (lote.fecha_cierre or hoy()) - lote.fecha_ingreso).days)
 
     alimento_kg, alimento_costo = db.execute(
         select(
