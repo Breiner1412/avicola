@@ -356,10 +356,21 @@ def test_anular_devuelve_los_huevos(cliente, tienda):
     # queda registrada y no se puede anular dos veces
     assert (
         cliente.post(
-            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "otra vez"}
+            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "otra vez por error"}
         ).status_code
         == 400
     )
+    # una venta anulada no se puede borrar: sigue en el historial
+    assert cliente.delete(f"{API}/ventas/{venta['id']}", headers=tienda["cab"]).status_code == 405
+    assert cliente.get(f"{API}/ventas/{venta['id']}", headers=tienda["cab"]).json()["estado"] == "anulada"
+
+
+def test_el_motivo_de_anulacion_debe_explicar_algo(cliente, tienda):
+    venta = tienda["venta_huevos"]
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "error"}
+    )
+    assert respuesta.status_code == 422
 
 
 def test_anular_devuelve_las_gallinas(cliente, tienda):
@@ -385,14 +396,14 @@ def test_el_cajero_no_anula_ventas_de_otro_turno(cliente, tienda):
     ).json()
 
     intento = cliente.post(
-        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "no es mia"}
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "no es mia, es de otro turno"}
     )
     assert intento.status_code == 403
 
     # el administrador si puede
     assert (
         cliente.post(
-            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab"], json={"motivo": "prueba"}
+            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab"], json={"motivo": "prueba del administrador"}
         ).status_code
         == 200
     )

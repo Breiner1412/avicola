@@ -201,7 +201,8 @@ class VentaSalida(BaseModel):
 
 
 class AnularVenta(BaseModel):
-    motivo: str = Field(min_length=3, max_length=255)
+    # La anulacion queda en el historial: el motivo debe explicar algo
+    motivo: str = Field(min_length=10, max_length=255)
 
 
 class ResumenVentas(BaseModel):

@@ -10,7 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
 from app.core.errores import conflicto, datos_invalidos, no_encontrado, sin_permiso
-from app.esquemas.comunes import Mensaje, Pagina
+from app.esquemas.comunes import Pagina
 from app.esquemas.ventas import (
     AjustesVentas,
     AjustesVentasActualizar,
@@ -608,20 +608,4 @@ def anular(
     db.commit()
     db.refresh(venta)
     return _venta_salida(venta)
-
-
-@router.delete("/ventas/{venta_id}", response_model=Mensaje, summary="Borrar una venta anulada")
-def borrar(
-    venta_id: int,
-    db: Session = Depends(obtener_db),
-    ctx: Contexto = Depends(requiere("ventas", "borrar")),
-):
-    venta = _venta_de(db, ctx, venta_id)
-    if venta.estado != "anulada":
-        raise datos_invalidos("Solo se puede borrar una venta que ya fue anulada")
-
-    registrar(db, ctx, "borrar", "ventas", venta.id, f"Borro la venta anulada {venta.numero}")
-    db.delete(venta)
-    db.commit()
-    return Mensaje(mensaje="Venta borrada")
 
