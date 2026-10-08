@@ -5,7 +5,8 @@ RUN npm install
 
 FROM node:22-alpine AS constructor
 WORKDIR /app
-ARG API_INTERNA=http://api:8000
+# Destino de /api: queda fijo en la imagen al construir (next build)
+ARG API_INTERNA=http://avicola-api:8000
 ENV API_INTERNA=$API_INTERNA
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencias /app/node_modules ./node_modules

@@ -52,10 +52,12 @@ services:
     # interna: base y cache; proxy: Caddy y salida a internet (correo)
     networks: [interna, proxy]
     env_file: ${ENV_FILE:-.env}
+    # Se usan los nombres de contenedor: en la red proxy, un servicio de otra app
+    # llamado "api", "db" o "cache" responderia a esos nombres cortos
     environment:
-      DB_HOST: db
+      DB_HOST: avicola-db
       DB_PORT: "3306"
-      REDIS_URL: redis://cache:6379/0
+      REDIS_URL: redis://avicola-cache:6379/0
       TZ: ${TZ:-America/Bogota}
       # Solo se cree X-Forwarded-For de quien esta en las redes privadas de Docker
       # (Caddy y la web): la API no tiene puertos publicados
@@ -70,12 +72,13 @@ services:
     build:
       context: ./web
       args:
-        API_INTERNA: http://api:8000
+        # Queda fijo al construir la imagen (next build); si cambia, hay que reconstruir
+        API_INTERNA: http://avicola-api:8000
     container_name: avicola-web
     restart: unless-stopped
     networks: [interna, proxy]
     environment:
-      API_INTERNA: http://api:8000
+      API_INTERNA: http://avicola-api:8000
     depends_on:
       - api
 
