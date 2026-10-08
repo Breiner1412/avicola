@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import type { ResumenAlertas } from "@/lib/tipos";
 import { Icono } from "./iconos";
+import { rutaInterna } from "@/lib/menu";
 
 const TONO: Record<string, string> = {
   critico: "bg-rose-100 text-rose-700",
@@ -90,7 +91,7 @@ export function Campana({ fincaId }: { fincaId: number | null }) {
                 {datos.alertas.slice(0, 12).map((alerta) => (
                   <li key={alerta.id}>
                     <Link
-                      href={alerta.ruta ?? "/panel"}
+                      href={rutaInterna(alerta.ruta)}
                       onClick={() => setAbierta(false)}
                       className={`flex gap-3 px-4 py-3 transition hover:bg-slate-50 ${alerta.leida ? "opacity-70" : ""}`}
                     >

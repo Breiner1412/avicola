@@ -70,3 +70,13 @@ export function moduloDeRuta(ruta: string): string | null {
   }
   return null;
 }
+
+/**
+ * Ruta segura para un enlace que viene de la API (por ejemplo, la de un aviso).
+ * Solo se aceptan rutas internas ("/lotes/3"); "javascript:", "//otro.sitio" o una
+ * URL completa terminan en el panel.
+ */
+export function rutaInterna(ruta: string | null | undefined, porDefecto = "/panel"): string {
+  if (!ruta || !ruta.startsWith("/") || ruta.startsWith("//") || ruta.includes("\\")) return porDefecto;
+  return ruta;
+}
