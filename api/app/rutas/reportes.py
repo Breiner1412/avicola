@@ -284,7 +284,10 @@ def descargar(
                    Existencia.costo_promedio, Articulo.stock_minimo)
             .join(Articulo, Existencia.articulo_id == Articulo.id)
             .join(Bodega, Existencia.bodega_id == Bodega.id)
-            .where(Bodega.cuenta_id == (ctx.cuenta_activa_id or 0))
+            .where(
+                Bodega.cuenta_id == (ctx.cuenta_activa_id or 0),
+                or_(Bodega.finca_id.is_(None), Bodega.finca_id.in_(_fincas(db, ctx))),
+            )
             .order_by(Bodega.nombre, Articulo.nombre)
         ).all()
         return _csv(

@@ -11,6 +11,7 @@ from app.core.db import obtener_db
 from app.esquemas.comunes import Pagina
 from app.esquemas.registro import AuditoriaSalida
 from app.modelos.registro import Auditoria
+from app.servicios.alcance import ids_fincas_visibles
 
 router = APIRouter(prefix="/auditoria", tags=["Registro de cambios"])
 
@@ -31,6 +32,9 @@ def listar(
     consulta = select(Auditoria)
     if not ctx.es_plataforma:
         consulta = consulta.where(Auditoria.cuenta_id == ctx.cuenta_id)
+        if not ctx.ve_toda_la_cuenta:
+            # Quien no ve toda la cuenta solo ve lo que paso en sus fincas
+            consulta = consulta.where(Auditoria.finca_id.in_(ids_fincas_visibles(db, ctx) or [0]))
     if solo_finca_activa and ctx.finca_id is not None:
         consulta = consulta.where(Auditoria.finca_id == ctx.finca_id)
     if desde:

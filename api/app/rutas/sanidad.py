@@ -99,6 +99,8 @@ def proximas(
         consulta = consulta.where(AplicacionSanitaria.cuenta_id == cuenta)
     if ctx.finca_id is not None:
         consulta = consulta.where(AplicacionSanitaria.finca_id == ctx.finca_id)
+    elif not ctx.es_plataforma:
+        consulta = consulta.where(AplicacionSanitaria.finca_id.in_(ids_fincas_visibles(db, ctx) or [0]))
 
     filas = db.scalars(consulta.order_by(AplicacionSanitaria.proximo_refuerzo)).all()
     return [_salida(db, fila) for fila in refuerzos_pendientes(db, list(filas))]

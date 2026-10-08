@@ -680,4 +680,6 @@ export type ResumenPanel = {
   sensores: number;
   sensores_alerta: number;
   alertas: number;
+  // Solo para el supervisor: numeros generales de las fincas que no tiene a cargo
+  otras_fincas: { id: number; nombre: string; aves: number; huevos_periodo: number; lotes_activos: number }[];
 };

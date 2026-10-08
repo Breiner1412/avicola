@@ -192,3 +192,60 @@ def test_ids_de_otra_empresa_en_el_cuerpo_se_rechazan(cliente, propietario_a, pr
         json={"titulo": "Revisar galpon", "fecha": "2026-02-01", "galpon_id": galpon_b["id"]},
     )
     assert tarea.status_code == 400, tarea.text
+
+
+def _crear_usuario(cliente, cab_admin, rol, fincas):
+    email = f"{unico(rol)}@avicola.com"
+    creado = cliente.post(
+        f"{API}/usuarios",
+        headers=cab_admin,
+        json={"nombres": rol.title(), "email": email, "rol": rol, "clave": "ClaveDePrueba123",
+              "debe_cambiar_clave": False, "fincas": [{"finca_id": f, "solo_lectura": False} for f in fincas]},
+    )
+    assert creado.status_code == 201, creado.text
+    sesion = cliente.post(f"{API}/auth/login", json={"email": email, "clave": "ClaveDePrueba123"}).json()
+    return {"id": creado.json()["id"], "email": email, "token": sesion["token"]}
+
+
+@pytest.fixture(scope="module")
+def empresa_con_dos_fincas(cliente, token_plataforma):
+    cuenta = crear_cuenta_completa(cliente, token_plataforma, "DosFincas")
+    admin = cabeceras(cuenta["token"])
+    finca2 = cliente.post(f"{API}/fincas", headers=admin, json={"codigo": "P2", "nombre": unico("Lejana")}).json()
+    # Algo que quede en el registro de la finca 2
+    cliente.post(
+        f"{API}/galpones",
+        headers=cabeceras(cuenta["token"], finca2["id"]),
+        json={"codigo": "GL", "nombre": "Galpon lejano", "capacidad": 300},
+    )
+    operario2 = _crear_usuario(cliente, admin, "operario", [finca2["id"]])
+    supervisor = _crear_usuario(cliente, admin, "supervisor", [cuenta["finca_id"]])
+    return {"finca1": cuenta["finca_id"], "finca2": finca2, "operario2": operario2, "supervisor": supervisor}
+
+
+def test_supervisor_no_ve_usuarios_de_otras_fincas(cliente, empresa_con_dos_fincas):
+    datos = empresa_con_dos_fincas
+    cab = cabeceras(datos["supervisor"]["token"], datos["finca1"])
+    correos = {u["email"] for u in cliente.get(f"{API}/usuarios", headers=cab).json()}
+    assert datos["supervisor"]["email"] in correos
+    assert datos["operario2"]["email"] not in correos
+    assert cliente.get(f"{API}/usuarios/{datos['operario2']['id']}", headers=cab).status_code == 404
+
+
+def test_supervisor_no_ve_el_registro_de_otras_fincas(cliente, empresa_con_dos_fincas):
+    datos = empresa_con_dos_fincas
+    cab = cabeceras(datos["supervisor"]["token"], datos["finca1"])
+    respuesta = cliente.get(f"{API}/auditoria", headers=cab, params={"tamano": 200})
+    assert respuesta.status_code == 200, respuesta.text
+    assert all(linea["finca_id"] == datos["finca1"] for linea in respuesta.json()["datos"])
+
+
+def test_supervisor_ve_un_resumen_de_las_demas_fincas(cliente, empresa_con_dos_fincas):
+    datos = empresa_con_dos_fincas
+    cab = cabeceras(datos["supervisor"]["token"], datos["finca1"])
+    panel = cliente.get(f"{API}/panel/resumen", headers=cab).json()
+    otras = {f["id"]: f for f in panel["otras_fincas"]}
+    assert datos["finca2"]["id"] in otras
+    assert set(otras[datos["finca2"]["id"]]) == {"id", "nombre", "aves", "huevos_periodo", "lotes_activos"}
+    # y no puede entrar al detalle de esa finca
+    assert cliente.get(f"{API}/galpones", headers=cabeceras(datos["supervisor"]["token"], datos["finca2"]["id"])).status_code == 403

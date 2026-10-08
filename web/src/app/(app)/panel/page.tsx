@@ -176,6 +176,37 @@ export default function Panel() {
               </div>
             </Tarjeta>
           </div>
+
+          {datos.otras_fincas?.length ? (
+            <Tarjeta
+              titulo="Las demas fincas de la empresa"
+              descripcion={`Resumen general · ultimos ${datos.dias} dias`}
+              icono="finca"
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-slate-500">
+                    <tr>
+                      <th className="py-2 pr-3 font-medium">Finca</th>
+                      <th className="py-2 pr-3 text-right font-medium">Aves</th>
+                      <th className="py-2 pr-3 text-right font-medium">Lotes activos</th>
+                      <th className="py-2 text-right font-medium">Huevos del periodo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {datos.otras_fincas.map((finca) => (
+                      <tr key={finca.id}>
+                        <td className="py-2 pr-3 text-slate-800">{finca.nombre}</td>
+                        <td className="py-2 pr-3 text-right">{numero(finca.aves)}</td>
+                        <td className="py-2 pr-3 text-right">{numero(finca.lotes_activos)}</td>
+                        <td className="py-2 text-right">{numero(finca.huevos_periodo)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Tarjeta>
+          ) : null}
         </>
       ) : null}
     </>

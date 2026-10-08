@@ -3,12 +3,12 @@
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
-from app.modelos.acceso import Usuario
+from app.modelos.acceso import Usuario, UsuarioFinca
 from app.modelos.alertas import Alerta
 from app.modelos.aves import Lote, ProduccionHuevos, StockHuevos
 from app.modelos.organizacion import Finca, Galpon
@@ -43,11 +43,14 @@ def resumen(
 
     usuarios = 0
     if ctx.cuenta_activa_id is not None:
-        usuarios = db.scalar(
-            select(func.count(Usuario.id)).where(
-                Usuario.cuenta_id == ctx.cuenta_activa_id, Usuario.activo.is_(True)
-            )
+        consulta_usuarios = select(func.count(Usuario.id)).where(
+            Usuario.cuenta_id == ctx.cuenta_activa_id, Usuario.activo.is_(True)
         )
+        if not ctx.ve_toda_la_cuenta:
+            consulta_usuarios = consulta_usuarios.where(
+                Usuario.id.in_(select(UsuarioFinca.usuario_id).where(UsuarioFinca.finca_id.in_(fincas or [0])))
+            )
+        usuarios = db.scalar(consulta_usuarios)
 
     finca = db.get(Finca, ctx.finca_id) if ctx.finca_id else None
     fincas_consulta = [ctx.finca_id] if ctx.finca_id is not None else (fincas or [0])
@@ -125,9 +128,12 @@ def resumen(
     cuenta = cuenta_filtro(ctx)
     alertas = 0
     if cuenta is not None:
-        alertas = db.scalar(
-            select(func.count(Alerta.id)).where(Alerta.cuenta_id == cuenta, Alerta.activa.is_(True))
-        ) or 0
+        consulta_alertas = select(func.count(Alerta.id)).where(Alerta.cuenta_id == cuenta, Alerta.activa.is_(True))
+        if not ctx.ve_toda_la_cuenta:
+            consulta_alertas = consulta_alertas.where(
+                or_(Alerta.finca_id.is_(None), Alerta.finca_id.in_(fincas or [0]))
+            )
+        alertas = db.scalar(consulta_alertas) or 0
 
     huevos_periodo = sum(d["valor"] for d in produccion)
     ventas_periodo = sum(d["valor"] for d in ventas)
@@ -156,4 +162,52 @@ def resumen(
         "sensores": len(sensores),
         "sensores_alerta": sensores_alerta,
         "alertas": int(alertas),
+        "otras_fincas": _otras_fincas(db, ctx, fincas, inicio, hoy) if ctx.rol == "supervisor" else [],
     }
+
+
+def _otras_fincas(db: Session, ctx: Contexto, propias: list[int], inicio: date, hoy: date) -> list[dict]:
+    """Resumen de las fincas de la empresa que el supervisor no tiene a cargo.
+
+    Solo numeros generales (aves, huevos del periodo, lotes activos): el detalle
+    queda para quien trabaja en esas fincas.
+    """
+    otras = db.scalars(
+        select(Finca)
+        .where(Finca.cuenta_id == ctx.cuenta_id, Finca.activo.is_(True), Finca.id.not_in(propias or [0]))
+        .order_by(Finca.nombre)
+    ).all()
+    if not otras:
+        return []
+    ids = [f.id for f in otras]
+    aves = dict(
+        db.execute(
+            select(Galpon.finca_id, func.coalesce(func.sum(Galpon.aves_actuales), 0))
+            .where(Galpon.finca_id.in_(ids), Galpon.activo.is_(True))
+            .group_by(Galpon.finca_id)
+        ).all()
+    )
+    huevos = dict(
+        db.execute(
+            select(ProduccionHuevos.finca_id, func.coalesce(func.sum(ProduccionHuevos.cantidad), 0))
+            .where(ProduccionHuevos.finca_id.in_(ids), ProduccionHuevos.fecha.between(inicio, hoy))
+            .group_by(ProduccionHuevos.finca_id)
+        ).all()
+    )
+    lotes = dict(
+        db.execute(
+            select(Lote.finca_id, func.count(Lote.id))
+            .where(Lote.finca_id.in_(ids), Lote.estado == "activo")
+            .group_by(Lote.finca_id)
+        ).all()
+    )
+    return [
+        {
+            "id": f.id,
+            "nombre": f.nombre,
+            "aves": int(aves.get(f.id, 0)),
+            "huevos_periodo": int(huevos.get(f.id, 0)),
+            "lotes_activos": int(lotes.get(f.id, 0)),
+        }
+        for f in otras
+    ]

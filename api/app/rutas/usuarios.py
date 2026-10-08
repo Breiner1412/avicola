@@ -19,7 +19,7 @@ from app.esquemas.usuarios import (
 )
 from app.modelos.acceso import Rol, Sesion, Usuario, UsuarioFinca
 from app.modelos.organizacion import Finca
-from app.servicios.alcance import cuenta_objetivo
+from app.servicios.alcance import cuenta_objetivo, ids_fincas_visibles
 from app.servicios.sesion import ahora_simple
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
@@ -64,6 +64,10 @@ def _usuario_de_la_cuenta(db: Session, ctx: Contexto, usuario_id: int) -> Usuari
         raise no_encontrado("El usuario no existe")
     if not ctx.es_plataforma and usuario.rol.nivel < ctx.usuario.rol.nivel:
         raise sin_permiso("No puedes administrar a ese usuario")
+    if not ctx.es_plataforma and not ctx.ve_toda_la_cuenta and usuario.id != ctx.usuario.id:
+        visibles = set(ids_fincas_visibles(db, ctx))
+        if not visibles & {f.finca_id for f in usuario.fincas}:
+            raise no_encontrado("El usuario no existe")
     return usuario
 
 
@@ -98,6 +102,12 @@ def listar(
             consulta = consulta.where(Usuario.cuenta_id == cuenta_id)
     else:
         consulta = consulta.where(Usuario.cuenta_id == ctx.cuenta_id)
+        if not ctx.ve_toda_la_cuenta:
+            # El supervisor solo ve a la gente que trabaja en sus fincas
+            companeros = select(UsuarioFinca.usuario_id).where(
+                UsuarioFinca.finca_id.in_(ids_fincas_visibles(db, ctx) or [0])
+            )
+            consulta = consulta.where(Usuario.id.in_(companeros))
     if not incluir_inactivos:
         consulta = consulta.where(Usuario.activo.is_(True))
 
