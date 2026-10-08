@@ -86,10 +86,14 @@ def contexto_actual(
     datos = leer_token_acceso(_token_de(peticion))
 
     usuario = db.scalars(
-        select(Usuario).options(joinedload(Usuario.rol)).where(Usuario.id == int(datos.get("sub", 0)))
+        select(Usuario)
+        .options(joinedload(Usuario.rol), joinedload(Usuario.cuenta))
+        .where(Usuario.id == int(datos.get("sub", 0)))
     ).first()
     if usuario is None or not usuario.activo:
         raise sin_sesion("El usuario no existe o esta inactivo")
+    if usuario.cuenta is not None and not usuario.cuenta.activo:
+        raise sin_sesion("La cuenta esta inactiva. Habla con el administrador.")
 
     sesion_id = datos.get("ses")
     if sesion_id:

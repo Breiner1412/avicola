@@ -98,3 +98,77 @@ def test_los_correos_inventados_no_llenan_el_registro(cliente, monkeypatch):
         cliente.post(f"{API}/auth/login", json={"email": f"nadie{n}@inventado.com", "clave": "x"})
     with SesionLocal() as db:
         assert db.scalar(select(func.count(Auditoria.id))) == antes
+
+
+def _navegador():
+    """Un cliente con su propio frasco de cookies, como otro navegador."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    return TestClient(app)
+
+
+def _entrar(navegador, email):
+    from tests.test_multicuenta import CLAVE
+
+    respuesta = navegador.post(f"{API}/auth/login", json={"email": email, "clave": CLAVE})
+    assert respuesta.status_code == 200, respuesta.text
+    return respuesta.json()["token"]
+
+
+def test_el_token_de_refresco_cambia_y_el_viejo_no_se_puede_reusar(victima):
+    from datetime import datetime, timedelta
+
+    from sqlalchemy import update
+
+    from app.core.config import config as ajustes
+    from app.core.db import SesionLocal
+    from app.modelos.acceso import Sesion
+
+    navegador = _navegador()
+    _entrar(navegador, victima["email"])
+    viejo = navegador.cookies.get(ajustes.cookie_refresco)
+
+    assert navegador.post(f"{API}/auth/refrescar").status_code == 200
+    nuevo = navegador.cookies.get(ajustes.cookie_refresco)
+    assert nuevo and nuevo != viejo
+
+    # Otra pestana que todavia mando el viejo: se acepta unos segundos
+    otra = _navegador()
+    otra.cookies.set(ajustes.cookie_refresco, viejo, path="/api/v1/auth")
+    assert otra.post(f"{API}/auth/refrescar").status_code == 200
+
+    # Pasado ese margen, usar el viejo cierra la sesion (posible robo)
+    with SesionLocal() as db:
+        db.execute(update(Sesion).where(Sesion.rotada_en.is_not(None)).values(rotada_en=datetime(2020, 1, 1)))
+        db.commit()
+    assert otra.post(f"{API}/auth/refrescar").status_code == 401
+    assert navegador.post(f"{API}/auth/refrescar").status_code == 401
+
+
+def test_cambiar_la_clave_cierra_las_demas_sesiones(cliente, token_plataforma):
+    from tests.test_multicuenta import CLAVE, crear_cuenta_completa
+
+    datos = crear_cuenta_completa(cliente, token_plataforma, "CambiaClave")
+    aqui = _entrar(_navegador(), datos["email"])
+    alla = _entrar(_navegador(), datos["email"])
+
+    cambio = cliente.post(
+        f"{API}/auth/cambiar-clave",
+        headers=cabeceras(aqui),
+        json={"clave_actual": CLAVE, "clave_nueva": "OtraClaveSegura123"},
+    )
+    assert cambio.status_code == 200, cambio.text
+    assert cliente.get(f"{API}/auth/yo", headers=cabeceras(aqui)).status_code == 200
+    assert cliente.get(f"{API}/auth/yo", headers=cabeceras(alla)).status_code == 401
+
+
+def test_una_cuenta_desactivada_queda_por_fuera_de_inmediato(cliente, token_plataforma):
+    from tests.test_multicuenta import crear_cuenta_completa
+
+    datos = crear_cuenta_completa(cliente, token_plataforma, "Desactivada")
+    assert cliente.get(f"{API}/auth/yo", headers=cabeceras(datos["token"])).status_code == 200
+    respuesta = cliente.delete(f"{API}/cuentas/{datos['cuenta_id']}", headers=cabeceras(token_plataforma))
+    assert respuesta.status_code == 200, respuesta.text
+    assert cliente.get(f"{API}/auth/yo", headers=cabeceras(datos["token"])).status_code == 401

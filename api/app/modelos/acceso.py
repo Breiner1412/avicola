@@ -123,6 +123,10 @@ class Sesion(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True)
     huella: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    # El token de refresco cambia en cada uso; el anterior sirve unos segundos mas
+    # (dos pestanas que refrescan a la vez) y despues, si alguien lo usa, se cierra la sesion
+    huella_anterior: Mapped[str | None] = mapped_column(String(64), index=True)
+    rotada_en: Mapped[datetime | None] = mapped_column(DateTime)
     finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="SET NULL"))
     ip: Mapped[str | None] = mapped_column(String(45))
     agente: Mapped[str | None] = mapped_column(String(255))

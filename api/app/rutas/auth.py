@@ -34,6 +34,7 @@ from app.servicios.sesion import (
     cargar_usuario,
     cerrar_sesion,
     guardar_cookie,
+    rotar_refresco,
 )
 
 router = APIRouter(prefix="/auth", tags=["Sesion"])
@@ -154,16 +155,22 @@ def refrescar(
     if not avicola_refresco:
         raise sin_sesion("No hay sesion abierta")
 
-    sesion = buscar_sesion(db, avicola_refresco)
+    sesion, rotar = buscar_sesion(db, avicola_refresco)
     if sesion is None:
+        db.commit()  # si el token era uno viejo reutilizado, la sesion queda cerrada
         raise sin_sesion("La sesion expiro. Vuelve a entrar.")
 
     usuario = cargar_usuario(db, sesion.usuario_id)
     if usuario is None or not usuario.activo:
         raise sin_sesion("El usuario no esta disponible")
+    if usuario.cuenta is not None and not usuario.cuenta.activo:
+        raise sin_sesion("La cuenta esta inactiva. Habla con el administrador.")
 
+    nuevo = rotar_refresco(sesion) if rotar else None
     salida = armar_respuesta(db, usuario, sesion)
     db.commit()
+    if nuevo:
+        guardar_cookie(respuesta, nuevo)
     return salida
 
 
@@ -174,7 +181,7 @@ def salir(
     avicola_refresco: str | None = Cookie(default=None, alias=config.cookie_refresco),
 ):
     if avicola_refresco:
-        sesion = buscar_sesion(db, avicola_refresco)
+        sesion, _ = buscar_sesion(db, avicola_refresco)
         if sesion is not None:
             cerrar_sesion(db, sesion)
             registrar(
@@ -217,6 +224,12 @@ def cambiar_clave(
 
     usuario.clave_hash = cifrar_clave(datos.clave_nueva)
     usuario.debe_cambiar_clave = False
+    # Las demas sesiones (otro equipo, o alguien que tenga la clave vieja) se cierran
+    db.execute(
+        update(Sesion)
+        .where(Sesion.usuario_id == usuario.id, Sesion.revocada_en.is_(None), Sesion.id != (ctx.sesion_id or 0))
+        .values(revocada_en=ahora_simple())
+    )
     registrar(db, ctx, "cambio_clave", "usuarios", usuario.id, descripcion="Cambio de contrasena")
     db.commit()
     return Mensaje(mensaje="Contrasena actualizada")
