@@ -23,8 +23,12 @@ RUN sed -i 's/\r$//' docker-entrypoint.sh \
 USER avicola
 EXPOSE 8000
 
+# Proxies de los que se cree X-Forwarded-For (IPs o redes, separadas por comas).
+# Por defecto ninguno; docker-compose lo define para la red interna de Docker.
+ENV FORWARDED_ALLOW_IPS=127.0.0.1
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8000/api/v1/salud || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["gunicorn", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "2", "-b", "0.0.0.0:8000", "--forwarded-allow-ips", "*", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers"]

@@ -194,3 +194,15 @@ def test_sin_smtp_en_produccion_el_codigo_no_queda_en_el_log(monkeypatch, caplog
         correo.enviar("alguien@avicola.com", "Codigo", "Tu codigo es 123456")
     assert "123456" not in caplog.text
     assert "no se envio" in caplog.text
+
+
+def test_un_x_forwarded_for_falso_no_salta_el_limite(cliente, victima):
+    codigos = [
+        cliente.post(
+            f"{API}/auth/login",
+            json={"email": victima["email"], "clave": "mala"},
+            headers={"X-Forwarded-For": f"203.0.113.{n}"},
+        ).status_code
+        for n in range(9)
+    ]
+    assert codigos[8] == 429

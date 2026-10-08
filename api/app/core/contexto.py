@@ -42,9 +42,12 @@ class Contexto:
 
 
 def ip_de(peticion: Request) -> str | None:
-    reenviada = peticion.headers.get("x-forwarded-for")
-    if reenviada:
-        return reenviada.split(",")[0].strip()
+    """IP de quien hace la peticion.
+
+    No se lee X-Forwarded-For aqui: su primer valor lo escribe el cliente y se puede
+    falsificar. Uvicorn ya lo resuelve con --proxy-headers, confiando solo en los
+    proxies de FORWARDED_ALLOW_IPS (Caddy y la web, en la red interna de Docker).
+    """
     return peticion.client.host if peticion.client else None
 
 

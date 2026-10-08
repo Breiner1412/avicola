@@ -49,6 +49,9 @@ services:
       DB_PORT: "3306"
       REDIS_URL: redis://cache:6379/0
       TZ: ${TZ:-America/Bogota}
+      # Solo se cree X-Forwarded-For de quien esta en las redes privadas de Docker
+      # (Caddy y la web): la API no tiene puertos publicados
+      FORWARDED_ALLOW_IPS: ${PROXY_CONFIABLE:-172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}
     depends_on:
       db:
         condition: service_healthy
