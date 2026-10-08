@@ -8,12 +8,19 @@ puede guardar como plantilla para la proxima vez.
 import csv
 import io
 import unicodedata
+import zipfile
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 from openpyxl import load_workbook
 
 MAX_FILAS = 5000
+# Topes para que un archivo hecho a proposito no tumbe el servidor
+MAX_COLUMNAS = 60
+MAX_FILAS_RECORRIDAS = MAX_FILAS * 4  # incluidas las vacias
+MAX_DESCOMPRIMIDO = 60 * 1024 * 1024  # un .xlsx es un zip: tope a lo que ocupa abierto
+MAX_PROPORCION_ZIP = 100  # mas de 100 a 1 es una bomba de descompresion
+MAX_PARTES_ZIP = 2000
 
 
 # --------------------------- Campos por tipo ---------------------------
@@ -107,11 +114,30 @@ def _valor_plano(valor):
     return valor
 
 
+def _revisar_zip(contenido: bytes) -> None:
+    """Un .xlsx es un zip: se revisa antes de abrirlo (firma y tamano descomprimido)."""
+    if not contenido.startswith(b"PK\x03\x04"):
+        raise ValueError("El archivo no es un Excel .xlsx valido")
+    try:
+        with zipfile.ZipFile(io.BytesIO(contenido)) as comprimido:
+            partes = comprimido.infolist()
+    except zipfile.BadZipFile as error:
+        raise ValueError("El archivo no es un Excel .xlsx valido") from error
+    if len(partes) > MAX_PARTES_ZIP:
+        raise ValueError("El archivo tiene una estructura demasiado grande")
+    abierto = sum(parte.file_size for parte in partes)
+    comprimido_total = sum(parte.compress_size for parte in partes) or 1
+    if abierto > MAX_DESCOMPRIMIDO or abierto / comprimido_total > MAX_PROPORCION_ZIP:
+        raise ValueError("El archivo es demasiado grande al abrirlo. Divide la informacion en varios archivos.")
+
+
 def leer_archivo(contenido: bytes, nombre: str) -> tuple[str | None, list[str], list[dict]]:
     """Devuelve (hoja, columnas, filas). Acepta .xlsx y .csv."""
     minusculas = nombre.lower()
 
     if minusculas.endswith((".csv", ".txt")):
+        if b"\x00" in contenido[:8192]:
+            raise ValueError("El archivo no es un CSV de texto")
         texto = contenido.decode("utf-8-sig", errors="replace")
         muestra = texto[:4000]
         try:
@@ -134,17 +160,19 @@ def leer_archivo(contenido: bytes, nombre: str) -> tuple[str | None, list[str], 
     if not minusculas.endswith((".xlsx", ".xlsm")):
         raise ValueError("Solo se pueden leer archivos .xlsx o .csv. Si tienes un .xls antiguo, guardalo como .xlsx")
 
+    _revisar_zip(contenido)
     libro = load_workbook(io.BytesIO(contenido), read_only=True, data_only=True)
-    hoja = libro.worksheets[0]
-
-    filas_brutas = []
-    for fila in hoja.iter_rows(values_only=True):
-        if fila is None:
-            continue
-        if any(celda is not None and str(celda).strip() != "" for celda in fila):
-            filas_brutas.append(list(fila))
-        if len(filas_brutas) > MAX_FILAS + 20:
-            break
+    try:
+        hoja = libro.worksheets[0]
+        filas_brutas = []
+        for recorridas, fila in enumerate(hoja.iter_rows(values_only=True, max_col=MAX_COLUMNAS), start=1):
+            # Las filas vacias tambien cuentan: una hoja con un millon de filas en blanco no se recorre entera
+            if recorridas > MAX_FILAS_RECORRIDAS or len(filas_brutas) > MAX_FILAS + 20:
+                break
+            if fila is not None and any(celda is not None and str(celda).strip() != "" for celda in fila):
+                filas_brutas.append(list(fila))
+    finally:
+        libro.close()
 
     if not filas_brutas:
         raise ValueError("La hoja esta vacia")

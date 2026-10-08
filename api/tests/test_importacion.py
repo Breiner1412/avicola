@@ -314,3 +314,41 @@ def test_un_archivo_de_mas_de_5_mb_se_rechaza(cliente, finca):
     respuesta = subir(cliente, finca, "articulos", grande, nombre="grande.csv")
     assert respuesta.status_code == 400
     assert "5 MB" in respuesta.json()["detail"]["mensaje"]
+
+
+def test_un_zip_que_no_es_excel_se_rechaza(cliente, finca):
+    respuesta = subir(cliente, finca, "articulos", b"esto no es un excel", nombre="falso.xlsx")
+    assert respuesta.status_code == 400
+    assert "xlsx" in respuesta.json()["detail"]["mensaje"]
+
+
+def test_una_bomba_de_descompresion_se_rechaza(cliente, finca):
+    import zipfile
+
+    memoria = io.BytesIO()
+    with zipfile.ZipFile(memoria, "w", zipfile.ZIP_DEFLATED) as bomba:
+        bomba.writestr("xl/worksheets/sheet1.xml", b"0" * (80 * 1024 * 1024))
+    respuesta = subir(cliente, finca, "articulos", memoria.getvalue(), nombre="bomba.xlsx")
+    assert respuesta.status_code == 400
+    assert "demasiado grande" in respuesta.json()["detail"]["mensaje"]
+
+
+def test_una_hoja_con_un_millon_de_filas_vacias_no_se_recorre_entera(cliente, finca):
+    import time
+
+    from app.servicios.importacion import MAX_FILAS_RECORRIDAS
+
+    libro = Workbook()
+    hoja = libro.active
+    hoja.append(["Codigo", "Nombre"])
+    hoja.append(["A1", "Primero"])
+    hoja.cell(row=MAX_FILAS_RECORRIDAS + 500, column=1, value="Escondido")
+    hoja.cell(row=MAX_FILAS_RECORRIDAS + 500, column=2, value="Muy abajo")
+    memoria = io.BytesIO()
+    libro.save(memoria)
+
+    inicio = time.monotonic()
+    respuesta = subir(cliente, finca, "articulos", memoria.getvalue())
+    assert time.monotonic() - inicio < 20
+    assert respuesta.status_code == 201, respuesta.text
+    assert respuesta.json()["filas_totales"] == 1
