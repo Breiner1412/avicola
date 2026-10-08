@@ -21,6 +21,9 @@ UNIDADES_VALIDAS = ("unidad", "kg", "litro", "bulto", "dosis", "metro")
 TIPOS_SANIDAD = ("vacuna", "medicamento", "vitamina", "desinfeccion", "otro")
 VIAS = ("agua", "ocular", "aspersion", "inyectado", "alimento", "otro")
 
+# Clave en los datos de la fila: cuanto habia ese dia antes de importar
+CANTIDAD_ANTERIOR = "_cantidad_anterior"
+
 
 def dec(valor) -> Decimal:
     return Decimal(str(valor or 0))
@@ -337,6 +340,8 @@ def aplicar(
                 db.add(registro)
                 db.flush()
             else:
+                # Se guarda lo que habia para poder volver a dejarlo al revertir
+                fila.datos = {**fila.datos, CANTIDAD_ANTERIOR: anterior}
                 registro.cantidad = cantidad
 
             if tipo_huevo.comercial:
@@ -359,10 +364,12 @@ def aplicar(
 # ------------------------------- Revertir -------------------------------
 def revertir(db: Session, ctx: Contexto, importacion: Importacion) -> dict:
     resumen = {"deshechos": 0, "no_se_pudo": 0}
+    # De la ultima fila a la primera: si dos filas tocaron el mismo dia de produccion,
+    # cada una deja lo que encontro y el dia termina como estaba antes de importar
     filas = db.scalars(
-        select(FilaImportacion).where(
-            FilaImportacion.importacion_id == importacion.id, FilaImportacion.creado.is_(True)
-        )
+        select(FilaImportacion)
+        .where(FilaImportacion.importacion_id == importacion.id, FilaImportacion.creado.is_(True))
+        .order_by(FilaImportacion.numero.desc())
     ).all()
 
     movimientos_anulados: set[int] = set()
@@ -411,10 +418,17 @@ def revertir(db: Session, ctx: Contexto, importacion: Importacion) -> dict:
         elif fila.entidad == "produccion_huevos" and fila.entidad_id:
             registro = db.get(ProduccionHuevos, fila.entidad_id)
             if registro is not None:
+                # Si el dia ya existia, vuelve a su cantidad anterior; si lo creo la importacion, se borra
+                anterior = (fila.datos or {}).get(CANTIDAD_ANTERIOR)
+                queda = int(anterior) if anterior is not None else 0
                 tipo_huevo = db.get(TipoHuevo, registro.tipo_huevo_id)
                 if tipo_huevo is not None and tipo_huevo.comercial:
-                    mover_stock_huevos(db, registro.finca_id, registro.tipo_huevo_id, -registro.cantidad)
-                db.delete(registro)
+                    mover_stock_huevos(db, registro.finca_id, registro.tipo_huevo_id, queda - registro.cantidad)
+                if anterior is None:
+                    db.delete(registro)
+                    db.flush()
+                else:
+                    registro.cantidad = queda
             fila.estado, fila.creado = "revertida", False
             resumen["deshechos"] += 1
 

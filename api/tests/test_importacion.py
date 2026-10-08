@@ -400,3 +400,47 @@ def test_una_bodega_que_no_es_numero_no_rompe_la_importacion(cliente, finca):
         json={"mapeo": analisis["mapeo_sugerido"], "opciones": {"bodega_id": "la central"}},
     )
     assert respuesta.status_code == 400
+
+
+def test_revertir_deja_el_dia_como_estaba_antes_de_importar(cliente, finca):
+    from sqlalchemy import select
+
+    from app.core.db import SesionLocal
+    from app.modelos.aves import ProduccionHuevos
+
+    def stock_aaa():
+        filas = cliente.get(f"{API}/stock-huevos", headers=finca["cab"]).json()
+        return next((f["cantidad"] for f in filas if f["tipo"] == "AAA"), 0)
+
+    aaa = next(t for t in cliente.get(f"{API}/tipos-huevo", headers=finca["cab"]).json() if t["nombre"] == "AAA")
+    registrada = cliente.post(
+        f"{API}/produccion",
+        headers=finca["cab"],
+        json={"lote_id": finca["lote"]["id"], "fecha": "2026-04-01", "detalles": [{"tipo_huevo_id": aaa["id"], "cantidad": 200}]},
+    )
+    assert registrada.status_code == 201, registrada.text
+    antes = stock_aaa()
+
+    # El archivo trae el mismo dia dos veces
+    contenido = excel(["Fecha", "Lote", "Tipo", "Cantidad"], [["2026-04-01", "L1", "AAA", 250], ["2026-04-01", "L1", "AAA", 300]])
+    analisis = subir(cliente, finca, "produccion", contenido).json()
+    aplicado = cliente.post(
+        f"{API}/importacion/{analisis['id']}/aplicar",
+        headers=finca["cab"],
+        json={"mapeo": analisis["mapeo_sugerido"], "opciones": {}},
+    )
+    assert aplicado.status_code == 200, aplicado.text
+    assert stock_aaa() == antes + 100
+
+    revertido = cliente.post(f"{API}/importacion/{analisis['id']}/revertir", headers=finca["cab"], json={})
+    assert revertido.status_code == 200, revertido.text
+    assert stock_aaa() == antes
+    with SesionLocal() as db:
+        dia = db.scalars(
+            select(ProduccionHuevos).where(
+                ProduccionHuevos.lote_id == finca["lote"]["id"],
+                ProduccionHuevos.tipo_huevo_id == aaa["id"],
+                ProduccionHuevos.fecha == "2026-04-01",
+            )
+        ).first()
+        assert dia is not None and dia.cantidad == 200
