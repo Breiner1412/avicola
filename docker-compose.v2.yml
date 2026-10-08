@@ -110,7 +110,8 @@ services:
       API_INTERNA: http://avicola-api:8000
       TZ: ${TZ:-America/Bogota}
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 networks:
   # Red compartida con Caddy y las demas apps (se crea una vez: docker network create proxy)
