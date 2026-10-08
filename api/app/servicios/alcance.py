@@ -15,16 +15,21 @@ def cuenta_filtro(ctx: Contexto) -> int | None:
     return ctx.cuenta_activa_id
 
 
+def _fincas_permitidas(db: Session, ctx: Contexto) -> list[Finca]:
+    """Fincas que ve el usuario; si la peticion escribe, sin las de solo lectura."""
+    return [f for f, solo_lectura in fincas_del_usuario(db, ctx.usuario) if not (ctx.escribe and solo_lectura)]
+
+
 def ids_fincas_visibles(db: Session, ctx: Contexto) -> list[int]:
-    return [f.id for f, _ in fincas_del_usuario(db, ctx.usuario)]
+    return [f.id for f in _fincas_permitidas(db, ctx)]
 
 
 def fincas_visibles(db: Session, ctx: Contexto) -> list[Finca]:
-    return [f for f, _ in fincas_del_usuario(db, ctx.usuario)]
+    return _fincas_permitidas(db, ctx)
 
 
 def finca_de(db: Session, ctx: Contexto, finca_id: int) -> Finca:
-    """Devuelve la finca si el usuario puede verla; si no, 404."""
+    """Devuelve la finca si el usuario puede verla (o cambiarla, si la peticion escribe)."""
     finca = db.get(Finca, finca_id)
     if finca is None:
         raise no_encontrado("La finca no existe")
@@ -33,6 +38,8 @@ def finca_de(db: Session, ctx: Contexto, finca_id: int) -> Finca:
     if finca.cuenta_id != ctx.cuenta_id:
         raise no_encontrado("La finca no existe")
     if finca_id not in ids_fincas_visibles(db, ctx):
+        if ctx.escribe and finca_id in [f.id for f, _ in fincas_del_usuario(db, ctx.usuario)]:
+            raise sin_permiso("Solo puedes consultar esa finca")
         raise sin_permiso("No tienes acceso a esa finca")
     return finca
 

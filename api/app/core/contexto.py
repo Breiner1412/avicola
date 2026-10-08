@@ -14,6 +14,7 @@ from app.modelos.acceso import Modulo, Permiso, Sesion, Usuario, UsuarioFinca
 from app.modelos.organizacion import Finca
 
 ROLES_TODA_LA_CUENTA = ("plataforma", "propietario", "administrador")
+METODOS_DE_LECTURA = ("GET", "HEAD", "OPTIONS")
 
 
 @dataclass
@@ -28,6 +29,8 @@ class Contexto:
     # Cuenta sobre la que se esta trabajando (la del usuario o, para el rol de
     # plataforma, la duena de la finca elegida)
     cuenta_activa_id: int | None = None
+    # La peticion cambia datos (no es GET): las fincas de solo lectura no cuentan
+    escribe: bool = True
 
     @property
     def es_plataforma(self) -> bool:
@@ -118,6 +121,7 @@ def contexto_actual(
         ip=ip_de(peticion),
         sesion_id=int(sesion_id) if sesion_id else None,
         cuenta_activa_id=cuenta_activa_id,
+        escribe=peticion.method not in METODOS_DE_LECTURA,
     )
 
 

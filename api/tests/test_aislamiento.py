@@ -93,3 +93,54 @@ def test_el_reporte_no_muestra_inventario_de_otra_empresa(cliente, propietario_a
     nombres = {b["articulo"] for b in resumen.json()["inventario"]["bajo_minimo"]}
     assert secreto not in nombres
     assert "Propio de A" in nombres
+
+
+@pytest.fixture(scope="module")
+def supervisor_con_finca_ajena(cliente, token_plataforma):
+    """Supervisor de la finca 1 que solo puede consultar la finca 2."""
+    cuenta = crear_cuenta_completa(cliente, token_plataforma, "Superv")
+    admin = cabeceras(cuenta["token"])
+    finca2 = cliente.post(f"{API}/fincas", headers=admin, json={"codigo": "P2", "nombre": unico("Finca2")}).json()
+    galpon2 = cliente.post(
+        f"{API}/galpones",
+        headers=cabeceras(cuenta["token"], finca2["id"]),
+        json={"codigo": "G2", "nombre": "Galpon ajeno", "capacidad": 100},
+    ).json()
+    email = f"{unico('superv')}@avicola.com"
+    creado = cliente.post(
+        f"{API}/usuarios",
+        headers=admin,
+        json={
+            "nombres": "Super",
+            "email": email,
+            "rol": "supervisor",
+            "clave": "ClaveDePrueba123",
+            "debe_cambiar_clave": False,
+            "fincas": [
+                {"finca_id": cuenta["finca_id"], "solo_lectura": False},
+                {"finca_id": finca2["id"], "solo_lectura": True},
+            ],
+        },
+    )
+    assert creado.status_code == 201, creado.text
+    sesion = cliente.post(f"{API}/auth/login", json={"email": email, "clave": "ClaveDePrueba123"}).json()
+    return {"token": sesion["token"], "finca1": cuenta["finca_id"], "finca2": finca2["id"], "galpon2": galpon2}
+
+
+def test_no_escribe_en_finca_de_solo_lectura_sin_finca_activa(cliente, supervisor_con_finca_ajena):
+    datos = supervisor_con_finca_ajena
+    galpon = datos["galpon2"]["id"]
+    respuesta = cliente.patch(f"{API}/galpones/{galpon}", headers=cabeceras(datos["token"]), json={"nombre": "Cambiado"})
+    assert respuesta.status_code == 403
+    # Consultar si puede
+    assert cliente.get(f"{API}/galpones/{galpon}", headers=cabeceras(datos["token"])).status_code == 200
+
+
+def test_no_escribe_en_finca_de_solo_lectura_desde_otra_finca(cliente, supervisor_con_finca_ajena):
+    datos = supervisor_con_finca_ajena
+    respuesta = cliente.patch(
+        f"{API}/galpones/{datos['galpon2']['id']}",
+        headers=cabeceras(datos["token"], datos["finca1"]),
+        json={"nombre": "Cambiado"},
+    )
+    assert respuesta.status_code in (403, 404)
