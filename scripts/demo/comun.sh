@@ -7,9 +7,7 @@
 #   DEMO_BASE     donde queda el volcado base (por defecto demo/base_demo.sql.gz)
 
 ENV_FILE="${ENV_FILE:-.env}"
-if [ -z "${COMPOSE_FILE:-}" ]; then
-    if [ -f docker-compose.v2.yml ]; then COMPOSE_FILE=docker-compose.v2.yml; else COMPOSE_FILE=docker-compose.yml; fi
-fi
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 DEMO_BASE="${DEMO_BASE:-demo/base_demo.sql.gz}"
 
 dc() {

@@ -159,11 +159,11 @@ cd avicola
 # 2. Crear el archivo de configuración y cambiar las contraseñas
 cp .env.example .env          # en Windows (PowerShell): copy .env.example .env
 
-# 3. Construir y levantar todo
-docker compose -f docker-compose.v2.yml up -d --build
+# 3. Construir y levantar todo (en tu equipo, con los puertos publicados en 127.0.0.1)
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
 # 4. Ver que todo esté arriba (api y db deben decir "healthy")
-docker compose -f docker-compose.v2.yml ps
+docker compose ps
 ```
 
 Abre:
@@ -181,13 +181,13 @@ ejemplo para empezar.
 
 | Acción | Comando |
 |---|---|
-| Ver los registros de la API | `docker compose -f docker-compose.v2.yml logs -f api` |
-| Detener | `docker compose -f docker-compose.v2.yml down` |
-| Empezar de cero (**borra la base de datos**) | `docker compose -f docker-compose.v2.yml down -v` |
-| Actualizar después de un cambio en el código | `docker compose -f docker-compose.v2.yml up -d --build` |
-| Reiniciar la contraseña del admin | `docker compose -f docker-compose.v2.yml exec api python -m app.semilla --reiniciar-admin` |
-| Restaurar los permisos de fábrica | `docker compose -f docker-compose.v2.yml exec api python -m app.semilla --forzar-permisos` |
-| Cargar datos de ejemplo | `docker compose -f docker-compose.v2.yml exec api python -m app.demo` |
+| Ver los registros de la API | `docker compose logs -f api` |
+| Detener | `docker compose down` |
+| Empezar de cero (**borra la base de datos**) | `docker compose down -v` |
+| Actualizar después de un cambio en el código | `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build` |
+| Reiniciar la contraseña del admin | `docker compose exec api python -m app.semilla --reiniciar-admin` |
+| Restaurar los permisos de fábrica | `docker compose exec api python -m app.semilla --forzar-permisos` |
+| Cargar datos de ejemplo | `docker compose exec api python -m app.demo` |
 
 ---
 
@@ -222,7 +222,7 @@ Si la API no está en `http://localhost:8000`, indica dónde con la variable `AP
 Para ver el sistema como si una granja llevara **seis meses** usándolo:
 
 ```bash
-docker compose -f docker-compose.v2.yml exec api python -m app.demo
+docker compose exec api python -m app.demo
 # sin Docker: cd api && python -m app.demo
 ```
 
@@ -365,7 +365,7 @@ Para correrlas en GitHub, copia `docs/github-actions-pruebas.yml` a `.github/wor
 
 ```
 avicola/
-├── docker-compose.v2.yml        # base de datos + caché + API + web
+├── docker-compose.yml        # base de datos + caché + API + web
 ├── .env.example                 # variables de entorno (copiar a .env)
 ├── docs/
 │   ├── manual/                  # manual de usuario con capturas
@@ -445,7 +445,7 @@ en cada petición; la web solo oculta lo que el rol no puede usar.
 Resumen para una máquina virtual con Linux (Azure, AWS, DigitalOcean…):
 
 1. Instala Docker y Git, clona el repositorio y crea el `.env` con contraseñas y `JWT_SECRET` nuevos.
-2. Levanta con `docker compose -f docker-compose.v2.yml up -d --build`.
+2. Levanta con `docker compose up -d --build`.
 3. Pon delante un proxy con HTTPS (Nginx o Caddy) que apunte al puerto 3000 y cambia
    `COOKIE_SEGURA=true`.
 4. Abre en el firewall solo los puertos 80 y 443. La API y la base de datos quedan escuchando solo en
@@ -462,8 +462,8 @@ arquitectura. Bórrala y vuelve a construir:
 ```bash
 docker image rm -f node:22-alpine python:3.11-slim
 docker builder prune -af
-docker compose -f docker-compose.v2.yml build --no-cache
-docker compose -f docker-compose.v2.yml up -d
+docker compose build --no-cache
+docker compose up -d
 ```
 
 **`rpc error: code = Unavailable ... EOF`.** Docker Desktop se quedó sin memoria o se cerró el motor.
@@ -476,7 +476,7 @@ cero con `down -v`.
 **El puerto 3000, 8000 o 3308 ya está en uso.** Cambia `WEB_PUERTO_HOST`, `API_PUERTO_HOST` o
 `DB_PUERTO_HOST` en el `.env`.
 
-**No recuerdo la contraseña del admin.** `docker compose -f docker-compose.v2.yml exec api python -m
+**No recuerdo la contraseña del admin.** `docker compose exec api python -m
 app.semilla --reiniciar-admin` la deja como está en el `.env`.
 
 ---

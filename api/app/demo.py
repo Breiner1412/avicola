@@ -14,10 +14,10 @@ Uso:
     python -m app.demo --dias 90       # otro periodo
 
 Con Docker:
-    docker compose -f docker-compose.v2.yml exec api python -m app.demo
+    docker compose exec api python -m app.demo
 
 Solo se puede cargar una vez por base de datos. Para empezar de cero hay que borrar la
-base (docker compose -f docker-compose.v2.yml down -v) y volver a levantar todo.
+base (docker compose down -v) y volver a levantar todo.
 """
 
 from __future__ import annotations
