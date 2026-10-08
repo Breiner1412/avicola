@@ -32,6 +32,8 @@ class SesionSalida(BaseModel):
     finca_activa: FincaResumen | None = None
     fincas: list[FincaResumen] = []
     permisos: dict[str, dict[str, bool]] = {}
+    # Demo publica: el frontend avisa que los datos se reinician cada noche
+    demo: bool = False
 
 
 class LoginEntrada(BaseModel):

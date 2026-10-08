@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, solo_plataforma
 from app.core.db import obtener_db
+from app.core.demo import bloqueado_en_demo
 from app.core.errores import conflicto, no_encontrado
 from app.esquemas.comunes import Mensaje
 from app.esquemas.organizacion import CuentaActualizar, CuentaCrear, CuentaSalida
@@ -14,13 +15,15 @@ from app.modelos.organizacion import Cuenta
 
 router = APIRouter(prefix="/cuentas", tags=["Cuentas"])
 
+SIN_DEMO = [Depends(bloqueado_en_demo("cambiar cuentas"))]
+
 
 @router.get("", response_model=list[CuentaSalida], summary="Listar cuentas")
 def listar(db: Session = Depends(obtener_db), ctx: Contexto = Depends(solo_plataforma)):
     return db.scalars(select(Cuenta).order_by(Cuenta.nombre)).all()
 
 
-@router.post("", response_model=CuentaSalida, status_code=201, summary="Crear cuenta")
+@router.post("", response_model=CuentaSalida, status_code=201, summary="Crear cuenta", dependencies=SIN_DEMO)
 def crear(
     datos: CuentaCrear,
     db: Session = Depends(obtener_db),
@@ -46,7 +49,7 @@ def ver(cuenta_id: int, db: Session = Depends(obtener_db), ctx: Contexto = Depen
     return cuenta
 
 
-@router.patch("/{cuenta_id}", response_model=CuentaSalida, summary="Editar cuenta")
+@router.patch("/{cuenta_id}", response_model=CuentaSalida, summary="Editar cuenta", dependencies=SIN_DEMO)
 def editar(
     cuenta_id: int,
     datos: CuentaActualizar,
@@ -66,7 +69,7 @@ def editar(
     return cuenta
 
 
-@router.delete("/{cuenta_id}", response_model=Mensaje, summary="Desactivar cuenta")
+@router.delete("/{cuenta_id}", response_model=Mensaje, summary="Desactivar cuenta", dependencies=SIN_DEMO)
 def desactivar(
     cuenta_id: int,
     db: Session = Depends(obtener_db),

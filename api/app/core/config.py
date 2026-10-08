@@ -18,6 +18,9 @@ class Configuracion(BaseSettings):
     # --- General ---
     app_nombre: str = "Avícola"
     entorno: str = "desarrollo"
+    # Demo publica: bloquea contrasenas, correos, permisos, cuentas y desactivaciones
+    # para que ningun visitante la rompa para los demas (los datos se reinician cada noche)
+    demo: bool = False
 
     # --- Base de datos ---
     db_host: str = "localhost"

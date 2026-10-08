@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, permisos_de_rol, requiere
 from app.core.db import obtener_db
+from app.core.demo import bloqueado_en_demo
 from app.core.errores import no_encontrado, sin_permiso
 from app.esquemas.usuarios import ModuloSalida, PermisoEntrada, PermisoSalida, RolSalida
 from app.modelos.acceso import Modulo, Permiso, Rol
@@ -56,7 +57,12 @@ def matriz(
     return {rol.clave: permisos_de_rol(db, rol.id, cuenta) for rol in roles}
 
 
-@router.put("/permisos/{rol_clave}/{modulo_clave}", response_model=PermisoSalida, summary="Cambiar un permiso")
+@router.put(
+    "/permisos/{rol_clave}/{modulo_clave}",
+    response_model=PermisoSalida,
+    summary="Cambiar un permiso",
+    dependencies=[Depends(bloqueado_en_demo("cambiar permisos"))],
+)
 def cambiar(
     rol_clave: str,
     modulo_clave: str,

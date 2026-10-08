@@ -118,4 +118,5 @@ def armar_respuesta(db: Session, usuario: Usuario, sesion: Sesion) -> SesionSali
             for f, lectura in fincas
         ],
         permisos=permisos_de_rol(db, usuario.rol_id, usuario.cuenta_id),
+        demo=config.demo,
     )

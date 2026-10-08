@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.core import limites
+from app.core.demo import bloqueado_en_demo
 from app.core.auditoria import registrar
 from app.core.config import config
 from app.core.contexto import Contexto, contexto_actual, fincas_del_usuario, ip_de
@@ -189,7 +190,12 @@ def yo(db: Session = Depends(obtener_db), ctx: Contexto = Depends(contexto_actua
     return armar_respuesta(db, usuario, sesion)
 
 
-@router.post("/cambiar-clave", response_model=Mensaje, summary="Cambiar mi contrasena")
+@router.post(
+    "/cambiar-clave",
+    response_model=Mensaje,
+    summary="Cambiar mi contrasena",
+    dependencies=[Depends(bloqueado_en_demo("cambiar contrasenas"))],
+)
 def cambiar_clave(
     datos: CambiarClave,
     db: Session = Depends(obtener_db),
@@ -208,7 +214,12 @@ def cambiar_clave(
     return Mensaje(mensaje="Contrasena actualizada")
 
 
-@router.post("/recuperar", response_model=Mensaje, summary="Pedir un codigo de recuperacion")
+@router.post(
+    "/recuperar",
+    response_model=Mensaje,
+    summary="Pedir un codigo de recuperacion",
+    dependencies=[Depends(bloqueado_en_demo("recuperar contrasenas"))],
+)
 def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obtener_db)):
     ip = ip_de(peticion) or "desconocida"
     limites.recuperar_ip.registrar(ip)
@@ -238,7 +249,12 @@ def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obten
     return Mensaje(mensaje="Si el correo esta registrado, te enviamos un codigo")
 
 
-@router.post("/restablecer", response_model=Mensaje, summary="Cambiar la contrasena con el codigo")
+@router.post(
+    "/restablecer",
+    response_model=Mensaje,
+    summary="Cambiar la contrasena con el codigo",
+    dependencies=[Depends(bloqueado_en_demo("cambiar contrasenas"))],
+)
 def restablecer(datos: RestablecerClave, peticion: Request, db: Session = Depends(obtener_db)):
     ip = ip_de(peticion) or "desconocida"
     limites.restablecer.registrar(ip)

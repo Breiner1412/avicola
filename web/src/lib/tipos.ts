@@ -36,6 +36,8 @@ export type Sesion = {
   finca_activa: Finca | null;
   fincas: Finca[];
   permisos: Permisos;
+  // Demo publica: se reinicia cada noche y no deja cambiar claves, correos ni permisos
+  demo?: boolean;
 };
 
 export type Galpon = {

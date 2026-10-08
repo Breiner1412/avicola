@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
+from app.core.demo import bloqueado_en_demo, no_en_demo
 from app.core.errores import conflicto, datos_invalidos, no_encontrado, sin_permiso
 from app.core.seguridad import cifrar_clave
 from app.esquemas.comunes import Mensaje
@@ -167,6 +168,14 @@ def editar(
 ):
     usuario = _usuario_de_la_cuenta(db, ctx, usuario_id)
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("email") and cambios["email"].lower() != usuario.email:
+        no_en_demo("cambiar correos")
+    if cambios.get("rol") and cambios["rol"] != usuario.rol.clave:
+        no_en_demo("cambiar el rol de los usuarios")
+    if cambios.get("activo") is False:
+        no_en_demo("desactivar usuarios")
+    if datos.fincas is not None:
+        no_en_demo("cambiar las fincas de los usuarios")
 
     if "email" in cambios and cambios["email"]:
         nuevo = cambios["email"].lower()
@@ -195,7 +204,12 @@ def editar(
     return _salida(usuario)
 
 
-@router.post("/{usuario_id}/clave", response_model=Mensaje, summary="Asignar una contrasena nueva")
+@router.post(
+    "/{usuario_id}/clave",
+    response_model=Mensaje,
+    summary="Asignar una contrasena nueva",
+    dependencies=[Depends(bloqueado_en_demo("cambiar contrasenas"))],
+)
 def cambiar_clave(
     usuario_id: int,
     datos: ClaveNueva,
@@ -217,7 +231,12 @@ def cambiar_clave(
     return Mensaje(mensaje="Contrasena actualizada")
 
 
-@router.delete("/{usuario_id}", response_model=Mensaje, summary="Desactivar usuario")
+@router.delete(
+    "/{usuario_id}",
+    response_model=Mensaje,
+    summary="Desactivar usuario",
+    dependencies=[Depends(bloqueado_en_demo("desactivar usuarios"))],
+)
 def desactivar(
     usuario_id: int,
     db: Session = Depends(obtener_db),

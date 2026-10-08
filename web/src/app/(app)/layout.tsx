@@ -62,7 +62,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (sesion.usuario.debe_cambiar_clave) {
+  // En la demo no se pueden cambiar claves: no se obliga a hacerlo
+  if (sesion.usuario.debe_cambiar_clave && !sesion.demo) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="w-full max-w-md">
@@ -280,7 +281,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 space-y-5 p-4 pb-16 lg:p-6">{children}</main>
+        <main className="flex-1 space-y-5 p-4 pb-16 lg:p-6">
+          {sesion.demo ? (
+            <Aviso tipo="info">
+              Estas en la demo: puedes probar todo, pero no cambiar contrasenas, correos, permisos ni
+              desactivar usuarios o fincas. Los datos vuelven a quedar como al principio cada noche.
+            </Aviso>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   );
