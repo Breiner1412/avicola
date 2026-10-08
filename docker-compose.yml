@@ -3,12 +3,26 @@
 # Para probar en tu equipo con puertos: docker compose -f docker-compose.yml -f docker-compose.local.yml up
 name: avicola
 
+# Comun a todos: logs con tope (no llenan el disco de la VM) y sin escalar privilegios
+x-comun: &comun
+  restart: unless-stopped
+  init: true
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
 services:
   db:
-    image: mysql:8.4
+    <<: *comun
+    image: mysql:8.4.11
     container_name: avicola-db
-    restart: unless-stopped
     networks: [interna]
+    mem_limit: 1g
+    pids_limit: 512
+    stop_grace_period: 1m
     # log-bin-trust-function-creators: permite a las migraciones crear los triggers
     # que dejan el registro de cambios de solo insercion
     command: >
@@ -37,13 +51,18 @@ services:
       retries: 12
 
   cache:
-    image: redis:7-alpine
+    <<: *comun
+    image: redis:7.4.11-alpine
     container_name: avicola-cache
-    restart: unless-stopped
     networks: [interna]
-    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    mem_limit: 128m
+    pids_limit: 128
+    # Con clave; solo guarda limites de intentos, no hace falta que persista
+    command: ["sh", "-c", 'exec redis-server --requirepass "$$REDISCLI_AUTH" --appendonly no --save ""']
     environment:
       TZ: ${TZ:-America/Bogota}
+      # redis-cli la toma de aqui (healthcheck y scripts de la demo)
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?falta REDIS_PASSWORD}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -51,9 +70,11 @@ services:
       retries: 10
 
   api:
+    <<: *comun
     build: ./api
     container_name: avicola-api
-    restart: unless-stopped
+    mem_limit: 768m
+    pids_limit: 256
     # interna: base y cache; proxy: Caddy y salida a internet (correo)
     networks: [interna, proxy]
     # Solo lo que la API necesita (sin MYSQL_ROOT_PASSWORD). Los valores salen del .env
@@ -72,7 +93,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
       DB_MIGRA_USER: ${DB_MIGRA_USER:-avicola}
       DB_MIGRA_PASSWORD: ${DB_MIGRA_PASSWORD:?falta DB_MIGRA_PASSWORD}
-      REDIS_URL: redis://avicola-cache:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD:?falta REDIS_PASSWORD}@avicola-cache:6379/0
       JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET}
       MINUTOS_ACCESO: ${MINUTOS_ACCESO:-30}
       DIAS_REFRESCO: ${DIAS_REFRESCO:-14}
@@ -103,8 +124,10 @@ services:
       args:
         # Queda fijo al construir la imagen (next build); si cambia, hay que reconstruir
         API_INTERNA: http://avicola-api:8000
+    <<: *comun
     container_name: avicola-web
-    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 256
     networks: [interna, proxy]
     environment:
       API_INTERNA: http://avicola-api:8000

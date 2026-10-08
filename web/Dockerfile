@@ -1,9 +1,10 @@
-FROM node:22-alpine AS dependencias
+FROM node:22.23.2-alpine AS dependencias
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm install
+# npm ci: instala exactamente lo del package-lock.json (que es obligatorio)
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
-FROM node:22-alpine AS constructor
+FROM node:22.23.2-alpine AS constructor
 WORKDIR /app
 # Destino de /api: queda fijo en la imagen al construir (next build)
 ARG API_INTERNA=http://avicola-api:8000
@@ -13,7 +14,7 @@ COPY --from=dependencias /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS ejecucion
+FROM node:22.23.2-alpine AS ejecucion
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
