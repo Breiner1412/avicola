@@ -159,3 +159,13 @@ def requiere(modulo: str, accion: str = "ver", con_finca: bool = False):
         return ctx
 
     return dependencia
+
+
+def solo_plataforma(ctx: Contexto = Depends(contexto_actual)) -> Contexto:
+    """Dependencia para lo que administra todo el sistema (cuentas, empresas).
+
+    No depende de la matriz de permisos: ninguna empresa puede darse este acceso.
+    """
+    if not ctx.es_plataforma:
+        raise sin_permiso("Solo el administrador de la plataforma puede hacer esto")
+    return ctx

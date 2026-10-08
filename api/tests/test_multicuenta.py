@@ -7,8 +7,8 @@ from tests.conftest import API, cabeceras, unico
 CLAVE = "ClaveDePrueba123"
 
 
-def crear_cuenta_completa(cliente, token, nombre: str):
-    """Crea cuenta + finca + administrador y devuelve sus datos."""
+def crear_cuenta_completa(cliente, token, nombre: str, rol: str = "administrador"):
+    """Crea cuenta + finca + un usuario con ese rol y devuelve sus datos."""
     cuenta = cliente.post(
         f"{API}/cuentas", headers=cabeceras(token), json={"tipo": "empresa", "nombre": unico(nombre)}
     )
@@ -31,7 +31,7 @@ def crear_cuenta_completa(cliente, token, nombre: str):
             "nombres": "Admin",
             "apellidos": "Prueba",
             "email": email,
-            "rol": "administrador",
+            "rol": rol,
             "clave": CLAVE,
             "debe_cambiar_clave": False,
             "cuenta_id": cuenta_id,

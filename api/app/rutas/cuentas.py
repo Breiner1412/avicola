@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
-from app.core.contexto import Contexto, requiere
+from app.core.contexto import Contexto, solo_plataforma
 from app.core.db import obtener_db
 from app.core.errores import conflicto, no_encontrado
 from app.esquemas.comunes import Mensaje
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/cuentas", tags=["Cuentas"])
 
 
 @router.get("", response_model=list[CuentaSalida], summary="Listar cuentas")
-def listar(db: Session = Depends(obtener_db), ctx: Contexto = Depends(requiere("cuentas", "ver"))):
+def listar(db: Session = Depends(obtener_db), ctx: Contexto = Depends(solo_plataforma)):
     return db.scalars(select(Cuenta).order_by(Cuenta.nombre)).all()
 
 
@@ -24,7 +24,7 @@ def listar(db: Session = Depends(obtener_db), ctx: Contexto = Depends(requiere("
 def crear(
     datos: CuentaCrear,
     db: Session = Depends(obtener_db),
-    ctx: Contexto = Depends(requiere("cuentas", "crear")),
+    ctx: Contexto = Depends(solo_plataforma),
 ):
     if datos.documento and db.scalars(select(Cuenta.id).where(Cuenta.documento == datos.documento)).first():
         raise conflicto("Ya existe una cuenta con ese documento")
@@ -39,7 +39,7 @@ def crear(
 
 
 @router.get("/{cuenta_id}", response_model=CuentaSalida, summary="Ver una cuenta")
-def ver(cuenta_id: int, db: Session = Depends(obtener_db), ctx: Contexto = Depends(requiere("cuentas", "ver"))):
+def ver(cuenta_id: int, db: Session = Depends(obtener_db), ctx: Contexto = Depends(solo_plataforma)):
     cuenta = db.get(Cuenta, cuenta_id)
     if cuenta is None:
         raise no_encontrado("La cuenta no existe")
@@ -51,7 +51,7 @@ def editar(
     cuenta_id: int,
     datos: CuentaActualizar,
     db: Session = Depends(obtener_db),
-    ctx: Contexto = Depends(requiere("cuentas", "editar")),
+    ctx: Contexto = Depends(solo_plataforma),
 ):
     cuenta = db.get(Cuenta, cuenta_id)
     if cuenta is None:
@@ -70,7 +70,7 @@ def editar(
 def desactivar(
     cuenta_id: int,
     db: Session = Depends(obtener_db),
-    ctx: Contexto = Depends(requiere("cuentas", "borrar")),
+    ctx: Contexto = Depends(solo_plataforma),
 ):
     cuenta = db.get(Cuenta, cuenta_id)
     if cuenta is None:
