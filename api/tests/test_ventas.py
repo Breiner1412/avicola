@@ -282,6 +282,27 @@ def test_no_se_venden_aves_de_otra_finca(cliente, tienda):
     assert cliente.get(f"{API}/lotes/{ajeno['id']}", headers=cab_otra).json()["aves_actuales"] == 100
 
 
+def test_no_se_venden_fracciones_de_huevo(cliente, tienda):
+    respuesta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["unidad"]["id"], "cantidad": 1.5}]},
+    )
+    assert respuesta.status_code == 400
+    assert "enteros" in respuesta.json()["detail"]["mensaje"]
+
+
+def test_el_pollo_por_kilo_pide_cuantas_aves(cliente, tienda):
+    antes = lote(cliente, tienda, "engorde")["aves_actuales"]
+    respuesta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["pollo"]["id"], "cantidad": 30.5, "lote_id": tienda["engorde"]["id"]}]},
+    )
+    assert respuesta.status_code == 400
+    assert lote(cliente, tienda, "engorde")["aves_actuales"] == antes
+
+
 def test_el_cajero_no_puede_pasarse_del_tope_de_descuento(cliente, tienda):
     respuesta = cliente.post(
         f"{API}/ventas",

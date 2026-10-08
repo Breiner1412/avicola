@@ -244,7 +244,10 @@ def _descontar_item(db: Session, ctx: Contexto, venta: Venta, producto: Producto
             raise datos_invalidos(f"El producto {producto.nombre} no tiene tipo de huevo configurado")
         if venta.finca_id is None:
             raise datos_invalidos("Para vender huevos, el punto de venta debe estar en una finca")
-        unidades = int(cantidad * producto.factor)
+        total_unidades = cantidad * producto.factor
+        if total_unidades != total_unidades.to_integral_value():
+            raise datos_invalidos(f"{producto.nombre}: la cantidad debe dar huevos enteros")
+        unidades = int(total_unidades)
         mover_stock_huevos(db, venta.finca_id, producto.tipo_huevo_id, -unidades)
 
     elif producto.clase in ("ave_descarte", "ave_engorde"):
@@ -262,7 +265,15 @@ def _descontar_item(db: Session, ctx: Contexto, venta: Venta, producto: Producto
         elif not ctx.es_plataforma and lote.finca_id not in ids_fincas_visibles(db, ctx):
             raise no_encontrado("El lote no existe")
 
-        aves = int(item.aves if item.aves is not None else cantidad)
+        if producto.cobro_por == "kg":
+            # Se cobra por kilo: cuantas aves son no se puede deducir de los kilos
+            if item.aves is None:
+                raise datos_invalidos(f"{producto.nombre} se cobra por kilo: indica cuantas aves se llevan")
+            aves = item.aves
+        else:
+            if cantidad != cantidad.to_integral_value():
+                raise datos_invalidos(f"{producto.nombre}: la cantidad de aves debe ser entera")
+            aves = int(cantidad)
         if aves <= 0:
             raise datos_invalidos("Indica cuantas aves se venden")
 
