@@ -442,15 +442,90 @@ en cada petición; la web solo oculta lo que el rol no puede usar.
 
 ## Poner en un servidor
 
-Resumen para una máquina virtual con Linux (Azure, AWS, DigitalOcean…):
+Pensado para una máquina virtual Linux (Azure, AWS, DigitalOcean…) con **Docker** y un **Caddy** que ya
+da HTTPS a otras apps. Ningún contenedor de Avícola publica puertos: Caddy es el único que expone 80 y 443
+y llega a la web y a la API por la red de Docker `proxy`.
 
-1. Instala Docker y Git, clona el repositorio y crea el `.env` con contraseñas y `JWT_SECRET` nuevos.
-2. Levanta con `docker compose up -d --build`.
-3. Pon delante un proxy con HTTPS (Nginx o Caddy) que apunte al puerto 3000 y cambia
-   `COOKIE_SEGURA=true`.
-4. Abre en el firewall solo los puertos 80 y 443. La API y la base de datos quedan escuchando solo en
-   `127.0.0.1`.
-5. Programa una copia diaria de la base de datos con `mysqldump`.
+```text
+Internet ──443──> Caddy ──/api/*──> avicola-api:8000 ──┐
+                    │                                  ├── red "interna" ── avicola-db, avicola-cache
+                    └──── resto ───> avicola-web:3000 ─┘
+                (red "proxy", compartida con las demás apps)
+```
+
+### 1. Preparar la VM
+
+```bash
+sudo mkdir -p /opt/avicola && sudo chown "$USER" /opt/avicola
+git clone https://github.com/Breiner1412/avicola.git /opt/avicola
+cd /opt/avicola
+docker network create proxy 2>/dev/null || true   # la red que comparte Caddy (si no existe)
+cp .env.example .env && chmod 600 .env
+```
+
+En el `.env` del servidor:
+
+- `ENTORNO=produccion` y `COOKIE_SEGURA=true` (la API no arranca en producción con las claves de
+  ejemplo ni sin cookie segura).
+- Claves nuevas para `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD`, `DB_MIGRA_PASSWORD`, `JWT_SECRET` y
+  `ADMIN_PASSWORD` (12 caracteres o más).
+- Para la demo pública: `DEMO=true` y `DB_NAME=avicola_demo` (ver [Demo pública](#demo-pública)).
+
+### 2. Levantar
+
+```bash
+docker compose up -d --build
+docker compose ps        # avicola-db, avicola-cache, avicola-api y avicola-web deben quedar "healthy"
+```
+
+### 3. Caddy
+
+En el `Caddyfile` del Caddy compartido (que debe estar en la red `proxy`):
+
+```caddy
+granja.ejemplo.com {
+	encode zstd gzip
+
+	# La API va directo a su contenedor: Caddy le pasa la IP real del visitante
+	# (los limites de intentos y el registro de cambios la usan)
+	handle /api/* {
+		reverse_proxy avicola-api:8000
+	}
+
+	# Todo lo demas es la aplicacion web
+	handle {
+		reverse_proxy avicola-web:3000
+	}
+}
+```
+
+Y se recarga sin cortar las demás apps:
+
+```bash
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile   # usa el nombre de tu contenedor de Caddy
+```
+
+La API solo cree la cabecera `X-Forwarded-For` de quien está en las redes privadas de Docker (Caddy y la
+web). Si tu red `proxy` usa otro rango, ajústalo con `PROXY_CONFIABLE` en el `.env`
+(`docker network inspect proxy` muestra la subred).
+
+### 4. Firewall
+
+En el grupo de seguridad de Azure deja abiertos solo **80**, **443** y el **22** (SSH, mejor limitado a tu
+IP). La base de datos, Redis y la API no tienen puertos publicados.
+
+### Si ya tenías Avícola corriendo en la VM
+
+La base existente sigue sirviendo (el volumen `avicola_db_datos` no cambia). Solo hay que crear una vez el
+usuario de la aplicación, que no puede tocar el registro de cambios:
+
+```bash
+# En el .env: DB_MIGRA_USER y DB_MIGRA_PASSWORD = el usuario y la clave que ya tenias en DB_USER/DB_PASSWORD;
+# DB_USER=avicola_app y DB_PASSWORD = una clave nueva
+docker compose up -d db
+docker compose exec db sh /docker-entrypoint-initdb.d/01-usuario-app.sh
+docker compose up -d --build      # las migraciones crean los triggers y los permisos por empresa
+```
 
 ---
 
