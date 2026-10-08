@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto, requiere
@@ -120,13 +120,24 @@ def resumen(
     ).all()
 
     # --- Inventario bajo minimo ---
-    bodegas = [b.id for b in db.scalars(select(Bodega).where(Bodega.cuenta_id == (ctx.cuenta_activa_id or 0))).all()]
+    # Solo las bodegas de la cuenta: centrales o de las fincas que ve el usuario
+    cuenta = ctx.cuenta_activa_id or 0
+    bodegas = db.scalars(
+        select(Bodega.id).where(
+            Bodega.cuenta_id == cuenta,
+            or_(Bodega.finca_id.is_(None), Bodega.finca_id.in_(fincas)),
+        )
+    ).all()
     bajos = []
     if bodegas:
         filas = db.execute(
             select(Articulo.nombre, Articulo.unidad, Articulo.stock_minimo, func.coalesce(func.sum(Existencia.cantidad), 0))
-            .join(Existencia, Existencia.articulo_id == Articulo.id, isouter=True)
-            .where(Articulo.activo.is_(True), Articulo.stock_minimo > 0)
+            .join(
+                Existencia,
+                and_(Existencia.articulo_id == Articulo.id, Existencia.bodega_id.in_(bodegas)),
+                isouter=True,
+            )
+            .where(Articulo.cuenta_id == cuenta, Articulo.activo.is_(True), Articulo.stock_minimo > 0)
             .group_by(Articulo.id, Articulo.nombre, Articulo.unidad, Articulo.stock_minimo)
         ).all()
         bajos = [

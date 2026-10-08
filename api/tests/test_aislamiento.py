@@ -2,7 +2,7 @@
 
 import pytest
 
-from tests.conftest import API, cabeceras
+from tests.conftest import API, cabeceras, unico
 from tests.test_multicuenta import crear_cuenta_completa
 
 
@@ -67,3 +67,29 @@ def test_nadie_cambia_los_permisos_de_su_propio_rol(cliente, propietario_a):
     assert respuesta.status_code == 403
     matriz = cliente.get(f"{API}/permisos", headers=cabeceras(propietario_a["token"]))
     assert matriz.status_code == 200
+
+
+def _crear_articulo_bajo_minimo(cliente, cuenta, nombre):
+    cab = cabeceras(cuenta["token"], cuenta["finca_id"])
+    categoria = cliente.get(f"{API}/categorias-articulo", headers=cab).json()[0]
+    articulo = cliente.post(
+        f"{API}/articulos",
+        headers=cab,
+        json={"codigo": unico("B")[:30], "nombre": nombre, "categoria_id": categoria["id"], "unidad": "kg", "stock_minimo": 50},
+    )
+    assert articulo.status_code == 201, articulo.text
+
+
+def test_el_reporte_no_muestra_inventario_de_otra_empresa(cliente, propietario_a, propietario_b):
+    secreto = unico("SecretoDeB")
+    _crear_articulo_bajo_minimo(cliente, propietario_b, secreto)
+    _crear_articulo_bajo_minimo(cliente, propietario_a, "Propio de A")
+    cab = cabeceras(propietario_a["token"], propietario_a["finca_id"])
+    bodega = cliente.post(f"{API}/bodegas", headers=cab, json={"codigo": unico("BC")[:20], "nombre": "Central A"})
+    assert bodega.status_code == 201, bodega.text
+
+    resumen = cliente.get(f"{API}/reportes/resumen", headers=cab)
+    assert resumen.status_code == 200, resumen.text
+    nombres = {b["articulo"] for b in resumen.json()["inventario"]["bajo_minimo"]}
+    assert secreto not in nombres
+    assert "Propio de A" in nombres
