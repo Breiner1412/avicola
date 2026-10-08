@@ -489,6 +489,15 @@ granja.ejemplo.com {
 	# La API va directo a su contenedor: Caddy le pasa la IP real del visitante
 	# (los limites de intentos y el registro de cambios la usan)
 	handle /api/* {
+		# Tope al tamano de lo que se envia: el Excel admite 5 MB, lo demas es JSON
+		@importacion path /api/v1/importacion/analizar
+		@resto not path /api/v1/importacion/analizar
+		request_body @importacion {
+			max_size 6MB
+		}
+		request_body @resto {
+			max_size 1MB
+		}
 		reverse_proxy avicola-api:8000
 	}
 
