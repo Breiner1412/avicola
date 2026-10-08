@@ -258,7 +258,8 @@ no uses el signo `$` en las contraseñas: Docker Compose lo interpreta como vari
 | Variable | Para qué | Ejemplo |
 |---|---|---|
 | `MYSQL_ROOT_PASSWORD` | Contraseña root de MySQL (solo Docker) | `CambiaEstaClaveRoot123` |
-| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos de la aplicación | `avicola` |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos y usuario de la aplicación (solo lee y escribe datos) | `avicola`, `avicola_app` |
+| `DB_MIGRA_USER`, `DB_MIGRA_PASSWORD` | Dueño del esquema, solo para las migraciones (vacíos = usan `DB_USER`) | `avicola` |
 | `DB_HOST`, `DB_PORT` | Dónde está MySQL | `db`, `3306` |
 | `JWT_SECRET` | Clave para firmar las sesiones (**mínimo 32 caracteres**) | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `MINUTOS_ACCESO` | Duración del token de acceso | `30` |

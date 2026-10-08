@@ -3,9 +3,9 @@
 from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import create_engine
 
 from app.core.config import config as ajustes
-from app.core.db import motor
 from app.modelos import Base  # importa todos los modelos
 
 configuracion = context.config
@@ -17,7 +17,7 @@ metadatos = Base.metadata
 
 def offline() -> None:
     context.configure(
-        url=ajustes.url_base_datos.render_as_string(hide_password=False),
+        url=ajustes.url_migraciones.render_as_string(hide_password=False),
         target_metadata=metadatos,
         literal_binds=True,
         compare_type=True,
@@ -27,6 +27,8 @@ def offline() -> None:
 
 
 def online() -> None:
+    # Con el usuario duenio del esquema: el de la aplicacion no puede cambiarlo
+    motor = create_engine(ajustes.url_migraciones, future=True)
     with motor.connect() as conexion:
         context.configure(connection=conexion, target_metadata=metadatos, compare_type=True)
         with context.begin_transaction():

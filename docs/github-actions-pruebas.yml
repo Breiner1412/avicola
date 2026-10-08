@@ -38,6 +38,8 @@ jobs:
       - name: Instalar dependencias
         working-directory: api
         run: pip install -r requirements-dev.txt
+      - name: Permitir triggers con el binlog activo
+        run: mysql -h127.0.0.1 -uroot -praiz123 -e "SET GLOBAL log_bin_trust_function_creators = 1"
       - name: Migraciones y datos iniciales
         working-directory: api
         run: |

@@ -4,16 +4,24 @@ services:
   db:
     image: mysql:8.4
     restart: unless-stopped
+    # log-bin-trust-function-creators: permite a las migraciones crear los triggers
+    # que dejan el registro de cambios de solo insercion
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
+      --log-bin-trust-function-creators=1
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME:-avicola}
-      MYSQL_USER: ${DB_USER:-avicola}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
+      # Duenio del esquema: solo lo usan las migraciones
+      MYSQL_USER: ${DB_MIGRA_USER:-avicola}
+      MYSQL_PASSWORD: ${DB_MIGRA_PASSWORD:?falta DB_MIGRA_PASSWORD}
+      # Usuario de la aplicacion (solo datos), lo crea db/inicio/01-usuario-app.sh
+      DB_APP_USER: ${DB_USER:-avicola_app}
+      DB_APP_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
     volumes:
       - db_datos:/var/lib/mysql
+      - ./db/inicio:/docker-entrypoint-initdb.d:ro
     ports:
       - "127.0.0.1:${DB_PUERTO_HOST:-3308}:3306"
     healthcheck:

@@ -25,6 +25,11 @@ class Configuracion(BaseSettings):
     db_user: str = "avicola"
     db_password: str = ""
     db_name: str = "avicola"
+    # Usuario duenio del esquema, solo para las migraciones. El de arriba (db_user)
+    # es el de la aplicacion y no puede crear ni quitar tablas ni triggers.
+    # Vacio = las migraciones usan db_user (desarrollo y pruebas).
+    db_migra_user: str = ""
+    db_migra_password: str = ""
 
     # --- Sesiones ---
     jwt_secret: str = ""
@@ -64,17 +69,26 @@ class Configuracion(BaseSettings):
             )
         return valor
 
-    @property
-    def url_base_datos(self) -> URL:
+    def _url(self, usuario: str, clave: str) -> URL:
         return URL.create(
             "mysql+pymysql",
-            username=self.db_user,
-            password=self.db_password,
+            username=usuario,
+            password=clave,
             host=self.db_host,
             port=self.db_port,
             database=self.db_name,
             query={"charset": "utf8mb4"},
         )
+
+    @property
+    def url_base_datos(self) -> URL:
+        return self._url(self.db_user, self.db_password)
+
+    @property
+    def url_migraciones(self) -> URL:
+        if self.db_migra_user:
+            return self._url(self.db_migra_user, self.db_migra_password)
+        return self.url_base_datos
 
     @property
     def lista_cors(self) -> list[str]:
