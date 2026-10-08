@@ -277,3 +277,33 @@ def test_otra_cuenta_no_ve_las_importaciones(cliente, finca, token_plataforma):
 
     assert cliente.get(f"{API}/importacion", headers=cab).json() == []
     assert cliente.get(f"{API}/importacion/{finca['importacion_aplicada']}", headers=cab).status_code == 404
+
+
+def test_una_finca_no_ve_ni_aplica_importaciones_de_otra(cliente, finca):
+    archivo = excel(["Codigo", "Nombre", "Unidad"], [[unico("X")[:20], "Articulo de la finca 1", "kg"]])
+    subida = subir(cliente, finca, "articulos", archivo)
+    assert subida.status_code == 201, subida.text
+    importacion_id = subida.json()["id"]
+
+    admin = cabeceras(finca["token"])
+    finca2 = cliente.post(f"{API}/fincas", headers=admin, json={"codigo": "P2", "nombre": unico("Otra")}).json()
+    email = f"{unico('sup2')}@avicola.com"
+    cliente.post(
+        f"{API}/usuarios",
+        headers=admin,
+        json={
+            "nombres": "Supervisor",
+            "email": email,
+            "rol": "supervisor",
+            "clave": "ClaveDePrueba123",
+            "debe_cambiar_clave": False,
+            "fincas": [{"finca_id": finca2["id"], "solo_lectura": False}],
+        },
+    )
+    token = cliente.post(f"{API}/auth/login", json={"email": email, "clave": "ClaveDePrueba123"}).json()["token"]
+    cab = cabeceras(token, finca2["id"])
+
+    assert cliente.get(f"{API}/importacion/{importacion_id}", headers=cab).status_code == 404
+    assert cliente.post(f"{API}/importacion/{importacion_id}/validar", headers=cab, json={}).status_code in (404, 422)
+    historial = cliente.get(f"{API}/importacion", headers=cab).json()
+    assert importacion_id not in {i["id"] for i in historial}

@@ -1,7 +1,7 @@
 """Subir un archivo de Excel o CSV y cargar sus datos al sistema."""
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
@@ -28,7 +28,7 @@ from app.modelos.importacion import (
     Importacion,
     PlantillaImportacion,
 )
-from app.servicios.alcance import cuenta_filtro, cuenta_objetivo
+from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, ids_fincas_visibles
 from app.servicios.importacion import (
     CAMPOS,
     ETIQUETAS_TIPO,
@@ -79,6 +79,12 @@ def _importacion_de(db: Session, ctx: Contexto, importacion_id: int) -> Importac
     cuenta = cuenta_filtro(ctx)
     if importacion is None or (cuenta is not None and importacion.cuenta_id != cuenta):
         raise no_encontrado("Esa importacion no existe")
+    # Ademas de la cuenta, la finca: verla o aplicarla escribe en esa finca
+    if importacion.finca_id is not None and not ctx.es_plataforma:
+        if importacion.finca_id not in ids_fincas_visibles(db, ctx):
+            raise no_encontrado("Esa importacion no existe")
+        if ctx.finca_id is not None and importacion.finca_id != ctx.finca_id:
+            raise no_encontrado("Esa importacion es de otra finca")
     return importacion
 
 
@@ -357,6 +363,9 @@ def historial(
     cuenta = cuenta_filtro(ctx)
     if cuenta is not None:
         consulta = consulta.where(Importacion.cuenta_id == cuenta)
+    if not ctx.es_plataforma:
+        fincas = [ctx.finca_id] if ctx.finca_id is not None else ids_fincas_visibles(db, ctx)
+        consulta = consulta.where(or_(Importacion.finca_id.is_(None), Importacion.finca_id.in_(fincas or [0])))
     filas = db.scalars(consulta.order_by(Importacion.id.desc()).limit(limite)).all()
     return [_salida(i) for i in filas]
 
