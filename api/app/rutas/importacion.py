@@ -45,6 +45,19 @@ from app.servicios.importacion_datos import revertir as revertir_datos
 router = APIRouter(prefix="/importacion", tags=["Importar desde Excel"])
 
 MAX_BYTES = 5 * 1024 * 1024
+BLOQUE = 64 * 1024
+
+
+async def _leer_con_tope(archivo: UploadFile) -> bytes:
+    """Lee el archivo por bloques y corta en cuanto pasa del tope, sin cargarlo entero."""
+    partes: list[bytes] = []
+    leidos = 0
+    while bloque := await archivo.read(BLOQUE):
+        leidos += len(bloque)
+        if leidos > MAX_BYTES:
+            raise datos_invalidos("El archivo pesa mas de 5 MB. Divide la informacion en varios archivos.")
+        partes.append(bloque)
+    return b"".join(partes)
 
 
 def _campos(tipo: str) -> list[CampoInfo]:
@@ -166,9 +179,7 @@ async def analizar(
     if tipo not in TIPOS_IMPORTACION:
         raise datos_invalidos("Ese tipo de importacion no existe")
 
-    contenido = await archivo.read()
-    if len(contenido) > MAX_BYTES:
-        raise datos_invalidos("El archivo pesa mas de 5 MB. Divide la informacion en varios archivos.")
+    contenido = await _leer_con_tope(archivo)
 
     try:
         hoja, columnas, filas = leer_archivo(contenido, archivo.filename or "archivo")

@@ -307,3 +307,10 @@ def test_una_finca_no_ve_ni_aplica_importaciones_de_otra(cliente, finca):
     assert cliente.post(f"{API}/importacion/{importacion_id}/validar", headers=cab, json={}).status_code in (404, 422)
     historial = cliente.get(f"{API}/importacion", headers=cab).json()
     assert importacion_id not in {i["id"] for i in historial}
+
+
+def test_un_archivo_de_mas_de_5_mb_se_rechaza(cliente, finca):
+    grande = b"codigo;nombre\n" + b"A;" + b"x" * (5 * 1024 * 1024 + 10) + b"\n"
+    respuesta = subir(cliente, finca, "articulos", grande, nombre="grande.csv")
+    assert respuesta.status_code == 400
+    assert "5 MB" in respuesta.json()["detail"]["mensaje"]
