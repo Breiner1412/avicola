@@ -384,7 +384,7 @@ avicola/
 │   │   ├── servicios/           # reglas del negocio (inventario, aves, ventas, avisos...)
 │   │   ├── rutas/               # endpoints por módulo
 │   │   ├── semilla.py           # datos iniciales
-│   │   └── demo.py              # seis meses de datos de ejemplo
+│   │   └── demo/                # seis meses de datos de ejemplo (python -m app.demo)
 │   ├── migraciones/             # Alembic
 │   └── tests/                   # pruebas
 └── web/

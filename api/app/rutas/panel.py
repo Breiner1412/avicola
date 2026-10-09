@@ -1,6 +1,6 @@
 """Resumen para la pantalla de inicio."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_, select
@@ -22,6 +22,81 @@ from app.servicios.ventas import puntos_visibles
 router = APIRouter(prefix="/panel", tags=["Panel"])
 
 
+def _galpones_de_la_finca(db: Session, finca_id: int | None) -> tuple[int, int, int]:
+    """(galpones activos, aves, capacidad) de la finca activa."""
+    if finca_id is None:
+        return 0, 0, 0
+    galpones, aves, capacidad = db.execute(
+        select(
+            func.count(Galpon.id),
+            func.coalesce(func.sum(Galpon.aves_actuales), 0),
+            func.coalesce(func.sum(Galpon.capacidad), 0),
+        ).where(Galpon.finca_id == finca_id, Galpon.activo.is_(True))
+    ).one()
+    return int(galpones or 0), int(aves or 0), int(capacidad or 0)
+
+
+def _usuarios_activos(db: Session, ctx: Contexto, fincas: list[int]) -> int:
+    if ctx.cuenta_activa_id is None:
+        return 0
+    consulta = select(func.count(Usuario.id)).where(Usuario.cuenta_id == ctx.cuenta_activa_id, Usuario.activo.is_(True))
+    if not ctx.ve_toda_la_cuenta:
+        consulta = consulta.where(
+            Usuario.id.in_(select(UsuarioFinca.usuario_id).where(UsuarioFinca.finca_id.in_(fincas or [0])))
+        )
+    return int(db.scalar(consulta) or 0)
+
+
+def _serie_diaria(filas, inicio: date, dias: int, tipo=int) -> list[dict]:
+    """Un punto por dia del periodo (los dias sin datos quedan en cero)."""
+    por_dia = {fecha: tipo(valor or 0) for fecha, valor in filas}
+    return [
+        {"fecha": (inicio + timedelta(days=i)).isoformat(), "valor": por_dia.get(inicio + timedelta(days=i), tipo(0))}
+        for i in range(dias)
+    ]
+
+
+def _trabajo(db: Session, fincas: list[int], hoy: date) -> tuple[int, int, int]:
+    """(tareas de hoy, tareas atrasadas, novedades abiertas)."""
+    pendientes = Tarea.estado.in_(("pendiente", "en_proceso"))
+    tareas_hoy = db.scalar(select(func.count(Tarea.id)).where(Tarea.finca_id.in_(fincas), Tarea.fecha == hoy, pendientes))
+    atrasadas = db.scalar(select(func.count(Tarea.id)).where(Tarea.finca_id.in_(fincas), Tarea.fecha < hoy, pendientes))
+    novedades = db.scalar(
+        select(func.count(Novedad.id)).where(Novedad.finca_id.in_(fincas), Novedad.estado.in_(("abierta", "en_proceso")))
+    )
+    return int(tareas_hoy or 0), int(atrasadas or 0), int(novedades or 0)
+
+
+def _sensores(db: Session, fincas: list[int]) -> tuple[int, int]:
+    """(sensores activos, cuantos tienen la ultima medicion fuera de rango), en dos consultas."""
+    ids = list(db.scalars(select(Sensor.id).where(Sensor.finca_id.in_(fincas), Sensor.activo.is_(True))).all())
+    if not ids:
+        return 0, 0
+    # La ultima por fecha de medicion (las lecturas pueden llegar desordenadas)
+    orden = (
+        func.row_number()
+        .over(partition_by=LecturaSensor.sensor_id, order_by=(LecturaSensor.medido_en.desc(), LecturaSensor.id.desc()))
+        .label("orden")
+    )
+    ultimas = (
+        select(LecturaSensor.fuera_rango, orden).where(LecturaSensor.sensor_id.in_(ids)).subquery()
+    )
+    fuera = db.scalar(
+        select(func.count()).select_from(ultimas).where(ultimas.c.orden == 1, ultimas.c.fuera_rango.is_(True))
+    )
+    return len(ids), int(fuera or 0)
+
+
+def _avisos(db: Session, ctx: Contexto, fincas: list[int]) -> int:
+    cuenta = cuenta_filtro(ctx)
+    if cuenta is None:
+        return 0
+    consulta = select(func.count(Alerta.id)).where(Alerta.cuenta_id == cuenta, Alerta.activa.is_(True))
+    if not ctx.ve_toda_la_cuenta:
+        consulta = consulta.where(or_(Alerta.finca_id.is_(None), Alerta.finca_id.in_(fincas or [0])))
+    return int(db.scalar(consulta) or 0)
+
+
 @router.get("/resumen", summary="Numeros generales de la cuenta y de la finca activa")
 def resumen(
     dias: int = Query(14, ge=7, le=60),
@@ -31,138 +106,64 @@ def resumen(
     fincas = ids_fincas_visibles(db, ctx)
     hoy = hoy_en_la_granja()
     inicio = hoy - timedelta(days=dias - 1)
-
-    galpones = aves = capacidad = 0
-    if ctx.finca_id is not None:
-        galpones, aves, capacidad = db.execute(
-            select(
-                func.count(Galpon.id),
-                func.coalesce(func.sum(Galpon.aves_actuales), 0),
-                func.coalesce(func.sum(Galpon.capacidad), 0),
-            ).where(Galpon.finca_id == ctx.finca_id, Galpon.activo.is_(True))
-        ).one()
-
-    usuarios = 0
-    if ctx.cuenta_activa_id is not None:
-        consulta_usuarios = select(func.count(Usuario.id)).where(
-            Usuario.cuenta_id == ctx.cuenta_activa_id, Usuario.activo.is_(True)
-        )
-        if not ctx.ve_toda_la_cuenta:
-            consulta_usuarios = consulta_usuarios.where(
-                Usuario.id.in_(select(UsuarioFinca.usuario_id).where(UsuarioFinca.finca_id.in_(fincas or [0])))
-            )
-        usuarios = db.scalar(consulta_usuarios)
-
     finca = db.get(Finca, ctx.finca_id) if ctx.finca_id else None
     fincas_consulta = [ctx.finca_id] if ctx.finca_id is not None else (fincas or [0])
 
-    # --- Produccion por dia ---
-    filas = db.execute(
-        select(ProduccionHuevos.fecha, func.coalesce(func.sum(ProduccionHuevos.cantidad), 0))
-        .where(ProduccionHuevos.finca_id.in_(fincas_consulta), ProduccionHuevos.fecha.between(inicio, hoy))
-        .group_by(ProduccionHuevos.fecha)
-    ).all()
-    por_dia = {fecha: int(cantidad or 0) for fecha, cantidad in filas}
-    produccion = [
-        {"fecha": (inicio + timedelta(days=i)).isoformat(), "valor": por_dia.get(inicio + timedelta(days=i), 0)}
-        for i in range(dias)
-    ]
-
-    # --- Ventas por dia ---
+    galpones, aves, capacidad = _galpones_de_la_finca(db, ctx.finca_id)
+    produccion = _serie_diaria(
+        db.execute(
+            select(ProduccionHuevos.fecha, func.coalesce(func.sum(ProduccionHuevos.cantidad), 0))
+            .where(ProduccionHuevos.finca_id.in_(fincas_consulta), ProduccionHuevos.fecha.between(inicio, hoy))
+            .group_by(ProduccionHuevos.fecha)
+        ).all(),
+        inicio,
+        dias,
+    )
     puntos = [p.id for p in puntos_visibles(db, ctx, incluir_inactivos=True)] or [0]
-    filas = db.execute(
-        select(Venta.fecha, func.coalesce(func.sum(Venta.total), 0))
-        .where(Venta.punto_venta_id.in_(puntos), Venta.estado == "activa", Venta.fecha.between(inicio, hoy))
-        .group_by(Venta.fecha)
-    ).all()
-    ventas_dia = {fecha: float(total or 0) for fecha, total in filas}
-    ventas = [
-        {"fecha": (inicio + timedelta(days=i)).isoformat(), "valor": ventas_dia.get(inicio + timedelta(days=i), 0.0)}
-        for i in range(dias)
-    ]
-
-    # --- Huevos disponibles ---
+    ventas = _serie_diaria(
+        db.execute(
+            select(Venta.fecha, func.coalesce(func.sum(Venta.total), 0))
+            .where(Venta.punto_venta_id.in_(puntos), Venta.estado == "activa", Venta.fecha.between(inicio, hoy))
+            .group_by(Venta.fecha)
+        ).all(),
+        inicio,
+        dias,
+        tipo=float,
+    )
     disponibles = 0
     if ctx.finca_id is not None:
         disponibles = db.scalar(
             select(func.coalesce(func.sum(StockHuevos.cantidad), 0)).where(StockHuevos.finca_id == ctx.finca_id)
         ) or 0
-
-    # --- Lotes ---
-    lotes = db.scalars(
-        select(Lote).where(Lote.finca_id.in_(fincas_consulta), Lote.estado == "activo")
-    ).all()
-
-    # --- Trabajo de hoy ---
-    tareas_hoy = db.scalar(
-        select(func.count(Tarea.id)).where(
-            Tarea.finca_id.in_(fincas_consulta), Tarea.fecha == hoy, Tarea.estado.in_(("pendiente", "en_proceso"))
-        )
-    ) or 0
-    tareas_atrasadas = db.scalar(
-        select(func.count(Tarea.id)).where(
-            Tarea.finca_id.in_(fincas_consulta), Tarea.fecha < hoy, Tarea.estado.in_(("pendiente", "en_proceso"))
-        )
-    ) or 0
-    novedades = db.scalar(
-        select(func.count(Novedad.id)).where(
-            Novedad.finca_id.in_(fincas_consulta), Novedad.estado.in_(("abierta", "en_proceso"))
-        )
-    ) or 0
-
-    # --- Sensores ---
-    sensores = db.scalars(
-        select(Sensor).where(Sensor.finca_id.in_(fincas_consulta), Sensor.activo.is_(True))
-    ).unique().all()
-    sensores_alerta = 0
-    for sensor in sensores:
-        ultima = db.scalars(
-            select(LecturaSensor)
-            .where(LecturaSensor.sensor_id == sensor.id)
-            .order_by(LecturaSensor.medido_en.desc(), LecturaSensor.id.desc())
-            .limit(1)
-        ).first()
-        if ultima is not None and ultima.fuera_rango:
-            sensores_alerta += 1
-
-    # --- Avisos ---
-    cuenta = cuenta_filtro(ctx)
-    alertas = 0
-    if cuenta is not None:
-        consulta_alertas = select(func.count(Alerta.id)).where(Alerta.cuenta_id == cuenta, Alerta.activa.is_(True))
-        if not ctx.ve_toda_la_cuenta:
-            consulta_alertas = consulta_alertas.where(
-                or_(Alerta.finca_id.is_(None), Alerta.finca_id.in_(fincas or [0]))
-            )
-        alertas = db.scalar(consulta_alertas) or 0
-
+    lotes = db.scalars(select(Lote).where(Lote.finca_id.in_(fincas_consulta), Lote.estado == "activo")).all()
+    tareas_hoy, tareas_atrasadas, novedades = _trabajo(db, fincas_consulta, hoy)
+    sensores, sensores_alerta = _sensores(db, fincas_consulta)
     huevos_periodo = sum(d["valor"] for d in produccion)
-    ventas_periodo = sum(d["valor"] for d in ventas)
 
     return {
         "finca_activa": {"id": finca.id, "nombre": finca.nombre} if finca else None,
         "fincas_visibles": len(fincas),
-        "usuarios_activos": int(usuarios or 0),
-        "galpones_activos": int(galpones or 0),
-        "aves_en_finca": int(aves or 0),
-        "capacidad_finca": int(capacidad or 0),
-        "ocupacion": round(int(aves or 0) * 100 / int(capacidad), 1) if capacidad else 0.0,
+        "usuarios_activos": _usuarios_activos(db, ctx, fincas),
+        "galpones_activos": galpones,
+        "aves_en_finca": aves,
+        "capacidad_finca": capacidad,
+        "ocupacion": round(aves * 100 / capacidad, 1) if capacidad else 0.0,
         "solo_lectura": ctx.solo_lectura,
         "dias": dias,
         "huevos_periodo": huevos_periodo,
         "huevos_promedio": round(huevos_periodo / dias, 1),
         "huevos_disponibles": int(disponibles),
-        "ventas_periodo": ventas_periodo,
+        "ventas_periodo": sum(d["valor"] for d in ventas),
         "produccion": produccion,
         "ventas": ventas,
         "lotes_activos": len(lotes),
-        "aves_descarte": sum(l.aves_descarte for l in lotes),
-        "tareas_hoy": int(tareas_hoy),
-        "tareas_atrasadas": int(tareas_atrasadas),
-        "novedades_abiertas": int(novedades),
-        "sensores": len(sensores),
+        "aves_descarte": sum(lote.aves_descarte for lote in lotes),
+        "tareas_hoy": tareas_hoy,
+        "tareas_atrasadas": tareas_atrasadas,
+        "novedades_abiertas": novedades,
+        "sensores": sensores,
         "sensores_alerta": sensores_alerta,
-        "alertas": int(alertas),
+        "alertas": _avisos(db, ctx, fincas),
         "otras_fincas": _otras_fincas(db, ctx, fincas, inicio, hoy) if ctx.rol == "supervisor" else [],
     }
 

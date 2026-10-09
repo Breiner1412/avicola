@@ -231,3 +231,30 @@ def test_los_avisos_de_otra_finca_no_se_cierran_al_mirar_esta(cliente, token_pla
     with SesionLocal() as db:
         de_la_finca2 = db.scalars(select(Alerta).where(Alerta.finca_id == finca2["id"])).all()
     assert de_la_finca2 and all(a.activa for a in de_la_finca2)
+
+
+def test_el_panel_cuenta_sensores_por_su_ultima_medicion(cliente, token_plataforma):
+    datos = crear_cuenta_completa(cliente, token_plataforma, "PanelSensores")
+    cab = cabeceras(datos["token"], datos["finca_id"])
+    tipo = next(t for t in cliente.get(f"{API}/tipos-sensor", headers=cab).json() if t["nombre"].lower().startswith("temp"))
+    sensor = cliente.post(
+        f"{API}/sensores",
+        headers=cab,
+        json={"codigo": "T-PANEL", "nombre": "Termometro", "tipo_id": tipo["id"], "min_ok": 10, "max_ok": 30},
+    ).json()
+    # Llega primero la medicion nueva (normal) y despues una vieja fuera de rango
+    for valor, cuando in ((20, "2026-06-02T10:00:00"), (45, "2026-06-01T10:00:00")):
+        lectura = cliente.post(
+            f"{API}/sensores/{sensor['id']}/lecturas", headers=cab, json={"valor": valor, "medido_en": cuando}
+        )
+        assert lectura.status_code == 201, lectura.text
+    # Al reves, la ultima medicion si queda fuera de rango
+    lectura = cliente.post(
+        f"{API}/sensores/{sensor['id']}/lecturas", headers=cab, json={"valor": 50, "medido_en": "2026-06-03T10:00:00"}
+    )
+    assert lectura.status_code == 201, lectura.text
+    assert cliente.get(f"{API}/panel/resumen", headers=cab).json()["sensores_alerta"] == 1
+    cliente.post(f"{API}/sensores/{sensor['id']}/lecturas", headers=cab, json={"valor": 20, "medido_en": "2026-06-04T10:00:00"})
+    panel = cliente.get(f"{API}/panel/resumen", headers=cab).json()
+    assert panel["sensores"] == 1
+    assert panel["sensores_alerta"] == 0
