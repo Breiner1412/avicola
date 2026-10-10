@@ -478,7 +478,8 @@ def anular_venta(db: Session, ctx: Contexto, venta: Venta, motivo: str) -> None:
             raise sin_permiso("Solo puedes anular ventas de tu turno abierto")
 
     # Con la caja ya cerrada, solo quien responde por toda la cuenta
-    turno_venta = db.get(TurnoCaja, venta.turno_id) if venta.turno_id else None
+    # Se bloquea el turno: una anulacion y el cierre de esa caja no se cruzan
+    turno_venta = bloquear(db, TurnoCaja, venta.turno_id)
     caja_cerrada = turno_venta is not None and turno_venta.estado == "cerrado"
     if caja_cerrada and not ctx.ve_toda_la_cuenta:
         raise sin_permiso("Esa venta es de una caja ya cerrada: solo el propietario o el administrador pueden anularla")
