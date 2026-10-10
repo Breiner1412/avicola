@@ -396,6 +396,7 @@ def crear_novedad(
     lote = bloquear(db, Lote, datos.lote_id)
     if datos.lote_id and (lote is None or lote.finca_id != ctx.finca_id):
         raise datos_invalidos("El lote no existe en esta finca")
+    de_la_finca(db, Galpon, datos.galpon_id, ctx.finca_id, "El galpon")
 
     movimiento_id = None
     if datos.descontar_aves and datos.aves_afectadas:

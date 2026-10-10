@@ -297,3 +297,26 @@ def test_un_punto_de_venta_no_se_pasa_a_una_finca_ajena(cliente, propietario_a, 
         f"{API}/puntos-venta/{punto['id']}", headers=cab_a, json={"finca_id": propietario_b["finca_id"]}
     )
     assert respuesta.status_code == 400
+
+
+def test_novedad_y_sanidad_no_aceptan_galpones_ni_lotes_de_otra_finca(cliente, token_plataforma):
+    cuenta = crear_cuenta_completa(cliente, token_plataforma, "OtraFincaIds")
+    admin = cabeceras(cuenta["token"])
+    finca2 = cliente.post(f"{API}/fincas", headers=admin, json={"codigo": "F2", "nombre": unico("Dos")}).json()
+    cab1 = cabeceras(cuenta["token"], cuenta["finca_id"])
+    cab2 = cabeceras(cuenta["token"], finca2["id"])
+    galpon2 = cliente.post(f"{API}/galpones", headers=cab2, json={"codigo": "G2", "nombre": "G2", "capacidad": 100}).json()
+    lote2 = cliente.post(
+        f"{API}/lotes", headers=cab2,
+        json={"codigo": "L2", "galpon_id": galpon2["id"], "fecha_ingreso": "2026-01-05", "aves_iniciales": 50},
+    ).json()
+
+    novedad = cliente.post(
+        f"{API}/novedades", headers=cab1, json={"fecha": "2026-06-01", "titulo": "Gotera", "galpon_id": galpon2["id"]}
+    )
+    assert novedad.status_code == 400, novedad.text
+    sanidad = cliente.post(
+        f"{API}/sanidad", headers=cab1,
+        json={"fecha": "2026-06-01", "tipo": "vacuna", "producto": "Newcastle", "lote_id": lote2["id"]},
+    )
+    assert sanidad.status_code == 400, sanidad.text

@@ -114,6 +114,9 @@ def crear(
     ctx: Contexto = Depends(requiere("sanidad", "crear", con_finca=True)),
 ):
     lote = lote_de(db, ctx, datos.lote_id) if datos.lote_id else None
+    # El registro es de la finca activa: el lote tambien debe serlo
+    if lote is not None and lote.finca_id != ctx.finca_id:
+        raise datos_invalidos("El lote no es de la finca activa")
 
     galpon_id = datos.galpon_id or (lote.galpon_id if lote else None)
     if galpon_id is not None:
@@ -196,6 +199,9 @@ def borrar(
     aplicacion = db.get(AplicacionSanitaria, aplicacion_id)
     cuenta = cuenta_filtro(ctx)
     if aplicacion is None or (cuenta is not None and aplicacion.cuenta_id != cuenta):
+        raise no_encontrado("El registro no existe")
+    # Borrar escribe en la finca: debe ser una finca en la que se puede trabajar
+    if not ctx.es_plataforma and aplicacion.finca_id not in ids_fincas_visibles(db, ctx):
         raise no_encontrado("El registro no existe")
     if aplicacion.movimiento_id:
         raise datos_invalidos(
