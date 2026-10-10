@@ -288,22 +288,27 @@ no uses el signo `$` en las contraseñas: Docker Compose lo interpreta como vari
 
 | Variable | Para qué | Ejemplo |
 |---|---|---|
-| `MYSQL_ROOT_PASSWORD` | Contraseña root de MySQL (solo Docker) | `CambiaEstaClaveRoot123` |
-| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos y usuario de la aplicación (solo lee y escribe datos) | `avicola`, `avicola_app` |
-| `DB_MIGRA_USER`, `DB_MIGRA_PASSWORD` | Dueño del esquema, solo para las migraciones (vacíos = usan `DB_USER`) | `avicola` |
-| `DB_HOST`, `DB_PORT` | Dónde está MySQL | `db`, `3306` |
+| `ENTORNO` | `produccion` en el servidor: exige claves propias, apaga `/docs` y pide Redis | `desarrollo` |
 | `DEMO` | `true` solo en la demo pública (ver [Demo pública](#demo-pública)) | `false` |
+| `ZONA_HORARIA` | Zona de la granja: define "hoy" y los días de los reportes | `America/Bogota` |
+| `TZ` | Hora de los logs de los contenedores | `America/Bogota` |
+| `MYSQL_ROOT_PASSWORD` | Contraseña root de MySQL (solo la usa el contenedor de la base y los scripts) | |
+| `DB_NAME` | Base de datos (`avicola_demo` en la demo pública) | `avicola` |
+| `DB_USER`, `DB_PASSWORD` | Usuario de la aplicación: solo lee y escribe datos | `avicola_app` |
+| `DB_MIGRA_USER`, `DB_MIGRA_PASSWORD` | Dueño del esquema, solo para las migraciones (vacíos = usan `DB_USER`) | `avicola` |
+| `REDIS_PASSWORD` | Clave de Redis (Docker arma `REDIS_URL` con ella) | |
 | `JWT_SECRET` | Clave para firmar las sesiones (**mínimo 32 caracteres**) | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `MINUTOS_ACCESO` | Duración del token de acceso | `30` |
 | `DIAS_REFRESCO` | Días que dura la sesión sin volver a entrar | `14` |
-| `COOKIE_SEGURA` | `true` cuando se sirve con HTTPS | `false` |
-| `REDIS_URL` | Caché para limitar intentos | `redis://cache:6379/0` |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NOMBRE` | Usuario de plataforma que se crea la primera vez | |
+| `COOKIE_SEGURA` | `true` con HTTPS (obligatorio en producción) | `true` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NOMBRE` | Usuario de plataforma que se crea la primera vez (clave de 12 o más en producción) | |
 | `CUENTA_DEMO`, `FINCA_DEMO` | Nombre de la cuenta y la finca que se crean la primera vez | |
-| `SMTP_*` | Correo para recuperar contraseñas (opcional) | |
-| `CORS_ORIGENES` | Orígenes permitidos si se llama la API desde otro dominio | |
-| `WEB_PUERTO_HOST`, `API_PUERTO_HOST`, `DB_PUERTO_HOST` | Puertos en tu máquina | `3000`, `8000`, `3308` |
-| `TZ` | Zona horaria del servidor | `America/Bogota` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_DESDE` | Correo para recuperar contraseñas | `587` |
+| `CORS_ORIGENES` | Orígenes permitidos si se llama la API desde otro dominio (vacío detrás de Caddy) | |
+| `PROXY_CONFIABLE` | Redes de las que la API cree `X-Forwarded-For` | `172.16.0.0/12,192.168.0.0/16,10.0.0.0/8` |
+| `WEB_PUERTO_HOST`, `API_PUERTO_HOST`, `DB_PUERTO_HOST` | Solo con `docker-compose.local.yml` (en tu equipo) | `3000`, `8000`, `3308` |
+
+Sin Docker (`api/.env`) se usan además `DB_HOST`, `DB_PORT` y `REDIS_URL`.
 
 ---
 
@@ -532,6 +537,40 @@ web). Si tu red `proxy` usa otro rango, ajústalo con `PROXY_CONFIABLE` en el `.
 En el grupo de seguridad de Azure deja abiertos solo **80**, **443** y el **22** (SSH, mejor limitado a tu
 IP). La base de datos, Redis y la API no tienen puertos publicados.
 
+### 5. Respaldos
+
+`scripts/respaldo.sh` saca un `mysqldump` consistente (`--single-transaction`, con los triggers del
+registro de cambios), lo comprime, verifica que quedó completo y borra los de más de 14 días:
+
+```bash
+sudo mkdir -p /var/backups/avicola && sudo chown "$USER" /var/backups/avicola
+sh scripts/respaldo.sh                         # deja /var/backups/avicola/<base>_AAAA-MM-DD_HHMM.sql.gz
+```
+
+Cron del host (`crontab -e`), todos los días a las 2:00, antes del reinicio de la demo:
+
+```cron
+0 2 * * *  cd /opt/avicola && sh scripts/respaldo.sh >> /var/log/avicola-respaldo.log 2>&1
+```
+
+El comando que hace por dentro, por si lo quieres correr a mano:
+
+```bash
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot \
+  --single-transaction --quick --routines --triggers --events --hex-blob \
+  --default-character-set=utf8mb4 --set-gtid-purged=OFF --no-tablespaces "$MYSQL_DATABASE"' \
+  | gzip -9 > /var/backups/avicola/avicola_$(date +%F_%H%M).sql.gz
+```
+
+Para restaurar (**borra los datos actuales**; detiene la API mientras tanto):
+
+```bash
+sh scripts/restaurar.sh /var/backups/avicola/avicola_2026-10-09_0200.sql.gz --confirmo
+```
+
+Copia la carpeta de respaldos fuera de la VM (por ejemplo a Azure Blob Storage con `azcopy sync`): si
+se pierde el disco, se pierden también los respaldos que estén en él.
+
 ### Si ya tenías Avícola corriendo en la VM
 
 La base existente sigue sirviendo (el volumen `avicola_db_datos` no cambia). Solo hay que crear una vez el
@@ -543,6 +582,17 @@ usuario de la aplicación, que no puede tocar el registro de cambios:
 docker compose up -d db
 docker compose exec db sh /docker-entrypoint-initdb.d/01-usuario-app.sh
 docker compose up -d --build      # las migraciones crean los triggers y los permisos por empresa
+```
+
+Para pasar la demo pública a su propia base (`avicola_demo`), después de lo anterior: en el `.env` pon
+`DEMO=true` y `DB_NAME=avicola_demo`, saca un respaldo de la base vieja y luego:
+
+```bash
+sh scripts/respaldo.sh                                        # por si acaso, la base anterior
+docker compose up -d db                                       # recrea el contenedor con el nombre nuevo
+docker compose exec db sh /docker-entrypoint-initdb.d/01-usuario-app.sh   # permisos sobre avicola_demo
+sh scripts/demo/crear_base.sh                                 # crea la base, la llena y deja el volcado base
+docker compose up -d --build
 ```
 
 ---
