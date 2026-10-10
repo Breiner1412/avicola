@@ -22,6 +22,11 @@ if [ "$CONFIRMO" != "--confirmo" ]; then
     exit 1
 fi
 gzip -t "$ARCHIVO"
+# Antes de borrar nada: un volcado completo termina con esta linea
+if ! gunzip -c "$ARCHIVO" | tail -n 1 | grep -q "Dump completed"; then
+    echo "El respaldo esta incompleto (no termina con 'Dump completed'): no se toca la base"
+    exit 1
+fi
 
 dc() {
     docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"

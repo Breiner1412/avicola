@@ -14,6 +14,14 @@ set -eu
 : "${DB_APP_PASSWORD:?falta DB_APP_PASSWORD}"
 : "${MYSQL_DATABASE:?falta MYSQL_DATABASE}"
 
+# La clave va dentro de una sentencia SQL: comillas o barras invertidas la romperian
+case "$DB_APP_PASSWORD" in
+    *"'"* | *'\'* | *'"'* | *'`'*)
+        echo "DB_PASSWORD no puede llevar comillas, barras invertidas ni acentos graves" >&2
+        exit 1
+        ;;
+esac
+
 MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot <<SQL
 CREATE USER IF NOT EXISTS '${DB_APP_USER}'@'%' IDENTIFIED BY '${DB_APP_PASSWORD}';
 ALTER USER '${DB_APP_USER}'@'%' IDENTIFIED BY '${DB_APP_PASSWORD}';

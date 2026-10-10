@@ -283,8 +283,10 @@ Variables opcionales de los scripts: `ENV_FILE` (por defecto `.env`), `COMPOSE_F
 
 ## Variables de entorno
 
-Se configuran en el archivo `.env` (copia de `.env.example`). **Nunca subas el `.env` al repositorio** y
-no uses el signo `$` en las contraseñas: Docker Compose lo interpreta como variable.
+Se configuran en el archivo `.env` (copia de `.env.example`). **Nunca subas el `.env` al repositorio.**
+En las contraseñas usa letras, números, `-`, `_` y `.`: el signo `$` lo interpreta Docker Compose, las
+comillas y la barra invertida rompen el SQL que crea el usuario de la aplicación, y `@`, `:` o `/` rompen
+la dirección de Redis.
 
 | Variable | Para qué | Ejemplo |
 |---|---|---|
