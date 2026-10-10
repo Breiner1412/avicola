@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
+from app.core.demo import no_en_demo
 from app.core.errores import conflicto, datos_invalidos, no_encontrado, sin_permiso
 from app.esquemas.comunes import Pagina
 from app.esquemas.ventas import (
@@ -117,6 +118,8 @@ def editar_punto(
 ):
     punto = punto_de(db, ctx, punto_id)
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("activo") is False:
+        no_en_demo("desactivar puntos de venta")
     if cambios.get("finca_id") is not None and cambios["finca_id"] not in ids_fincas_visibles(db, ctx):
         raise datos_invalidos("Esa finca no es tuya o no tienes acceso")
 
@@ -242,6 +245,8 @@ def editar_producto(
         raise no_encontrado("El producto no existe")
 
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("activo") is False:
+        no_en_demo("desactivar productos")
     if cambios.get("tipo_huevo_id") is not None:
         de_la_cuenta(db, TipoHuevo, cambios["tipo_huevo_id"], producto.cuenta_id, "Ese tipo de huevo", compartido=True)
     for campo, valor in cambios.items():
@@ -284,6 +289,8 @@ def poner_precio(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("precios", "editar")),
 ):
+    if datos.precio <= 0:
+        no_en_demo("poner precios en cero")
     producto = db.get(ProductoVenta, datos.producto_id)
     cuenta = cuenta_filtro(ctx)
     if producto is None or (cuenta is not None and producto.cuenta_id != cuenta):
@@ -582,6 +589,7 @@ def cambiar_ajustes(
     from app.modelos.organizacion import Cuenta
     from app.servicios.ventas import CON_TOPE
 
+    no_en_demo("cambiar el tope de descuento")
     cuenta = db.get(Cuenta, cuenta_objetivo(ctx, None))
     if cuenta is None:
         raise no_encontrado("La cuenta no existe")

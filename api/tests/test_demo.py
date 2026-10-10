@@ -17,7 +17,15 @@ def dueno(cliente, token_plataforma):
         json={"nombres": "Caja", "email": f"{unico('caja')}@avicola.com", "rol": "cajero", "clave": CLAVE,
               "debe_cambiar_clave": False, "fincas": [{"finca_id": datos["finca_id"], "solo_lectura": False}]},
     ).json()
-    datos.update({"cab": cab, "cajero": cajero})
+    cab_finca = cabeceras(datos["token"], datos["finca_id"])
+    punto = cliente.post(
+        f"{API}/puntos-venta", headers=cab_finca, json={"codigo": "PD", "nombre": "Tienda demo", "finca_id": datos["finca_id"]}
+    ).json()
+    producto = cliente.post(
+        f"{API}/productos-venta", headers=cab_finca,
+        json={"nombre": "Gallina demo", "clase": "ave_descarte", "presentacion": "unidad", "precio": 12000},
+    ).json()
+    datos.update({"cab": cab, "cajero": cajero, "punto": punto, "producto": producto})
     return datos
 
 
@@ -44,13 +52,19 @@ def test_la_sesion_avisa_que_es_demo(cliente, dueno, demo):
         ("put", "/permisos/cajero/ventas", {"ver": False, "crear": False, "editar": False, "borrar": False}),
         ("patch", "/fincas/{finca}", {"activo": False}),
         ("delete", "/fincas/{finca}", None),
+        ("patch", "/puntos-venta/{punto}", {"activo": False}),
+        ("patch", "/productos-venta/{producto}", {"activo": False}),
+        ("post", "/precios", {"producto_id": "{producto}", "precio": 0}),
+        ("patch", "/ventas/ajustes", {"descuento_maximo": 100}),
     ],
 )
 def test_lo_que_la_demo_no_permite(cliente, dueno, demo, metodo, ruta, cuerpo):
-    ruta = ruta.format(cajero=dueno["cajero"]["id"], finca=dueno["finca_id"])
+    ids = {"cajero": dueno["cajero"]["id"], "finca": dueno["finca_id"], "punto": dueno["punto"]["id"],
+           "producto": dueno["producto"]["id"]}
+    ruta = ruta.format(**ids)
     argumentos = {"headers": dueno["cab"]}
     if cuerpo is not None:
-        argumentos["json"] = cuerpo
+        argumentos["json"] = {k: (ids["producto"] if v == "{producto}" else v) for k, v in cuerpo.items()}
     respuesta = getattr(cliente, metodo)(f"{API}{ruta}", **argumentos)
     assert respuesta.status_code == 403, respuesta.text
     assert respuesta.json()["detail"]["codigo"] == "demo"
@@ -65,6 +79,7 @@ def test_lo_demas_si_se_puede_usar(cliente, dueno, demo):
         json={"codigo": "GD", "nombre": "Galpon demo", "capacidad": 100},
     )
     assert galpon.status_code == 201, galpon.text
+    assert cliente.get(f"{API}/ventas/ajustes", headers=cabeceras(dueno["token"], dueno["finca_id"])).status_code == 200
 
 
 def test_fuera_de_la_demo_si_se_puede(cliente, dueno):
