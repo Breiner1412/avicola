@@ -202,3 +202,31 @@ def test_aplicar_y_revertir_la_misma_importacion_a_la_vez(cliente, granja):
 def test_ver_los_avisos_a_la_vez_no_falla(cliente, granja):
     codigos = a_la_vez(lambda: cliente.get(f"{API}/alertas", headers=granja["cab"]))
     assert codigos == [200] * EN_PARALELO
+
+
+def test_refrescar_la_sesion_a_la_vez_rota_el_token_una_sola_vez(cliente, granja):
+    from fastapi.testclient import TestClient
+
+    from app.core.config import config as ajustes
+    from app.main import app
+
+    navegador = TestClient(app)
+    navegador.post(f"{API}/auth/login", json={"email": granja["email"], "clave": CLAVE})
+    cookie = navegador.cookies.get(ajustes.cookie_refresco)
+
+    def refrescar():
+        pestana = TestClient(app)
+        pestana.cookies.set(ajustes.cookie_refresco, cookie, path="/api/v1/auth")
+        return pestana.post(f"{API}/auth/refrescar")
+
+    salida = threading.Barrier(EN_PARALELO)
+
+    def correr(_):
+        salida.wait()
+        return refrescar()
+
+    with ThreadPoolExecutor(max_workers=EN_PARALELO) as hilos:
+        respuestas = list(hilos.map(correr, range(EN_PARALELO)))
+    assert [r.status_code for r in respuestas] == [200] * EN_PARALELO
+    # Solo una entrega un token nuevo; las demas usan el margen de gracia
+    assert sum(1 for r in respuestas if "set-cookie" in r.headers) == 1

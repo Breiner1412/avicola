@@ -3,11 +3,12 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Response
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import config
 from app.core.contexto import fincas_del_usuario, permisos_de_rol
+from app.core.db import bloquear
 from app.core.seguridad import crear_token_acceso, huella, nuevo_refresco
 from app.esquemas.auth import FincaResumen, SesionSalida, UsuarioSesion
 from app.modelos.acceso import Sesion, Usuario
@@ -62,12 +63,17 @@ def buscar_sesion(db: Session, token: str) -> tuple[Sesion | None, bool]:
     sin rotar (otra pestana ya lo hizo); despues se toma como robado y se cierra.
     """
     marca = huella(token)
-    sesion = db.scalars(select(Sesion).where(Sesion.huella == marca)).first()
-    if _vigente(sesion):
-        return sesion, True
-
-    sesion = db.scalars(select(Sesion).where(Sesion.huella_anterior == marca)).first()
+    encontrada = db.scalars(
+        select(Sesion.id).where(or_(Sesion.huella == marca, Sesion.huella_anterior == marca))
+    ).first()
+    # Se bloquea la fila: dos pestanas que refrescan a la vez no rotan dos veces (la
+    # segunda espera, ve el token ya rotado y entra por el margen de gracia)
+    sesion = bloquear(db, Sesion, encontrada)
     if not _vigente(sesion):
+        return None, False
+    if sesion.huella == marca:
+        return sesion, True
+    if sesion.huella_anterior != marca:
         return None, False
     if sesion.rotada_en and sesion.rotada_en >= ahora_simple() - timedelta(seconds=SEGUNDOS_DE_GRACIA):
         return sesion, False
