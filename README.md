@@ -575,8 +575,17 @@ se pierde el disco, se pierden también los respaldos que estén en él.
 
 ### Si ya tenías Avícola corriendo en la VM
 
-La base existente sigue sirviendo (el volumen `avicola_db_datos` no cambia). Solo hay que crear una vez el
-usuario de la aplicación, que no puede tocar el registro de cambios:
+La base existente sigue sirviendo (el volumen `avicola_db_datos` no cambia). **Antes de nada, saca un
+respaldo con la versión que está corriendo**: en MySQL los cambios de estructura no se pueden deshacer
+a mitad de camino, y si una migración falla lo más rápido es restaurar y reintentar.
+
+```bash
+cd /opt/avicola
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers "$MYSQL_DATABASE"' | gzip > ~/antes-de-actualizar.sql.gz
+git pull
+```
+
+Después, crear una vez el usuario de la aplicación, que no puede tocar el registro de cambios:
 
 ```bash
 # En el .env: DB_MIGRA_USER y DB_MIGRA_PASSWORD = el usuario y la clave que ya tenias en DB_USER/DB_PASSWORD;
