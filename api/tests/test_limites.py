@@ -39,3 +39,17 @@ def test_el_429_dice_cuando_reintentar_y_lleva_cabeceras(cliente, token_platafor
     assert respuesta.status_code == 429
     assert int(respuesta.headers["Retry-After"]) > 0
     assert respuesta.headers["X-Content-Type-Options"] == "nosniff"
+
+
+def test_en_la_demo_el_tope_de_cambios_es_por_usuario_y_conexion(cliente, token_plataforma, monkeypatch):
+    from app import main
+    from app.core.config import config
+
+    monkeypatch.setattr(config, "demo", True)
+    monkeypatch.setattr(limites.escrituras, "maximo", 2)
+    for _ in range(3):
+        cliente.post(f"{API}/galpones", headers=cabeceras(token_plataforma), json={})
+    assert cliente.post(f"{API}/galpones", headers=cabeceras(token_plataforma), json={}).status_code == 429
+    # El mismo usuario desde otra conexion no queda frenado
+    monkeypatch.setattr(main, "ip_de", lambda peticion: "10.9.9.9")
+    assert cliente.post(f"{API}/galpones", headers=cabeceras(token_plataforma), json={}).status_code == 422

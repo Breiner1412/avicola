@@ -85,14 +85,20 @@ async def limitar_peticiones(peticion: Request, siguiente):
 
 
 def _quien_pide(peticion: Request) -> str:
-    """El usuario del token (sin ir a la base) o, si no hay sesion valida, la conexion."""
+    """El usuario del token (sin ir a la base) o, si no hay sesion valida, la conexion.
+
+    En la demo todos comparten los mismos usuarios: se cuenta por usuario y conexion,
+    para que un visitante que agota su tope no deje sin escribir a los demas.
+    """
+    ip = f"ip:{ip_de(peticion)}"
     cabecera = peticion.headers.get("authorization", "")
     if cabecera.lower().startswith("bearer "):
         try:
-            return f"usuario:{leer_token_acceso(cabecera[7:].strip()).get('sub')}"
+            usuario = f"usuario:{leer_token_acceso(cabecera[7:].strip()).get('sub')}"
+            return f"{usuario}|{ip}" if config.demo else usuario
         except ErrorApi:
             pass
-    return f"ip:{ip_de(peticion)}"
+    return ip
 
 
 @app.middleware("http")
