@@ -14,6 +14,7 @@ from app.core import limites
 from app.core.cache import cliente as cliente_redis
 from app.core.config import config
 from app.core.contexto import ip_de
+from app.core.cuerpo import LimiteDeCuerpo
 from app.core.db import motor
 from app.core.errores import ErrorApi
 from app.core.seguridad import leer_token_acceso
@@ -124,6 +125,9 @@ async def cabeceras_de_seguridad(peticion: Request, siguiente):
     respuesta.headers.setdefault("Cache-Control", "no-store")
     return respuesta
 
+
+# Tope al tamano de lo que se envia (tambien para quien llega sin pasar por Caddy)
+app.add_middleware(LimiteDeCuerpo)
 
 app.add_middleware(
     CORSMiddleware,

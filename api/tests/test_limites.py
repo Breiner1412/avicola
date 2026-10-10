@@ -59,3 +59,28 @@ def test_la_clave_de_redis_no_queda_en_el_log():
     from app.core.cache import _sin_clave
 
     assert _sin_clave("redis://:Secreta-123@avicola-cache:6379/0") == "redis://avicola-cache:6379/0"
+
+
+def test_un_cuerpo_demasiado_grande_se_rechaza(cliente, token_plataforma):
+    grande = b'{"nombre": "' + b"x" * (2 * 1024 * 1024) + b'"}'
+    respuesta = cliente.post(
+        f"{API}/galpones",
+        headers={**cabeceras(token_plataforma), "Content-Type": "application/json"},
+        content=grande,
+    )
+    assert respuesta.status_code == 413
+    assert respuesta.json()["detail"]["codigo"] == "demasiado_grande"
+
+
+def test_un_cuerpo_enviado_por_partes_tambien_tiene_tope(cliente, token_plataforma):
+    def partes():
+        for _ in range(3):
+            yield b"x" * (512 * 1024)
+
+    respuesta = cliente.post(
+        f"{API}/galpones",
+        headers={**cabeceras(token_plataforma), "Content-Type": "application/json"},
+        content=partes(),
+    )
+    # La lectura se corta en el tope; al leer JSON, FastAPI lo informa como 400
+    assert respuesta.status_code in (400, 413)

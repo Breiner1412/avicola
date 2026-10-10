@@ -538,9 +538,32 @@ Y se recarga sin cortar las demás apps:
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile   # usa el nombre de tu contenedor de Caddy
 ```
 
-La API solo cree la cabecera `X-Forwarded-For` de quien está en las redes privadas de Docker (Caddy y la
-web). Si tu red `proxy` usa otro rango, ajústalo con `PROXY_CONFIABLE` en el `.env`
-(`docker network inspect proxy` muestra la subred).
+La API solo cree la cabecera `X-Forwarded-For` (la IP del visitante) de los proxies de `PROXY_CONFIABLE`.
+Por defecto son las redes privadas de Docker, lo que incluye a **cualquier contenedor de la red `proxy`**,
+también los de otras apps. Lo recomendado es dejar solo a Caddy, con una IP fija en la red `proxy`:
+
+```yaml
+# En el docker-compose de Caddy
+services:
+  caddy:
+    networks:
+      proxy:
+        ipv4_address: 172.30.0.2
+networks:
+  proxy:
+    external: true
+```
+
+```bash
+# Si la red proxy aun no existe, crearla con una subred conocida
+docker network create --subnet 172.30.0.0/24 proxy
+# Y en el .env de Avicola
+PROXY_CONFIABLE=172.30.0.2
+```
+
+Sin esto, otra app de la VM podría hacerse pasar por cualquier IP ante la API. Desde internet no se puede:
+Caddy reescribe esa cabecera. La API corta de todos modos los cuerpos de más de 1 MB (6 MB en la
+importación) aunque le lleguen sin pasar por Caddy.
 
 ### 4. Firewall
 
