@@ -72,7 +72,9 @@ def _usuario_de_la_cuenta(db: Session, ctx: Contexto, usuario_id: int) -> Usuari
     return usuario
 
 
-def _guardar_fincas(db: Session, usuario: Usuario, cuenta_id: int | None, asignaciones: list[FincaAsignada]) -> None:
+def _guardar_fincas(
+    db: Session, ctx: Contexto, usuario: Usuario, cuenta_id: int | None, asignaciones: list[FincaAsignada]
+) -> None:
     ids = [a.finca_id for a in asignaciones]
     if ids:
         validas = set(
@@ -82,8 +84,23 @@ def _guardar_fincas(db: Session, usuario: Usuario, cuenta_id: int | None, asigna
         if faltantes:
             raise datos_invalidos(f"Estas fincas no son de la cuenta: {sorted(faltantes)}")
 
+    # Quien no ve toda la cuenta solo reparte las fincas que el mismo tiene, y no toca
+    # las asignaciones del usuario en fincas que no son suyas
+    conservar: list[UsuarioFinca] = []
+    if not ctx.es_plataforma and not ctx.ve_toda_la_cuenta:
+        propias = set(ids_fincas_visibles(db, ctx))
+        ajenas = set(ids) - propias
+        if ajenas:
+            raise sin_permiso(f"No puedes asignar fincas que no tienes a cargo: {sorted(ajenas)}")
+        conservar = [
+            UsuarioFinca(finca_id=f.finca_id, solo_lectura=f.solo_lectura)
+            for f in usuario.fincas
+            if f.finca_id not in propias
+        ]
+
     usuario.fincas.clear()
     db.flush()
+    usuario.fincas.extend(conservar)
     for asignacion in asignaciones:
         usuario.fincas.append(
             UsuarioFinca(finca_id=asignacion.finca_id, solo_lectura=asignacion.solo_lectura)
@@ -142,7 +159,7 @@ def crear(
     )
     db.add(usuario)
     db.flush()
-    _guardar_fincas(db, usuario, cuenta_id, datos.fincas)
+    _guardar_fincas(db, ctx, usuario, cuenta_id, datos.fincas)
 
     registrar(
         db, ctx, "crear", "usuarios", usuario.id,
@@ -196,7 +213,7 @@ def editar(
             setattr(usuario, campo, cambios[campo])
 
     if datos.fincas is not None:
-        _guardar_fincas(db, usuario, usuario.cuenta_id, datos.fincas)
+        _guardar_fincas(db, ctx, usuario, usuario.cuenta_id, datos.fincas)
 
     registrar(db, ctx, "editar", "usuarios", usuario.id, f"Edito el usuario {usuario.email}", cambios)
     db.commit()

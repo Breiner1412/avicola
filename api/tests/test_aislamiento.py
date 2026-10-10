@@ -320,3 +320,30 @@ def test_novedad_y_sanidad_no_aceptan_galpones_ni_lotes_de_otra_finca(cliente, t
         json={"fecha": "2026-06-01", "tipo": "vacuna", "producto": "Newcastle", "lote_id": lote2["id"]},
     )
     assert sanidad.status_code == 400, sanidad.text
+
+
+def test_quien_no_ve_toda_la_cuenta_solo_asigna_sus_fincas(cliente, empresa_con_dos_fincas, token_plataforma):
+    datos = empresa_con_dos_fincas
+    sup = cabeceras(datos["supervisor"]["token"], datos["finca1"])
+    # La plataforma le delega al supervisor editar usuarios, solo en esta cuenta
+    permiso = cliente.put(
+        f"{API}/permisos/supervisor/usuarios",
+        headers=cabeceras(token_plataforma),
+        params={"cuenta_id": _cuenta_de(datos["finca1"])},
+        json={"ver": True, "crear": True, "editar": True, "borrar": False},
+    )
+    assert permiso.status_code == 200, permiso.text
+    respuesta = cliente.patch(
+        f"{API}/usuarios/{datos['supervisor']['id']}",
+        headers=sup,
+        json={"fincas": [{"finca_id": datos["finca2"]["id"], "solo_lectura": False}]},
+    )
+    assert respuesta.status_code == 403
+
+
+def _cuenta_de(finca_id):
+    from app.core.db import SesionLocal
+    from app.modelos.organizacion import Finca
+
+    with SesionLocal() as db:
+        return db.get(Finca, finca_id).cuenta_id
