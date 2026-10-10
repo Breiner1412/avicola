@@ -53,3 +53,9 @@ def test_en_la_demo_el_tope_de_cambios_es_por_usuario_y_conexion(cliente, token_
     # El mismo usuario desde otra conexion no queda frenado
     monkeypatch.setattr(main, "ip_de", lambda peticion: "10.9.9.9")
     assert cliente.post(f"{API}/galpones", headers=cabeceras(token_plataforma), json={}).status_code == 422
+
+
+def test_la_clave_de_redis_no_queda_en_el_log():
+    from app.core.cache import _sin_clave
+
+    assert _sin_clave("redis://:Secreta-123@avicola-cache:6379/0") == "redis://avicola-cache:6379/0"

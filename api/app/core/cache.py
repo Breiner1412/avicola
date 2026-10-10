@@ -1,6 +1,7 @@
 """Cliente de Redis con respaldo en memoria si no esta disponible."""
 
 import logging
+from urllib.parse import urlsplit
 import threading
 import time
 
@@ -48,6 +49,12 @@ _memoria = _Memoria()
 _cliente = None
 
 
+def _sin_clave(url: str) -> str:
+    """La direccion de Redis sin usuario ni clave, para poder escribirla en el log."""
+    partes = urlsplit(url)
+    return f"{partes.scheme}://{partes.hostname or ''}:{partes.port or 6379}{partes.path}"
+
+
 def cliente():
     """Devuelve el cliente de Redis, o None si no hay."""
     global _cliente
@@ -59,7 +66,7 @@ def cliente():
         _cliente = _redis.from_url(config.redis_url, decode_responses=True, socket_timeout=2)
         _cliente.ping()
     except Exception:  # noqa: BLE001 - si falla, seguimos en memoria
-        log.warning("Redis no responde en %s: los limites de intentos quedan en memoria", config.redis_url)
+        log.warning("Redis no responde en %s: los limites de intentos quedan en memoria", _sin_clave(config.redis_url))
         _cliente = None
     return _cliente
 
