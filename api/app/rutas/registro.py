@@ -1,6 +1,6 @@
 """Consulta del registro de cambios."""
 
-from datetime import date, datetime, time
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
+from app.core.tiempo import fin_del_dia, inicio_del_dia
 from app.esquemas.comunes import Pagina
 from app.esquemas.registro import AuditoriaSalida
 from app.modelos.registro import Auditoria
+from app.servicios.alcance import ids_fincas_visibles
 
 router = APIRouter(prefix="/auditoria", tags=["Registro de cambios"])
 
@@ -31,12 +33,16 @@ def listar(
     consulta = select(Auditoria)
     if not ctx.es_plataforma:
         consulta = consulta.where(Auditoria.cuenta_id == ctx.cuenta_id)
+        if not ctx.ve_toda_la_cuenta:
+            # Quien no ve toda la cuenta solo ve lo que paso en sus fincas
+            consulta = consulta.where(Auditoria.finca_id.in_(ids_fincas_visibles(db, ctx) or [0]))
     if solo_finca_activa and ctx.finca_id is not None:
         consulta = consulta.where(Auditoria.finca_id == ctx.finca_id)
+    # Los dias son de la granja; el registro guarda la hora en UTC
     if desde:
-        consulta = consulta.where(Auditoria.creado_en >= datetime.combine(desde, time.min))
+        consulta = consulta.where(Auditoria.creado_en >= inicio_del_dia(desde))
     if hasta:
-        consulta = consulta.where(Auditoria.creado_en <= datetime.combine(hasta, time.max))
+        consulta = consulta.where(Auditoria.creado_en <= fin_del_dia(hasta))
     if entidad:
         consulta = consulta.where(Auditoria.entidad == entidad)
     if accion:

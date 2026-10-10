@@ -17,6 +17,10 @@ def limpiar(datos: dict[str, Any] | None) -> dict[str, Any] | None:
     return {k: ("***" if k in CAMPOS_OCULTOS else v) for k, v in datos.items()}
 
 
+def _recortar(texto: str | None, largo: int) -> str | None:
+    return texto[:largo] if texto else texto
+
+
 def registrar(
     db: Session,
     ctx: Contexto | None,
@@ -31,19 +35,23 @@ def registrar(
     usuario_nombre: str | None = None,
     ip: str | None = None,
 ) -> None:
-    """Agrega una linea al registro. Se guarda con el commit de la operacion."""
+    """Agrega una linea al registro. Se guarda con el commit de la operacion.
+
+    Los textos se recortan al largo de su columna: un dato largo (una IP falsa
+    enorme, un correo muy largo) no puede hacer fallar la operacion.
+    """
     db.add(
         Auditoria(
             cuenta_id=cuenta_id if ctx is None else ctx.cuenta_id,
             finca_id=finca_id if ctx is None else (finca_id or ctx.finca_id),
             usuario_id=usuario_id if ctx is None else ctx.usuario.id,
-            usuario_nombre=usuario_nombre if ctx is None else ctx.usuario.nombre_completo,
-            accion=accion,
-            entidad=entidad,
+            usuario_nombre=_recortar(usuario_nombre if ctx is None else ctx.usuario.nombre_completo, 160),
+            accion=accion[:40],
+            entidad=entidad[:50],
             entidad_id=entidad_id,
-            descripcion=descripcion,
+            descripcion=_recortar(descripcion, 255),
             datos=limpiar(datos),
-            ip=ip if ctx is None else ctx.ip,
+            ip=_recortar(ip if ctx is None else ctx.ip, 45),
             creado_en=datetime.now(timezone.utc).replace(tzinfo=None),
         )
     )

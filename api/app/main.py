@@ -1,15 +1,23 @@
 """Aplicacion FastAPI de Avícola."""
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
+from app.core import limites
+from app.core.cache import cliente as cliente_redis
 from app.core.config import config
+from app.core.contexto import ip_de
+from app.core.cuerpo import LimiteDeCuerpo
 from app.core.db import motor
+from app.core.errores import ErrorApi
+from app.core.seguridad import leer_token_acceso
 from app.rutas import (
     alertas,
     auth,
@@ -37,13 +45,61 @@ log = logging.getLogger("avicola")
 
 PREFIJO = "/api/v1"
 
+@asynccontextmanager
+async def ciclo_de_vida(_app: FastAPI):
+    # En produccion los limites de intentos deben ser compartidos entre workers:
+    # sin Redis cada worker llevaria su propia cuenta
+    if config.es_produccion and cliente_redis() is None:
+        raise RuntimeError("En produccion hace falta Redis (REDIS_URL) para los limites de intentos")
+    yield
+
+
 app = FastAPI(
+    lifespan=ciclo_de_vida,
     title="Avícola",
     description="API de gestion de granjas avicolas (multi finca y multi cuenta).",
     version="2.0.0",
-    docs_url="/docs",
+    # En produccion no se publica la documentacion ni el esquema de la API
+    docs_url=None if config.es_produccion else "/docs",
+    openapi_url=None if config.es_produccion else "/openapi.json",
     redoc_url=None,
 )
+
+
+# Orden de los middlewares: el primero que se registra queda mas adentro. El limitador
+# va primero para que sus respuestas 429 tambien pasen por las cabeceras de seguridad
+# y por la captura de errores; CORS (add_middleware, al final) envuelve todo.
+@app.middleware("http")
+async def limitar_peticiones(peticion: Request, siguiente):
+    """Tope general de cambios, subidas y descargas por usuario o por conexion."""
+    aplican = limites.limites_de_peticion(peticion.method, peticion.url.path)
+    if aplican:
+        quien = _quien_pide(peticion)
+        try:
+            for limite in aplican:
+                limite.registrar(quien)
+        except ErrorApi as error:
+            espera = (error.detail.get("detalles") or {}).get("reintentar_en_segundos")
+            cabeceras = {"Retry-After": str(espera)} if espera else None
+            return JSONResponse(status_code=error.status_code, content={"detail": error.detail}, headers=cabeceras)
+    return await siguiente(peticion)
+
+
+def _quien_pide(peticion: Request) -> str:
+    """El usuario del token (sin ir a la base) o, si no hay sesion valida, la conexion.
+
+    En la demo todos comparten los mismos usuarios: se cuenta por usuario y conexion,
+    para que un visitante que agota su tope no deje sin escribir a los demas.
+    """
+    ip = f"ip:{ip_de(peticion)}"
+    cabecera = peticion.headers.get("authorization", "")
+    if cabecera.lower().startswith("bearer "):
+        try:
+            usuario = f"usuario:{leer_token_acceso(cabecera[7:].strip()).get('sub')}"
+            return f"{usuario}|{ip}" if config.demo else usuario
+        except ErrorApi:
+            pass
+    return ip
 
 
 @app.middleware("http")
@@ -58,6 +114,20 @@ async def capturar_errores(peticion: Request, siguiente):
             content={"codigo": "error_interno", "mensaje": "Ocurrio un error inesperado", "detalles": {}},
         )
 
+
+@app.middleware("http")
+async def cabeceras_de_seguridad(peticion: Request, siguiente):
+    """La API responde JSON: que el navegador no lo interprete como otra cosa ni lo enmarque."""
+    respuesta = await siguiente(peticion)
+    respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
+    respuesta.headers.setdefault("X-Frame-Options", "DENY")
+    respuesta.headers.setdefault("Referrer-Policy", "no-referrer")
+    respuesta.headers.setdefault("Cache-Control", "no-store")
+    return respuesta
+
+
+# Tope al tamano de lo que se envia (tambien para quien llega sin pasar por Caddy)
+app.add_middleware(LimiteDeCuerpo)
 
 app.add_middleware(
     CORSMiddleware,
@@ -80,6 +150,16 @@ async def validacion(peticion: Request, error: RequestValidationError):
     )
 
 
+@app.exception_handler(IntegrityError)
+async def conflicto_en_la_base(peticion: Request, error: IntegrityError):
+    """Un indice unico freno un dato repetido (por ejemplo, dos clics a la vez)."""
+    log.warning("Conflicto de integridad en %s %s: %s", peticion.method, peticion.url.path, error.orig)
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": {"codigo": "conflicto", "mensaje": "Ese cambio choca con otro que se hizo al mismo tiempo. Recarga e intenta de nuevo.", "detalles": {}}},
+    )
+
+
 @app.exception_handler(Exception)
 async def error_general(peticion: Request, error: Exception):
     log.exception("Error no controlado en %s %s", peticion.method, peticion.url.path)
@@ -99,7 +179,7 @@ for modulo in (
 
 @app.get("/", include_in_schema=False)
 def inicio():
-    return {"nombre": "Avícola", "version": app.version, "documentacion": "/docs"}
+    return {"nombre": "Avícola"}
 
 
 @app.get(f"{PREFIJO}/salud", tags=["Estado"], summary="Estado de la API y de la base de datos")
@@ -111,4 +191,4 @@ def salud():
     except Exception:  # noqa: BLE001
         log.exception("La base de datos no responde")
         base = "sin conexion"
-    return {"api": "ok", "base_datos": base, "entorno": config.entorno}
+    return {"api": "ok", "base_datos": base}

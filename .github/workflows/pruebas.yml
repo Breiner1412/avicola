@@ -1,0 +1,77 @@
+name: Pruebas
+
+on:
+  push:
+    branches: [main, auditoria]
+  pull_request:
+
+# Solo lectura: el flujo no necesita escribir en el repositorio
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: raiz123
+          MYSQL_DATABASE: avicola
+          MYSQL_USER: avicola
+          MYSQL_PASSWORD: clave123
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -praiz123"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: avicola
+      DB_PASSWORD: clave123
+      DB_NAME: avicola
+      JWT_SECRET: clave-de-pruebas-larga-1234567890abcdefghij
+      ADMIN_EMAIL: admin@avicola.com
+      ADMIN_PASSWORD: Admin12345
+      ENTORNO: pruebas
+      REDIS_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar dependencias
+        working-directory: api
+        run: pip install -r requirements-dev.txt
+      - name: Permitir triggers con el binlog activo
+        run: mysql -h127.0.0.1 -uroot -praiz123 -e "SET GLOBAL log_bin_trust_function_creators = 1"
+      - name: Migraciones y datos iniciales
+        working-directory: api
+        run: |
+          alembic upgrade head
+          python -m app.semilla
+      - name: Los modelos y las migraciones coinciden
+        working-directory: api
+        run: alembic check
+      - name: Pruebas
+        working-directory: api
+        run: python -m pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar dependencias
+        working-directory: web
+        run: npm ci
+      - name: Revisar los tipos
+        working-directory: web
+        run: npx tsc --noEmit
+      - name: Compilar
+        working-directory: web
+        run: npm run build

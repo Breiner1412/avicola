@@ -1,0 +1,33 @@
+# Caddy para probar Avicola en tu equipo (http://localhost:8080).
+# Es el mismo bloque de la seccion "Poner en un servidor" del README; solo cambia la
+# direccion: ':80' dentro del contenedor (publicado en 127.0.0.1:8080) en lugar del dominio.
+# Si cambias el bloque del README, cambia tambien este archivo.
+
+:80 {
+	encode zstd gzip
+
+	# HSTS solo para este dominio (sin includeSubDomains: otras apps comparten el dominio padre).
+	# Las demas cabeceras de seguridad (CSP, nosniff, frame-ancestors...) las pone la aplicacion.
+	header Strict-Transport-Security "max-age=31536000"
+	header -Server
+
+	# La API va directo a su contenedor: Caddy le pasa la IP real del visitante
+	# (los limites de intentos y el registro de cambios la usan)
+	handle /api/* {
+		# Tope al tamano de lo que se envia: el Excel admite 5 MB, lo demas es JSON
+		@importacion path /api/v1/importacion/analizar
+		@resto not path /api/v1/importacion/analizar
+		request_body @importacion {
+			max_size 6MB
+		}
+		request_body @resto {
+			max_size 1MB
+		}
+		reverse_proxy avicola-api:8000
+	}
+
+	# Todo lo demas es la aplicacion web
+	handle {
+		reverse_proxy avicola-web:3000
+	}
+}

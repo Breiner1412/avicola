@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
+from app.core.demo import no_en_demo
 from app.core.errores import conflicto, datos_invalidos, no_encontrado, sin_permiso
-from app.esquemas.comunes import Mensaje, Pagina
+from app.esquemas.comunes import Pagina
 from app.esquemas.ventas import (
     AjustesVentas,
     AjustesVentasActualizar,
@@ -33,7 +34,7 @@ from app.esquemas.ventas import (
     VentaCrear,
     VentaSalida,
 )
-from app.modelos.aves import StockHuevos
+from app.modelos.aves import StockHuevos, TipoHuevo
 from app.modelos.ventas import (
     UNIDADES_POR_PRESENTACION,
     MetodoPago,
@@ -45,7 +46,7 @@ from app.modelos.ventas import (
     VentaDetalle,
     VentaPago,
 )
-from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, ids_fincas_visibles
+from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, de_la_cuenta, ids_fincas_visibles
 from app.servicios.ventas import (
     abrir_turno,
     anular_venta,
@@ -117,6 +118,10 @@ def editar_punto(
 ):
     punto = punto_de(db, ctx, punto_id)
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("activo") is False:
+        no_en_demo("desactivar puntos de venta")
+    if cambios.get("finca_id") is not None and cambios["finca_id"] not in ids_fincas_visibles(db, ctx):
+        raise datos_invalidos("Esa finca no es tuya o no tienes acceso")
 
     if "codigo" in cambios and db.scalars(
         select(PuntoVenta.id).where(
@@ -202,6 +207,7 @@ def crear_producto(
         raise conflicto("Ya existe un producto con ese nombre")
     if datos.clase == "huevo" and datos.tipo_huevo_id is None:
         raise datos_invalidos("Indica que tipo de huevo se vende")
+    de_la_cuenta(db, TipoHuevo, datos.tipo_huevo_id, cuenta_id, "Ese tipo de huevo", compartido=True)
 
     cobro = "kg" if datos.presentacion == "kg" else datos.cobro_por
     producto = ProductoVenta(
@@ -239,6 +245,10 @@ def editar_producto(
         raise no_encontrado("El producto no existe")
 
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("activo") is False:
+        no_en_demo("desactivar productos")
+    if cambios.get("tipo_huevo_id") is not None:
+        de_la_cuenta(db, TipoHuevo, cambios["tipo_huevo_id"], producto.cuenta_id, "Ese tipo de huevo", compartido=True)
     for campo, valor in cambios.items():
         setattr(producto, campo, valor)
     registrar(db, ctx, "editar", "productos_venta", producto.id, f"Edito el producto {producto.nombre}", cambios)
@@ -279,6 +289,8 @@ def poner_precio(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("precios", "editar")),
 ):
+    if datos.precio <= 0:
+        no_en_demo("poner precios en cero")
     producto = db.get(ProductoVenta, datos.producto_id)
     cuenta = cuenta_filtro(ctx)
     if producto is None or (cuenta is not None and producto.cuenta_id != cuenta):
@@ -343,7 +355,7 @@ def abrir(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("caja", "crear")),
 ):
-    punto = punto_de(db, ctx, datos.punto_venta_id)
+    punto = punto_de(db, ctx, datos.punto_venta_id, para_vender=True)
     turno = abrir_turno(db, ctx, punto, datos.base_inicial, datos.observaciones)
     db.commit()
     db.refresh(turno)
@@ -356,7 +368,7 @@ def cerrar(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("caja", "editar")),
 ):
-    turno = turno_abierto(db, ctx)
+    turno = turno_abierto(db, ctx, bloquear_turno=True)
     if turno is None:
         raise datos_invalidos("No tienes ningun turno abierto")
 
@@ -486,11 +498,11 @@ def vender(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("ventas", "crear")),
 ):
-    turno = turno_abierto(db, ctx)
+    turno = turno_abierto(db, ctx, bloquear_turno=True)
     if turno is None:
         raise datos_invalidos("Primero abre la caja")
 
-    punto = punto_de(db, ctx, turno.punto_venta_id)
+    punto = punto_de(db, ctx, turno.punto_venta_id, para_vender=True)
     venta = crear_venta(db, ctx, punto, turno, datos)
     db.commit()
     db.refresh(venta)
@@ -577,6 +589,7 @@ def cambiar_ajustes(
     from app.modelos.organizacion import Cuenta
     from app.servicios.ventas import CON_TOPE
 
+    no_en_demo("cambiar el tope de descuento")
     cuenta = db.get(Cuenta, cuenta_objetivo(ctx, None))
     if cuenta is None:
         raise no_encontrado("La cuenta no existe")
@@ -608,20 +621,4 @@ def anular(
     db.commit()
     db.refresh(venta)
     return _venta_salida(venta)
-
-
-@router.delete("/ventas/{venta_id}", response_model=Mensaje, summary="Borrar una venta anulada")
-def borrar(
-    venta_id: int,
-    db: Session = Depends(obtener_db),
-    ctx: Contexto = Depends(requiere("ventas", "borrar")),
-):
-    venta = _venta_de(db, ctx, venta_id)
-    if venta.estado != "anulada":
-        raise datos_invalidos("Solo se puede borrar una venta que ya fue anulada")
-
-    registrar(db, ctx, "borrar", "ventas", venta.id, f"Borro la venta anulada {venta.numero}")
-    db.delete(venta)
-    db.commit()
-    return Mensaje(mensaje="Venta borrada")
 

@@ -1,12 +1,12 @@
 """Subir un archivo de Excel o CSV y cargar sus datos al sistema."""
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
-from app.core.db import obtener_db
+from app.core.db import bloquear, obtener_db
 from app.core.errores import conflicto, datos_invalidos, no_encontrado
 from app.esquemas.comunes import Mensaje
 from app.esquemas.importacion import (
@@ -28,7 +28,7 @@ from app.modelos.importacion import (
     Importacion,
     PlantillaImportacion,
 )
-from app.servicios.alcance import cuenta_filtro, cuenta_objetivo
+from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, ids_fincas_visibles
 from app.servicios.importacion import (
     CAMPOS,
     ETIQUETAS_TIPO,
@@ -45,6 +45,19 @@ from app.servicios.importacion_datos import revertir as revertir_datos
 router = APIRouter(prefix="/importacion", tags=["Importar desde Excel"])
 
 MAX_BYTES = 5 * 1024 * 1024
+BLOQUE = 64 * 1024
+
+
+def _leer_con_tope(archivo: UploadFile) -> bytes:
+    """Lee el archivo por bloques y corta en cuanto pasa del tope, sin cargarlo entero."""
+    partes: list[bytes] = []
+    leidos = 0
+    while bloque := archivo.file.read(BLOQUE):
+        leidos += len(bloque)
+        if leidos > MAX_BYTES:
+            raise datos_invalidos("El archivo pesa mas de 5 MB. Divide la informacion en varios archivos.")
+        partes.append(bloque)
+    return b"".join(partes)
 
 
 def _campos(tipo: str) -> list[CampoInfo]:
@@ -79,6 +92,12 @@ def _importacion_de(db: Session, ctx: Contexto, importacion_id: int) -> Importac
     cuenta = cuenta_filtro(ctx)
     if importacion is None or (cuenta is not None and importacion.cuenta_id != cuenta):
         raise no_encontrado("Esa importacion no existe")
+    # Ademas de la cuenta, la finca: verla o aplicarla escribe en esa finca
+    if importacion.finca_id is not None and not ctx.es_plataforma:
+        if importacion.finca_id not in ids_fincas_visibles(db, ctx):
+            raise no_encontrado("Esa importacion no existe")
+        if ctx.finca_id is not None and importacion.finca_id != ctx.finca_id:
+            raise no_encontrado("Esa importacion es de otra finca")
     return importacion
 
 
@@ -151,7 +170,7 @@ def borrar_plantilla(
 
 
 @router.post("/analizar", response_model=AnalisisSalida, status_code=201, summary="Leer el archivo")
-async def analizar(
+def analizar(
     tipo: str = Form(...),
     archivo: UploadFile = File(...),
     db: Session = Depends(obtener_db),
@@ -160,9 +179,9 @@ async def analizar(
     if tipo not in TIPOS_IMPORTACION:
         raise datos_invalidos("Ese tipo de importacion no existe")
 
-    contenido = await archivo.read()
-    if len(contenido) > MAX_BYTES:
-        raise datos_invalidos("El archivo pesa mas de 5 MB. Divide la informacion en varios archivos.")
+    # Funcion normal (no async): FastAPI la corre en su grupo de hilos, asi leer el
+    # Excel y guardar miles de filas no frena las demas peticiones del worker
+    contenido = _leer_con_tope(archivo)
 
     try:
         hoja, columnas, filas = leer_archivo(contenido, archivo.filename or "archivo")
@@ -261,6 +280,7 @@ def validar(
     ctx: Contexto = Depends(requiere("importacion", "crear")),
 ):
     importacion = _importacion_de(db, ctx, importacion_id)
+    bloquear(db, Importacion, importacion.id)  # dos clics no la aplican dos veces
     if importacion.estado != "pendiente":
         raise datos_invalidos("Esa importacion ya fue aplicada")
 
@@ -294,6 +314,7 @@ def aplicar(
     ctx: Contexto = Depends(requiere("importacion", "crear")),
 ):
     importacion = _importacion_de(db, ctx, importacion_id)
+    bloquear(db, Importacion, importacion.id)  # dos clics no la aplican dos veces
     if importacion.estado != "pendiente":
         raise datos_invalidos("Esa importacion ya fue aplicada")
 
@@ -329,6 +350,7 @@ def revertir(
     ctx: Contexto = Depends(requiere("importacion", "editar")),
 ):
     importacion = _importacion_de(db, ctx, importacion_id)
+    bloquear(db, Importacion, importacion.id)  # dos clics no la revierten dos veces
     if importacion.estado != "aplicada":
         raise datos_invalidos("Solo se puede deshacer una importacion que ya fue aplicada")
 
@@ -357,6 +379,9 @@ def historial(
     cuenta = cuenta_filtro(ctx)
     if cuenta is not None:
         consulta = consulta.where(Importacion.cuenta_id == cuenta)
+    if not ctx.es_plataforma:
+        fincas = [ctx.finca_id] if ctx.finca_id is not None else ids_fincas_visibles(db, ctx)
+        consulta = consulta.where(or_(Importacion.finca_id.is_(None), Importacion.finca_id.in_(fincas or [0])))
     filas = db.scalars(consulta.order_by(Importacion.id.desc()).limit(limite)).all()
     return [_salida(i) for i in filas]
 

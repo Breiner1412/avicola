@@ -8,6 +8,7 @@ import type { ResumenAlertas } from "@/lib/tipos";
 import { Icono } from "@/componentes/iconos";
 import { Aviso, Boton, Cargando, Dato, Insignia, Lista, Paginador, Tarjeta, Vacio, usePaginas } from "@/componentes/ui";
 import { avisar } from "@/componentes/dialogos";
+import { rutaInterna } from "@/lib/menu";
 
 const NIVEL: Record<string, { texto: string; tono: "rojo" | "ambar" | "azul" }> = {
   critico: { texto: "Urgente", tono: "rojo" },
@@ -91,7 +92,7 @@ export default function Alertas() {
                   {pagAvisos.visibles.map((alerta) => (
                     <li key={alerta.id}>
                       <Link
-                        href={alerta.ruta ?? "/panel"}
+                        href={rutaInterna(alerta.ruta)}
                         className="flex items-start gap-3 py-3 transition hover:bg-slate-50"
                       >
                         <span

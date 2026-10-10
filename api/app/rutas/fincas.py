@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
+from app.core.demo import bloqueado_en_demo, no_en_demo
 from app.core.errores import conflicto
 from app.esquemas.comunes import Mensaje
 from app.esquemas.organizacion import FincaActualizar, FincaCrear, FincaSalida
@@ -57,6 +58,8 @@ def editar(
 ):
     finca = finca_de(db, ctx, finca_id)
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("activo") is False:
+        no_en_demo("desactivar fincas")
     if "codigo" in cambios and existe_codigo_finca(db, finca.cuenta_id, cambios["codigo"], excluir=finca.id):
         raise conflicto(f"Ya existe una finca con el codigo {cambios['codigo']}")
 
@@ -68,7 +71,12 @@ def editar(
     return finca
 
 
-@router.delete("/{finca_id}", response_model=Mensaje, summary="Desactivar finca")
+@router.delete(
+    "/{finca_id}",
+    response_model=Mensaje,
+    summary="Desactivar finca",
+    dependencies=[Depends(bloqueado_en_demo("desactivar fincas"))],
+)
 def desactivar(
     finca_id: int,
     db: Session = Depends(obtener_db),

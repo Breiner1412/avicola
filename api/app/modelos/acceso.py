@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    Computed,
     DateTime,
     ForeignKey,
     Integer,
@@ -44,10 +45,24 @@ class Modulo(Base):
 
 
 class Permiso(Base):
-    __tablename__ = "permisos"
+    """Permiso de un rol sobre un modulo.
 
-    rol_id: Mapped[int] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True)
-    modulo_id: Mapped[int] = mapped_column(ForeignKey("modulos.id", ondelete="CASCADE"), primary_key=True)
+    Con cuenta_id vacio es el permiso de fabrica, que solo cambia la plataforma.
+    Cada empresa guarda los suyos con su cuenta_id y estos mandan sobre los de fabrica,
+    asi lo que cambia una empresa nunca afecta a otra.
+    """
+
+    __tablename__ = "permisos"
+    __table_args__ = (UniqueConstraint("alcance", "rol_id", "modulo_id", name="uq_permiso_alcance"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Sin CASCADE: MySQL no lo permite en la base de una columna generada (las
+    # cuentas no se borran, se desactivan)
+    cuenta_id: Mapped[int | None] = mapped_column(ForeignKey("cuentas.id"), index=True)
+    # 0 para los de fabrica: MySQL no compara NULL en los indices unicos
+    alcance: Mapped[int] = mapped_column(Integer, Computed("coalesce(`cuenta_id`, 0)", persisted=True))
+    rol_id: Mapped[int] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, index=True)
+    modulo_id: Mapped[int] = mapped_column(ForeignKey("modulos.id", ondelete="CASCADE"), nullable=False, index=True)
     ver: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     crear: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     editar: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -108,6 +123,10 @@ class Sesion(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True)
     huella: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    # El token de refresco cambia en cada uso; el anterior sirve unos segundos mas
+    # (dos pestanas que refrescan a la vez) y despues, si alguien lo usa, se cierra la sesion
+    huella_anterior: Mapped[str | None] = mapped_column(String(64), index=True)
+    rotada_en: Mapped[datetime | None] = mapped_column(DateTime)
     finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="SET NULL"))
     ip: Mapped[str | None] = mapped_column(String(45))
     agente: Mapped[str | None] = mapped_column(String(255))

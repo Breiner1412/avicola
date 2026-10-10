@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
 from app.core.errores import datos_invalidos, no_encontrado
+from app.core.tiempo import hoy
 from app.esquemas.aves import SanidadCrear, SanidadSalida
 from app.esquemas.comunes import Mensaje
 from app.esquemas.inventario import ItemEntrada, MovimientoCrear
@@ -89,7 +90,7 @@ def proximas(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("sanidad", "ver")),
 ):
-    limite = date.today() + timedelta(days=dias)
+    limite = hoy() + timedelta(days=dias)
     consulta = select(AplicacionSanitaria).where(
         AplicacionSanitaria.proximo_refuerzo.is_not(None),
         AplicacionSanitaria.proximo_refuerzo <= limite,
@@ -99,6 +100,8 @@ def proximas(
         consulta = consulta.where(AplicacionSanitaria.cuenta_id == cuenta)
     if ctx.finca_id is not None:
         consulta = consulta.where(AplicacionSanitaria.finca_id == ctx.finca_id)
+    elif not ctx.es_plataforma:
+        consulta = consulta.where(AplicacionSanitaria.finca_id.in_(ids_fincas_visibles(db, ctx) or [0]))
 
     filas = db.scalars(consulta.order_by(AplicacionSanitaria.proximo_refuerzo)).all()
     return [_salida(db, fila) for fila in refuerzos_pendientes(db, list(filas))]
@@ -111,6 +114,9 @@ def crear(
     ctx: Contexto = Depends(requiere("sanidad", "crear", con_finca=True)),
 ):
     lote = lote_de(db, ctx, datos.lote_id) if datos.lote_id else None
+    # El registro es de la finca activa: el lote tambien debe serlo
+    if lote is not None and lote.finca_id != ctx.finca_id:
+        raise datos_invalidos("El lote no es de la finca activa")
 
     galpon_id = datos.galpon_id or (lote.galpon_id if lote else None)
     if galpon_id is not None:
@@ -120,6 +126,12 @@ def crear(
 
     movimiento_id = None
     costo = dec(0)
+
+    # El articulo y la bodega siempre deben ser de la cuenta, se descuente o no
+    if datos.articulo_id:
+        articulo_de(db, ctx, datos.articulo_id)
+    if datos.bodega_id:
+        bodega_de(db, ctx, datos.bodega_id)
 
     # Si se indica el articulo, tambien se descuenta de la bodega
     if datos.articulo_id and datos.cantidad_usada:
@@ -187,6 +199,9 @@ def borrar(
     aplicacion = db.get(AplicacionSanitaria, aplicacion_id)
     cuenta = cuenta_filtro(ctx)
     if aplicacion is None or (cuenta is not None and aplicacion.cuenta_id != cuenta):
+        raise no_encontrado("El registro no existe")
+    # Borrar escribe en la finca: debe ser una finca en la que se puede trabajar
+    if not ctx.es_plataforma and aplicacion.finca_id not in ids_fincas_visibles(db, ctx):
         raise no_encontrado("El registro no existe")
     if aplicacion.movimiento_id:
         raise datos_invalidos(

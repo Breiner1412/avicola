@@ -10,6 +10,7 @@ from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
 from app.core.errores import conflicto, datos_invalidos, no_encontrado
+from app.core.tiempo import hoy
 from app.esquemas.aves import (
     AnularMovimientoAves,
     BalanceLote,
@@ -39,7 +40,7 @@ from app.modelos.aves import (
     Raza,
 )
 from app.modelos.organizacion import Galpon
-from app.servicios.alcance import cuenta_filtro, cuenta_objetivo
+from app.servicios.alcance import cuenta_filtro, cuenta_objetivo, de_la_cuenta
 from app.servicios.aves import (
     ahora,
     anular_movimiento_aves,
@@ -56,10 +57,32 @@ from app.servicios.inventario import articulo_de, bodega_de, crear_movimiento, e
 router = APIRouter(tags=["Aves"])
 
 
-def _lote_salida(db: Session, lote: Lote) -> LoteSalida:
+def _muertes(db: Session, lote_ids: list[int]) -> dict[int, int]:
+    """Aves muertas por lote: solo los movimientos de muerte que siguen vigentes.
+
+    No se calcula como iniciales - actuales - descarte, porque eso contaba como
+    muertas las aves vendidas, regaladas, consumidas o robadas.
+    """
+    if not lote_ids:
+        return {}
+    filas = db.execute(
+        select(MovimientoAves.lote_id, func.coalesce(func.sum(MovimientoAves.cantidad), 0))
+        .where(
+            MovimientoAves.lote_id.in_(lote_ids),
+            MovimientoAves.tipo == "muerte",
+            MovimientoAves.anulado.is_(False),
+        )
+        .group_by(MovimientoAves.lote_id)
+    ).all()
+    return {lote_id: int(total) for lote_id, total in filas}
+
+
+def _lote_salida(db: Session, lote: Lote, muertes: dict[int, int] | None = None) -> LoteSalida:
     galpon = db.get(Galpon, lote.galpon_id)
     dias = edad_dias(lote)
-    mortalidad = max(0, lote.aves_iniciales - lote.aves_actuales - lote.aves_descarte)
+    if muertes is None:
+        muertes = _muertes(db, [lote.id])
+    mortalidad = muertes.get(lote.id, 0)
     return LoteSalida(
         id=lote.id,
         cuenta_id=lote.cuenta_id,
@@ -123,7 +146,9 @@ def listar_lotes(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("lotes", "ver")),
 ):
-    return [_lote_salida(db, lote) for lote in lotes_visibles(db, ctx, solo_activos, todas_las_fincas)]
+    lotes = lotes_visibles(db, ctx, solo_activos, todas_las_fincas)
+    muertes = _muertes(db, [lote.id for lote in lotes])
+    return [_lote_salida(db, lote, muertes) for lote in lotes]
 
 
 @router.post("/lotes", response_model=LoteSalida, status_code=201, summary="Ingresar un lote")
@@ -157,6 +182,8 @@ def editar_lote(
         select(Lote.id).where(Lote.finca_id == lote.finca_id, Lote.codigo == cambios["codigo"], Lote.id != lote.id)
     ).first():
         raise conflicto("Ya existe otro lote con ese codigo en la finca")
+    if cambios.get("raza_id") is not None:
+        de_la_cuenta(db, Raza, cambios["raza_id"], lote.cuenta_id, "La raza", compartido=True)
 
     for campo, valor in cambios.items():
         setattr(lote, campo, dec(valor) if campo == "costo_ave" else valor)
@@ -448,7 +475,7 @@ def balance(lote_id: int, db: Session = Depends(obtener_db), ctx: Contexto = Dep
     lote = lote_de(db, ctx, lote_id)
     salida = _lote_salida(db, lote)
 
-    dias = max(1, (  (lote.fecha_cierre or date.today()) - lote.fecha_ingreso).days)
+    dias = max(1, (  (lote.fecha_cierre or hoy()) - lote.fecha_ingreso).days)
 
     alimento_kg, alimento_costo = db.execute(
         select(

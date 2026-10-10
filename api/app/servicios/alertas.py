@@ -2,13 +2,16 @@
 
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, true
 from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto
+from app.core.db import bloquear
+from app.core.tiempo import hoy as hoy_en_la_granja, inicio_del_dia
 from app.modelos.alertas import Alerta
 from app.modelos.aves import AplicacionSanitaria
 from app.modelos.inventario import Articulo, Bodega, Existencia
+from app.modelos.organizacion import Cuenta
 from app.modelos.sensores import LecturaSensor, Sensor
 from app.modelos.trabajo import Novedad, Tarea
 from app.modelos.ventas import PuntoVenta, TurnoCaja
@@ -38,11 +41,9 @@ def ahora() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) -> list[dict]:
-    hoy = date.today()
+def _stock_bajo(db: Session, cuenta_id: int, fincas: list[int]) -> list[dict]:
+    """Articulos por debajo del minimo en las bodegas centrales o de estas fincas."""
     encontradas: list[dict] = []
-
-    # 1. Articulos por debajo del minimo
     bodegas = [
         b.id
         for b in db.scalars(
@@ -91,11 +92,12 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
                         "finca_id": None,
                     }
                 )
+    return encontradas
 
-    if not fincas:
-        return encontradas
 
-    # 2. Sensores fuera del rango normal
+def _sensores_fuera_de_rango(db: Session, cuenta_id: int, fincas: list[int]) -> list[dict]:
+    """Sensores cuya ultima medicion quedo fuera del rango normal."""
+    encontradas: list[dict] = []
     sensores = db.scalars(
         select(Sensor).where(Sensor.cuenta_id == cuenta_id, Sensor.finca_id.in_(fincas), Sensor.activo.is_(True))
     ).unique().all()
@@ -121,8 +123,12 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
                 "finca_id": sensor.finca_id,
             }
         )
+    return encontradas
 
-    # 3. Refuerzos de vacuna que se vienen
+
+def _refuerzos(db: Session, fincas: list[int], hoy: date) -> list[dict]:
+    """Refuerzos de vacuna atrasados o de los proximos dias."""
+    encontradas: list[dict] = []
     limite = hoy + timedelta(days=DIAS_REFUERZO)
     refuerzos = db.scalars(
         select(AplicacionSanitaria).where(
@@ -145,8 +151,12 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
                 "finca_id": aplicacion.finca_id,
             }
         )
+    return encontradas
 
-    # 4. Tareas que ya pasaron de fecha
+
+def _tareas_atrasadas(db: Session, fincas: list[int], hoy: date) -> list[dict]:
+    """Tareas que ya pasaron de fecha sin terminarse."""
+    encontradas: list[dict] = []
     atrasadas = db.scalars(
         select(Tarea).where(
             Tarea.finca_id.in_(fincas),
@@ -167,8 +177,12 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
                 "finca_id": tarea.finca_id,
             }
         )
+    return encontradas
 
-    # 5. Novedades graves sin cerrar
+
+def _novedades_graves(db: Session, fincas: list[int]) -> list[dict]:
+    """Novedades de gravedad alta sin cerrar."""
+    encontradas: list[dict] = []
     novedades = db.scalars(
         select(Novedad).where(
             Novedad.finca_id.in_(fincas),
@@ -189,8 +203,12 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
                 "finca_id": novedad.finca_id,
             }
         )
+    return encontradas
 
-    # 6. Cajas que quedaron abiertas de dias anteriores
+
+def _cajas_abiertas(db: Session, cuenta_id: int, fincas: list[int], hoy: date) -> list[dict]:
+    """Cajas que quedaron abiertas de dias anteriores."""
+    encontradas: list[dict] = []
     puntos = [
         p.id
         for p in db.scalars(
@@ -205,7 +223,7 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
             select(TurnoCaja).where(
                 TurnoCaja.punto_venta_id.in_(puntos),
                 TurnoCaja.estado == "abierto",
-                TurnoCaja.abierto_en < datetime.combine(hoy, datetime.min.time()),
+                TurnoCaja.abierto_en < inicio_del_dia(hoy),
             )
         ).all()
         for turno in turnos:
@@ -221,29 +239,30 @@ def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) 
                     "finca_id": None,
                 }
             )
-
     return encontradas
 
 
-def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
-    """Actualiza la lista de avisos: agrega los nuevos y cierra los que ya se resolvieron."""
-    cuenta_id = cuenta_filtro(ctx)
-    if cuenta_id is None:
-        return []
+def _situaciones(db: Session, ctx: Contexto, cuenta_id: int, fincas: list[int]) -> list[dict]:
+    """Todo lo que hoy merece un aviso en estas fincas."""
+    hoy = hoy_en_la_granja()
+    encontradas = _stock_bajo(db, cuenta_id, fincas)
+    if not fincas:
+        return encontradas
+    return [
+        *encontradas,
+        *_sensores_fuera_de_rango(db, cuenta_id, fincas),
+        *_refuerzos(db, fincas, hoy),
+        *_tareas_atrasadas(db, fincas, hoy),
+        *_novedades_graves(db, fincas),
+        *_cajas_abiertas(db, cuenta_id, fincas, hoy),
+    ]
 
-    fincas = [ctx.finca_id] if ctx.finca_id is not None else ids_fincas_visibles(db, ctx)
-    situaciones = _situaciones(db, ctx, cuenta_id, fincas)
-    claves = {s["clave"] for s in situaciones}
 
-    existentes = {
-        a.clave: a for a in db.scalars(select(Alerta).where(Alerta.cuenta_id == cuenta_id)).all()
-    }
-
-    momento = ahora()
-    for situacion in situaciones:
-        alerta = existentes.get(situacion["clave"])
-        if alerta is None:
-            alerta = Alerta(
+def _guardar_aviso(db: Session, cuenta_id: int, alerta: Alerta | None, situacion: dict, momento: datetime) -> None:
+    """Crea el aviso o, si ya existia, lo actualiza (y lo reabre si se habia cerrado)."""
+    if alerta is None:
+        db.add(
+            Alerta(
                 cuenta_id=cuenta_id,
                 finca_id=situacion.get("finca_id"),
                 clave=situacion["clave"],
@@ -258,28 +277,66 @@ def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
                 creado_en=momento,
                 actualizado_en=momento,
             )
-            db.add(alerta)
-        else:
-            if not alerta.activa:
-                alerta.activa = True
-                alerta.leida = False
-                alerta.resuelta_en = None
-            alerta.nivel = situacion["nivel"]
-            alerta.titulo = situacion["titulo"][:140]
-            alerta.detalle = (situacion.get("detalle") or "")[:255] or None
-            alerta.actualizado_en = momento
+        )
+        return
+    if not alerta.activa:
+        alerta.activa = True
+        alerta.leida = False
+        alerta.resuelta_en = None
+    alerta.nivel = situacion["nivel"]
+    alerta.titulo = situacion["titulo"][:140]
+    alerta.detalle = (situacion.get("detalle") or "")[:255] or None
+    alerta.actualizado_en = momento
 
-    # Lo que ya no esta pasando se cierra solo
+
+def avisos_visibles(db: Session, ctx: Contexto):
+    """Condicion para ver o marcar avisos: los de la cuenta y los de las fincas del usuario.
+
+    Con finca activa, solo los de esa finca; sin ella, quien no ve toda la cuenta (el
+    supervisor) solo ve los de sus fincas.
+    """
+    if ctx.finca_id is not None:
+        return or_(Alerta.finca_id.is_(None), Alerta.finca_id == ctx.finca_id)
+    if ctx.es_plataforma or ctx.ve_toda_la_cuenta:
+        return true()
+    return or_(Alerta.finca_id.is_(None), Alerta.finca_id.in_(ids_fincas_visibles(db, ctx) or [0]))
+
+
+def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
+    """Actualiza la lista de avisos: agrega los nuevos y cierra los que ya se resolvieron."""
+    cuenta_id = cuenta_filtro(ctx)
+    if cuenta_id is None:
+        return []
+
+    # Una sola revision a la vez por cuenta: dos peticiones juntas no insertan el
+    # mismo aviso dos veces (chocaban con el indice unico y respondian 500)
+    bloquear(db, Cuenta, cuenta_id)
+
+    fincas = [ctx.finca_id] if ctx.finca_id is not None else ids_fincas_visibles(db, ctx)
+    situaciones = _situaciones(db, ctx, cuenta_id, fincas)
+    claves = {s["clave"] for s in situaciones}
+
+    existentes = {
+        a.clave: a for a in db.scalars(select(Alerta).where(Alerta.cuenta_id == cuenta_id)).all()
+    }
+    revisadas = set(fincas)
+
+    momento = ahora()
+    for situacion in situaciones:
+        _guardar_aviso(db, cuenta_id, existentes.get(situacion["clave"]), situacion, momento)
+
+    # Lo que ya no esta pasando se cierra solo, pero solo en las fincas que se
+    # revisaron: los avisos de otra finca no se tocan desde aqui
     for clave, alerta in existentes.items():
+        if alerta.finca_id is not None and alerta.finca_id not in revisadas:
+            continue
         if alerta.activa and clave not in claves:
             alerta.activa = False
             alerta.resuelta_en = momento
 
     db.flush()
 
-    consulta = select(Alerta).where(Alerta.cuenta_id == cuenta_id, Alerta.activa.is_(True))
-    if ctx.finca_id is not None:
-        consulta = consulta.where((Alerta.finca_id.is_(None)) | (Alerta.finca_id == ctx.finca_id))
+    consulta = select(Alerta).where(Alerta.cuenta_id == cuenta_id, Alerta.activa.is_(True), avisos_visibles(db, ctx))
 
     orden = {"critico": 0, "aviso": 1, "info": 2}
     alertas = db.scalars(consulta).all()

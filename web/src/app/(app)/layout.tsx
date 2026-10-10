@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSesion } from "@/lib/sesion";
-import { GRUPOS } from "@/lib/menu";
+import { GRUPOS, moduloDeRuta } from "@/lib/menu";
 import { CambiarClave } from "@/componentes/cambiar-clave";
 import { Campana } from "@/componentes/campana";
 import { Icono } from "@/componentes/iconos";
@@ -62,7 +62,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (sesion.usuario.debe_cambiar_clave) {
+  // En la demo no se pueden cambiar claves: no se obliga a hacerlo
+  if (sesion.usuario.debe_cambiar_clave && !sesion.demo) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="w-full max-w-md">
@@ -122,6 +123,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...grupo,
     enlaces: grupo.enlaces.filter((enlace) => puede(enlace.modulo, "ver")),
   })).filter((grupo) => grupo.enlaces.length > 0);
+
+  // La API ya rechaza lo que el rol no puede ver; aqui ademas no se abre la pantalla
+  const moduloActual = moduloDeRuta(ruta);
+  const puedeVerPantalla = moduloActual === null || puede(moduloActual, "ver");
 
   const iniciales = `${sesion.usuario.nombres[0] ?? ""}${sesion.usuario.apellidos[0] ?? ""}`.toUpperCase();
 
@@ -280,7 +285,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 space-y-5 p-4 pb-16 lg:p-6">{children}</main>
+        <main className="flex-1 space-y-5 p-4 pb-16 lg:p-6">
+          {sesion.demo ? (
+            <Aviso tipo="info">
+              Estas en la demo: puedes probar todo, pero no cambiar contrasenas, correos, permisos ni
+              desactivar usuarios o fincas. Los datos vuelven a quedar como al principio cada noche.
+            </Aviso>
+          ) : null}
+          {puedeVerPantalla ? (
+            children
+          ) : (
+            <Aviso>
+              Tu rol no tiene acceso a esta pantalla.{" "}
+              <Link href="/panel" className="font-medium underline">
+                Volver al panel
+              </Link>
+            </Aviso>
+          )}
+        </main>
       </div>
     </div>
   );

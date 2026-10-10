@@ -2,18 +2,19 @@
 
 from datetime import timedelta
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Request, Response, status
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.core import limites
+from app.core.demo import bloqueado_en_demo
 from app.core.auditoria import registrar
 from app.core.config import config
 from app.core.contexto import Contexto, contexto_actual, fincas_del_usuario, ip_de
 from app.core.correo import enviar
 from app.core.db import obtener_db
 from app.core.errores import ErrorApi, datos_invalidos, sin_permiso, sin_sesion
-from app.core.seguridad import cifrar_clave, codigo_numerico, huella, verificar_clave
+from app.core.seguridad import HUELLA_FALSA, cifrar_clave, codigo_numerico, huella, verificar_clave
 from app.esquemas.auth import (
     CambiarClave,
     ElegirFinca,
@@ -33,6 +34,7 @@ from app.servicios.sesion import (
     cargar_usuario,
     cerrar_sesion,
     guardar_cookie,
+    rotar_refresco,
 )
 
 router = APIRouter(prefix="/auth", tags=["Sesion"])
@@ -53,8 +55,11 @@ def login(
     db: Session = Depends(obtener_db),
 ):
     ip = ip_de(peticion) or "desconocida"
-    limites.login_ip.registrar(ip)
-    limites.login_email.registrar(datos.email)
+    correo_ip = f"{datos.email}|{ip}"
+    limites.login_ip.revisar(ip)
+    limites.ingresos_ip.revisar(ip)
+    limites.login_email_ip.revisar(correo_ip)
+    limites.login_email.revisar(datos.email)
 
     usuario = db.scalars(
         select(Usuario)
@@ -62,16 +67,25 @@ def login(
         .where(Usuario.email == datos.email.lower())
     ).first()
 
-    if usuario is None or not verificar_clave(datos.clave, usuario.clave_hash):
-        registrar(
-            db, None, "ingreso_fallido", "usuarios",
-            entidad_id=usuario.id if usuario else None,
-            descripcion=f"Intento fallido con {datos.email}",
-            cuenta_id=usuario.cuenta_id if usuario else None,
-            usuario_id=usuario.id if usuario else None,
-            ip=ip,
-        )
-        db.commit()
+    # Con un correo que no existe tambien se hace el bcrypt: asi el tiempo de respuesta
+    # no revela que correos estan registrados
+    clave_correcta = verificar_clave(datos.clave, usuario.clave_hash if usuario else HUELLA_FALSA)
+    if usuario is None or not clave_correcta:
+        limites.login_ip.sumar(ip)
+        limites.login_email_ip.sumar(correo_ip)
+        limites.login_email.sumar(datos.email)
+        # Solo los usuarios que existen dejan linea en el registro (y como mucho
+        # tantas como permite el limite): correos inventados no lo llenan
+        if usuario is not None:
+            registrar(
+                db, None, "ingreso_fallido", "usuarios",
+                entidad_id=usuario.id,
+                descripcion=f"Intento fallido con {datos.email}",
+                cuenta_id=usuario.cuenta_id,
+                usuario_id=usuario.id,
+                ip=ip,
+            )
+            db.commit()
         raise _credenciales_malas()
 
     if not usuario.activo:
@@ -93,9 +107,10 @@ def login(
     else:
         finca_id = None  # el usuario elige en la siguiente pantalla
 
+    limites.ingresos_ip.sumar(ip)
     sesion, refresco = abrir_sesion(db, usuario, finca_id, ip, peticion.headers.get("user-agent"))
     usuario.ultimo_ingreso = ahora_simple()
-    limites.login_email.limpiar(datos.email)
+    limites.login_email_ip.limpiar(correo_ip)
 
     registrar(
         db, None, "ingreso", "usuarios", usuario.id,
@@ -145,16 +160,22 @@ def refrescar(
     if not avicola_refresco:
         raise sin_sesion("No hay sesion abierta")
 
-    sesion = buscar_sesion(db, avicola_refresco)
+    sesion, rotar = buscar_sesion(db, avicola_refresco)
     if sesion is None:
+        db.commit()  # si el token era uno viejo reutilizado, la sesion queda cerrada
         raise sin_sesion("La sesion expiro. Vuelve a entrar.")
 
     usuario = cargar_usuario(db, sesion.usuario_id)
     if usuario is None or not usuario.activo:
         raise sin_sesion("El usuario no esta disponible")
+    if usuario.cuenta is not None and not usuario.cuenta.activo:
+        raise sin_sesion("La cuenta esta inactiva. Habla con el administrador.")
 
+    nuevo = rotar_refresco(sesion) if rotar else None
     salida = armar_respuesta(db, usuario, sesion)
     db.commit()
+    if nuevo:
+        guardar_cookie(respuesta, nuevo)
     return salida
 
 
@@ -165,7 +186,7 @@ def salir(
     avicola_refresco: str | None = Cookie(default=None, alias=config.cookie_refresco),
 ):
     if avicola_refresco:
-        sesion = buscar_sesion(db, avicola_refresco)
+        sesion, _ = buscar_sesion(db, avicola_refresco)
         if sesion is not None:
             cerrar_sesion(db, sesion)
             registrar(
@@ -189,7 +210,12 @@ def yo(db: Session = Depends(obtener_db), ctx: Contexto = Depends(contexto_actua
     return armar_respuesta(db, usuario, sesion)
 
 
-@router.post("/cambiar-clave", response_model=Mensaje, summary="Cambiar mi contrasena")
+@router.post(
+    "/cambiar-clave",
+    response_model=Mensaje,
+    summary="Cambiar mi contrasena",
+    dependencies=[Depends(bloqueado_en_demo("cambiar contrasenas"))],
+)
 def cambiar_clave(
     datos: CambiarClave,
     db: Session = Depends(obtener_db),
@@ -203,13 +229,24 @@ def cambiar_clave(
 
     usuario.clave_hash = cifrar_clave(datos.clave_nueva)
     usuario.debe_cambiar_clave = False
+    # Las demas sesiones (otro equipo, o alguien que tenga la clave vieja) se cierran
+    db.execute(
+        update(Sesion)
+        .where(Sesion.usuario_id == usuario.id, Sesion.revocada_en.is_(None), Sesion.id != (ctx.sesion_id or 0))
+        .values(revocada_en=ahora_simple())
+    )
     registrar(db, ctx, "cambio_clave", "usuarios", usuario.id, descripcion="Cambio de contrasena")
     db.commit()
     return Mensaje(mensaje="Contrasena actualizada")
 
 
-@router.post("/recuperar", response_model=Mensaje, summary="Pedir un codigo de recuperacion")
-def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obtener_db)):
+@router.post(
+    "/recuperar",
+    response_model=Mensaje,
+    summary="Pedir un codigo de recuperacion",
+    dependencies=[Depends(bloqueado_en_demo("recuperar contrasenas"))],
+)
+def recuperar(datos: PedirCodigo, peticion: Request, tareas: BackgroundTasks, db: Session = Depends(obtener_db)):
     ip = ip_de(peticion) or "desconocida"
     limites.recuperar_ip.registrar(ip)
     limites.recuperar_email.registrar(datos.email)
@@ -227,7 +264,9 @@ def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obten
         )
         registrar(db, None, "solicitud_clave", "usuarios", usuario.id, descripcion="Pidio codigo de recuperacion", usuario_id=usuario.id, ip=ip)
         db.commit()
-        enviar(
+        # El correo sale despues de responder: la demora del SMTP no revela si el correo existe
+        tareas.add_task(
+            enviar,
             usuario.email,
             "Codigo para recuperar tu contrasena de Avícola",
             f"Tu codigo es {codigo}. Vence en {MINUTOS_CODIGO} minutos.\n"
@@ -238,7 +277,12 @@ def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obten
     return Mensaje(mensaje="Si el correo esta registrado, te enviamos un codigo")
 
 
-@router.post("/restablecer", response_model=Mensaje, summary="Cambiar la contrasena con el codigo")
+@router.post(
+    "/restablecer",
+    response_model=Mensaje,
+    summary="Cambiar la contrasena con el codigo",
+    dependencies=[Depends(bloqueado_en_demo("cambiar contrasenas"))],
+)
 def restablecer(datos: RestablecerClave, peticion: Request, db: Session = Depends(obtener_db)):
     ip = ip_de(peticion) or "desconocida"
     limites.restablecer.registrar(ip)

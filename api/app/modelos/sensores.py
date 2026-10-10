@@ -3,7 +3,18 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modelos.base import Base
@@ -48,8 +59,9 @@ class Sensor(Base):
 
 class LecturaSensor(Base):
     __tablename__ = "lecturas_sensor"
+    __table_args__ = (Index("ix_lecturas_sensor_fecha", "sensor_id", "medido_en"),)
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     sensor_id: Mapped[int] = mapped_column(ForeignKey("sensores.id", ondelete="CASCADE"), nullable=False, index=True)
     valor: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
     medido_en: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)

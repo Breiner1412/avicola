@@ -1,8 +1,12 @@
-"""Registro de todo lo que se hace en el sistema (no se edita ni se borra)."""
+"""Registro de todo lo que se hace en el sistema (no se edita ni se borra).
+
+La base lo garantiza con triggers que rechazan UPDATE y DELETE. Por eso no tiene
+claves foraneas: un ON DELETE SET NULL reescribiria filas sin pasar por los triggers.
+"""
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import BigInteger, DateTime, Index, Integer, String
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,12 +18,13 @@ class Auditoria(Base):
     __table_args__ = (
         Index("ix_auditoria_cuenta_fecha", "cuenta_id", "creado_en"),
         Index("ix_auditoria_entidad", "entidad", "entidad_id"),
+        Index("ix_auditoria_cuenta_finca_fecha", "cuenta_id", "finca_id", "creado_en"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int | None] = mapped_column(ForeignKey("cuentas.id", ondelete="SET NULL"))
-    finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="SET NULL"))
-    usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id", ondelete="SET NULL"))
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    cuenta_id: Mapped[int | None] = mapped_column(Integer)  # indice en ix_auditoria_cuenta_fecha
+    finca_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    usuario_id: Mapped[int | None] = mapped_column(Integer, index=True)
     usuario_nombre: Mapped[str | None] = mapped_column(String(160))
     accion: Mapped[str] = mapped_column(String(40), nullable=False)
     entidad: Mapped[str] = mapped_column(String(50), nullable=False)

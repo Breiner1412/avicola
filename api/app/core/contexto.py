@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import Depends, Header, Request
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.db import obtener_db
@@ -14,6 +14,7 @@ from app.modelos.acceso import Modulo, Permiso, Sesion, Usuario, UsuarioFinca
 from app.modelos.organizacion import Finca
 
 ROLES_TODA_LA_CUENTA = ("plataforma", "propietario", "administrador")
+METODOS_DE_LECTURA = ("GET", "HEAD", "OPTIONS")
 
 
 @dataclass
@@ -28,6 +29,8 @@ class Contexto:
     # Cuenta sobre la que se esta trabajando (la del usuario o, para el rol de
     # plataforma, la duena de la finca elegida)
     cuenta_activa_id: int | None = None
+    # La peticion cambia datos (no es GET): las fincas de solo lectura no cuentan
+    escribe: bool = True
 
     @property
     def es_plataforma(self) -> bool:
@@ -39,9 +42,12 @@ class Contexto:
 
 
 def ip_de(peticion: Request) -> str | None:
-    reenviada = peticion.headers.get("x-forwarded-for")
-    if reenviada:
-        return reenviada.split(",")[0].strip()
+    """IP de quien hace la peticion.
+
+    No se lee X-Forwarded-For aqui: su primer valor lo escribe el cliente y se puede
+    falsificar. Uvicorn ya lo resuelve con --proxy-headers, confiando solo en los
+    proxies de FORWARDED_ALLOW_IPS (Caddy y la web, en la red interna de Docker).
+    """
     return peticion.client.host if peticion.client else None
 
 
@@ -83,10 +89,14 @@ def contexto_actual(
     datos = leer_token_acceso(_token_de(peticion))
 
     usuario = db.scalars(
-        select(Usuario).options(joinedload(Usuario.rol)).where(Usuario.id == int(datos.get("sub", 0)))
+        select(Usuario)
+        .options(joinedload(Usuario.rol), joinedload(Usuario.cuenta))
+        .where(Usuario.id == int(datos.get("sub", 0)))
     ).first()
     if usuario is None or not usuario.activo:
         raise sin_sesion("El usuario no existe o esta inactivo")
+    if usuario.cuenta is not None and not usuario.cuenta.activo:
+        raise sin_sesion("La cuenta esta inactiva. Habla con el administrador.")
 
     sesion_id = datos.get("ses")
     if sesion_id:
@@ -118,27 +128,40 @@ def contexto_actual(
         ip=ip_de(peticion),
         sesion_id=int(sesion_id) if sesion_id else None,
         cuenta_activa_id=cuenta_activa_id,
+        escribe=peticion.method not in METODOS_DE_LECTURA,
     )
 
 
-def permisos_de_rol(db: Session, rol_id: int) -> dict[str, dict[str, bool]]:
+def _alcance(cuenta_id: int | None):
+    """Permisos de fabrica mas los propios de la cuenta (si la hay)."""
+    if cuenta_id is None:
+        return Permiso.cuenta_id.is_(None)
+    return or_(Permiso.cuenta_id.is_(None), Permiso.cuenta_id == cuenta_id)
+
+
+def permisos_de_rol(db: Session, rol_id: int, cuenta_id: int | None = None) -> dict[str, dict[str, bool]]:
+    """Matriz de un rol para una cuenta: lo de la cuenta manda sobre lo de fabrica."""
     filas = db.execute(
         select(Modulo.clave, Permiso.ver, Permiso.crear, Permiso.editar, Permiso.borrar)
         .join(Permiso, Permiso.modulo_id == Modulo.id)
-        .where(Permiso.rol_id == rol_id)
-        .order_by(Modulo.orden)
+        .where(Permiso.rol_id == rol_id, _alcance(cuenta_id))
+        # Primero los de fabrica y despues los de la cuenta, que los reemplazan
+        .order_by(Permiso.cuenta_id.is_not(None), Modulo.orden)
     ).all()
-    return {
-        clave: {"ver": bool(ver), "crear": bool(crear), "editar": bool(editar), "borrar": bool(borrar)}
-        for clave, ver, crear, editar, borrar in filas
-        if ver or crear or editar or borrar
-    }
+    matriz: dict[str, dict[str, bool]] = {}
+    for clave, ver, crear, editar, borrar in filas:
+        matriz[clave] = {"ver": bool(ver), "crear": bool(crear), "editar": bool(editar), "borrar": bool(borrar)}
+    return {clave: acciones for clave, acciones in matriz.items() if any(acciones.values())}
 
 
-def tiene_permiso(db: Session, rol_id: int, modulo: str, accion: str) -> bool:
+def tiene_permiso(db: Session, rol_id: int, modulo: str, accion: str, cuenta_id: int | None = None) -> bool:
     columna = {"ver": Permiso.ver, "crear": Permiso.crear, "editar": Permiso.editar, "borrar": Permiso.borrar}[accion]
     valor = db.execute(
-        select(columna).join(Modulo, Permiso.modulo_id == Modulo.id).where(Permiso.rol_id == rol_id, Modulo.clave == modulo)
+        select(columna)
+        .join(Modulo, Permiso.modulo_id == Modulo.id)
+        .where(Permiso.rol_id == rol_id, Modulo.clave == modulo, _alcance(cuenta_id))
+        .order_by(Permiso.cuenta_id.is_(None))
+        .limit(1)
     ).scalar_one_or_none()
     return bool(valor)
 
@@ -152,10 +175,20 @@ def requiere(modulo: str, accion: str = "ver", con_finca: bool = False):
     ) -> Contexto:
         if accion != "ver" and ctx.solo_lectura:
             raise sin_permiso("Solo puedes consultar esta finca")
-        if not tiene_permiso(db, ctx.usuario.rol_id, modulo, accion):
+        if not tiene_permiso(db, ctx.usuario.rol_id, modulo, accion, ctx.cuenta_id):
             raise sin_permiso(f"Tu rol no puede {accion} en {modulo}")
         if con_finca and ctx.finca_id is None:
             raise datos_invalidos("Primero elige la finca en la que vas a trabajar")
         return ctx
 
     return dependencia
+
+
+def solo_plataforma(ctx: Contexto = Depends(contexto_actual)) -> Contexto:
+    """Dependencia para lo que administra todo el sistema (cuentas, empresas).
+
+    No depende de la matriz de permisos: ninguna empresa puede darse este acceso.
+    """
+    if not ctx.es_plataforma:
+        raise sin_permiso("Solo el administrador de la plataforma puede hacer esto")
+    return ctx

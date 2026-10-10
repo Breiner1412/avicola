@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api, FalloApi } from "@/lib/api";
+import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type {
@@ -62,22 +62,10 @@ export default function Importar() {
       cuerpo.append("tipo", tipo);
       cuerpo.append("archivo", archivo);
 
-      const respuesta = await fetch("/api/v1/importacion/analizar", {
-        method: "POST",
-        body: cuerpo,
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${sesion?.token ?? ""}`,
-          ...(finca ? { "X-Finca-Id": String(finca) } : {}),
-        },
-      });
-      const datos = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new FalloApi(respuesta.status, datos?.detail?.codigo ?? "error", datos?.detail?.mensaje ?? "No se pudo leer el archivo");
-      }
+      const datos = await api<AnalisisImportacion>("/importacion/analizar", { metodo: "POST", formulario: cuerpo });
 
-      setAnalisis(datos as AnalisisImportacion);
-      setMapeo((datos as AnalisisImportacion).mapeo_sugerido ?? {});
+      setAnalisis(datos);
+      setMapeo(datos.mapeo_sugerido ?? {});
       setValidacion(null);
       setResultado(null);
     } catch (error) {

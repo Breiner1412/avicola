@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useDatos } from "@/lib/hooks";
+import { descargar } from "@/lib/api";
+import { mensajeDeError, useDatos } from "@/lib/hooks";
 import { useSesion } from "@/lib/sesion";
 import type { ResumenReporte } from "@/lib/tipos";
 import { Aviso, Boton, Campo, Cargando, Insignia, Tabla, Tarjeta, Vacio } from "@/componentes/ui";
@@ -49,19 +50,11 @@ export default function Reportes() {
   const ruta = `/reportes/resumen?desde=${desde}&hasta=${hasta}`;
   const { datos, cargando, error } = useDatos<ResumenReporte>(ruta, `${finca}-${ruta}`);
 
-  async function descargar(tipo: string) {
+  async function bajar(tipo: string) {
     setBajando(tipo);
     try {
-      const respuesta = await fetch(`/api/v1/reportes/csv?tipo=${tipo}&desde=${desde}&hasta=${hasta}`, {
-        headers: {
-          Authorization: `Bearer ${sesion?.token ?? ""}`,
-          ...(finca ? { "X-Finca-Id": String(finca) } : {}),
-        },
-        credentials: "include",
-      });
-      if (!respuesta.ok) throw new Error("No se pudo generar el archivo");
-
-      const contenido = await respuesta.blob();
+      const parametros = new URLSearchParams({ tipo, desde, hasta });
+      const contenido = await descargar(`/reportes/csv?${parametros}`);
       const enlace = document.createElement("a");
       enlace.href = URL.createObjectURL(contenido);
       enlace.download = `${tipo}_${desde}_a_${hasta}.csv`;
@@ -69,8 +62,8 @@ export default function Reportes() {
       enlace.click();
       enlace.remove();
       URL.revokeObjectURL(enlace.href);
-    } catch {
-      avisar.error("No se pudo descargar el reporte");
+    } catch (error) {
+      avisar.error(mensajeDeError(error, "No se pudo descargar el reporte"));
     } finally {
       setBajando("");
     }
@@ -242,7 +235,7 @@ export default function Reportes() {
             </p>
             <div className="flex flex-wrap gap-2">
               {DESCARGAS.map((fila) => (
-                <Boton key={fila.tipo} tono="suave" onClick={() => descargar(fila.tipo)} disabled={bajando === fila.tipo}>
+                <Boton key={fila.tipo} tono="suave" onClick={() => bajar(fila.tipo)} disabled={bajando === fila.tipo}>
                   {bajando === fila.tipo ? "Generando..." : fila.texto}
                 </Boton>
               ))}

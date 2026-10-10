@@ -33,6 +33,7 @@ La demo tiene dos fincas con seis meses de trabajo simulado. Entra con cualquier
 | `caja@demo-avicola.com` | Cajero | Caja con turno abierto |
 
 > La demo se restaura sola cada noche: lo que cambies se borra y vuelve a quedar como al principio.
+> En la demo no se pueden cambiar contraseñas, correos ni permisos (ver [Demo pública](#demo-pública)).
 
 ## Contenido
 
@@ -121,7 +122,7 @@ Todas las pantallas están en el [manual de usuario](docs/manual/MANUAL_DE_USUAR
 **Infraestructura**
 
 - **Docker Compose**: base de datos, caché, API y web
-- Flujo de GitHub Actions listo para correr las pruebas (`docs/github-actions-pruebas.yml`)
+- GitHub Actions corre las pruebas, revisa las migraciones y compila la web en cada push (`.github/workflows/pruebas.yml`)
 
 ---
 
@@ -150,43 +151,45 @@ flowchart LR
 **Requisitos:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows o macOS) o
 Docker Engine con Compose (Linux), y Git.
 
-```bash
+En tu equipo se levanta igual que en la VM: un Caddy delante sirve todo en **http://localhost:8080**, con
+el mismo bloque del README (`local/Caddyfile`), y la demo de seis meses se genera sola la primera vez.
+
+```powershell
 # 1. Descargar el proyecto
 git clone https://github.com/Breiner1412/avicola.git
 cd avicola
 
-# 2. Crear el archivo de configuración y cambiar las contraseñas
-cp .env.example .env          # en Windows (PowerShell): copy .env.example .env
+# 2. Crear el archivo de configuracion local y cambiar sus claves (solo letras y numeros)
+copy .env.local.example .env.local          # en Linux/macOS: cp .env.local.example .env.local
 
 # 3. Construir y levantar todo
-docker compose -f docker-compose.v2.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local up -d --build
 
-# 4. Ver que todo esté arriba (api y db deben decir "healthy")
-docker compose -f docker-compose.v2.yml ps
+# 4. Ver el avance de la demo (la primera vez tarda unos minutos; termina con la lista de usuarios)
+docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local logs -f demo
 ```
 
-Abre:
+Abre **http://localhost:8080** y entra con los [usuarios de la demo](#datos-de-ejemplo) (clave
+`Granja2026`) o con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env.local` (usuario de plataforma).
 
-| Qué | Dirección |
+| Acción | Comando (desde la carpeta del proyecto) |
 |---|---|
-| Aplicación | http://localhost:3000 |
-| Documentación de la API | http://localhost:8000/docs |
+| Apagar (los datos se conservan) | `docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local down` |
+| Borrar todo (base, demo e imágenes) | `docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local down -v --rmi local` |
 
-Entra con el `ADMIN_EMAIL` y el `ADMIN_PASSWORD` del `.env`. La primera vez el sistema crea solo las
-tablas, los módulos, los roles, los permisos, el usuario de plataforma y una cuenta con una finca de
-ejemplo para empezar.
+En local no hay HTTPS: por eso `.env.local` usa `ENTORNO=desarrollo` y `COOKIE_SEGURA=false`.
 
 ### Comandos útiles
 
 | Acción | Comando |
 |---|---|
-| Ver los registros de la API | `docker compose -f docker-compose.v2.yml logs -f api` |
-| Detener | `docker compose -f docker-compose.v2.yml down` |
-| Empezar de cero (**borra la base de datos**) | `docker compose -f docker-compose.v2.yml down -v` |
-| Actualizar después de un cambio en el código | `docker compose -f docker-compose.v2.yml up -d --build` |
-| Reiniciar la contraseña del admin | `docker compose -f docker-compose.v2.yml exec api python -m app.semilla --reiniciar-admin` |
-| Restaurar los permisos de fábrica | `docker compose -f docker-compose.v2.yml exec api python -m app.semilla --forzar-permisos` |
-| Cargar datos de ejemplo | `docker compose -f docker-compose.v2.yml exec api python -m app.demo` |
+| Ver los registros de la API | `docker compose logs -f api` |
+| Detener | `docker compose down` |
+| Empezar de cero (**borra la base de datos**) | `docker compose down -v` |
+| Actualizar después de un cambio en el código | `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build` |
+| Reiniciar la contraseña del admin | `docker compose exec api python -m app.semilla --reiniciar-admin` |
+| Restaurar los permisos de fábrica | `docker compose exec api python -m app.semilla --forzar-permisos` |
+| Cargar datos de ejemplo | `docker compose exec api python -m app.demo` |
 
 ---
 
@@ -221,7 +224,7 @@ Si la API no está en `http://localhost:8000`, indica dónde con la variable `AP
 Para ver el sistema como si una granja llevara **seis meses** usándolo:
 
 ```bash
-docker compose -f docker-compose.v2.yml exec api python -m app.demo
+docker compose exec api python -m app.demo
 # sin Docker: cd api && python -m app.demo
 ```
 
@@ -242,35 +245,79 @@ Todo se registra con las mismas reglas del sistema, así que el inventario, las 
 | `dueno@demo-avicola.com` | Propietario |
 | `admin@demo-avicola.com` | Administrador |
 | `supervisor@demo-avicola.com` | Supervisor |
-| `operario1@demo-avicola.com` | Operario |
+| `operario1@demo-avicola.com` | Operario (La Esperanza) |
+| `operario2@demo-avicola.com` | Operario (La Esperanza) |
+| `operario3@demo-avicola.com` | Operario (El Recreo) |
 | `caja@demo-avicola.com` | Cajero |
 
 Contraseña de todos: **`Granja2026`**. Los datos se cargan una sola vez por base de datos; para volver a
 cargarlos hay que empezar de cero (`down -v`).
 
+### Demo pública
+
+La demo publicada usa **su propia base** (`DB_NAME=avicola_demo`) y `DEMO=true`. Con eso la API no deja
+cambiar contraseñas (propias ni ajenas), correos, roles, permisos ni cuentas, ni desactivar usuarios o
+fincas: nadie puede dejar a los demás sin entrar. Todo lo demás se puede probar, y cada noche los datos
+vuelven a quedar como al principio.
+
+El reinicio usa un **volcado base** y dos scripts que se corren desde la raíz del proyecto en la VM. Los
+dos se niegan a trabajar si `DEMO` no es `true` o si `DB_NAME` no termina en `_demo`.
+
+```bash
+# 1. Una vez (y cada semana, para que las fechas no envejezcan): crea la demo y guarda el volcado
+sh scripts/demo/crear_base.sh          # 180 días; deja demo/base_demo.sql.gz
+
+# 2. Cada noche: borra la base, carga el volcado, vacía Redis y vuelve a levantar la API (~10 s)
+sh scripts/demo/reiniciar.sh
+```
+
+Cron del host (`crontab -e` del usuario que maneja Docker; ajusta la ruta del proyecto):
+
+```cron
+# Reinicio de la demo todas las noches a las 3:00
+0 3 * * *  cd /opt/avicola && sh scripts/demo/reiniciar.sh >> /var/log/avicola-demo.log 2>&1
+# Volcado base nuevo cada domingo a las 2:30 (las fechas de la demo terminan ese dia)
+30 2 * * 0 cd /opt/avicola && sh scripts/demo/crear_base.sh >> /var/log/avicola-demo.log 2>&1
+```
+
+El volcado base guarda tambien el usuario de plataforma con la clave que tenia al crearse: si cambias
+`ADMIN_PASSWORD`, vuelve a correr `crear_base.sh` para que el reinicio nocturno no traiga la clave vieja.
+
+Variables opcionales de los scripts: `ENV_FILE` (por defecto `.env`), `COMPOSE_FILE` y `DEMO_BASE`
+(por defecto `demo/base_demo.sql.gz`, fuera del repositorio).
+
 ---
 
 ## Variables de entorno
 
-Se configuran en el archivo `.env` (copia de `.env.example`). **Nunca subas el `.env` al repositorio** y
-no uses el signo `$` en las contraseñas: Docker Compose lo interpreta como variable.
+Se configuran en el archivo `.env` (copia de `.env.example`). **Nunca subas el `.env` al repositorio.**
+En las contraseñas usa letras, números, `-`, `_` y `.`: el signo `$` lo interpreta Docker Compose, las
+comillas y la barra invertida rompen el SQL que crea el usuario de la aplicación, y `@`, `:` o `/` rompen
+la dirección de Redis.
 
 | Variable | Para qué | Ejemplo |
 |---|---|---|
-| `MYSQL_ROOT_PASSWORD` | Contraseña root de MySQL (solo Docker) | `CambiaEstaClaveRoot123` |
-| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base de datos de la aplicación | `avicola` |
-| `DB_HOST`, `DB_PORT` | Dónde está MySQL | `db`, `3306` |
+| `ENTORNO` | `produccion` en el servidor: exige claves propias, apaga `/docs` y pide Redis | `desarrollo` |
+| `DEMO` | `true` solo en la demo pública (ver [Demo pública](#demo-pública)) | `false` |
+| `ZONA_HORARIA` | Zona de la granja: define "hoy" y los días de los reportes | `America/Bogota` |
+| `TZ` | Hora de los logs de los contenedores | `America/Bogota` |
+| `MYSQL_ROOT_PASSWORD` | Contraseña root de MySQL (solo la usa el contenedor de la base y los scripts) | |
+| `DB_NAME` | Base de datos (`avicola_demo` en la demo pública) | `avicola` |
+| `DB_USER`, `DB_PASSWORD` | Usuario de la aplicación: solo lee y escribe datos | `avicola_app` |
+| `DB_MIGRA_USER`, `DB_MIGRA_PASSWORD` | Dueño del esquema, solo para las migraciones (vacíos = usan `DB_USER`) | `avicola` |
+| `REDIS_PASSWORD` | Clave de Redis (Docker arma `REDIS_URL` con ella) | |
 | `JWT_SECRET` | Clave para firmar las sesiones (**mínimo 32 caracteres**) | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `MINUTOS_ACCESO` | Duración del token de acceso | `30` |
 | `DIAS_REFRESCO` | Días que dura la sesión sin volver a entrar | `14` |
-| `COOKIE_SEGURA` | `true` cuando se sirve con HTTPS | `false` |
-| `REDIS_URL` | Caché para limitar intentos | `redis://cache:6379/0` |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NOMBRE` | Usuario de plataforma que se crea la primera vez | |
+| `COOKIE_SEGURA` | `true` con HTTPS (obligatorio en producción) | `true` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NOMBRE` | Usuario de plataforma que se crea la primera vez (clave de 12 o más en producción) | |
 | `CUENTA_DEMO`, `FINCA_DEMO` | Nombre de la cuenta y la finca que se crean la primera vez | |
-| `SMTP_*` | Correo para recuperar contraseñas (opcional) | |
-| `CORS_ORIGENES` | Orígenes permitidos si se llama la API desde otro dominio | |
-| `WEB_PUERTO_HOST`, `API_PUERTO_HOST`, `DB_PUERTO_HOST` | Puertos en tu máquina | `3000`, `8000`, `3308` |
-| `TZ` | Zona horaria del servidor | `America/Bogota` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_DESDE` | Correo para recuperar contraseñas | `587` |
+| `CORS_ORIGENES` | Orígenes permitidos si se llama la API desde otro dominio (vacío detrás de Caddy) | |
+| `PROXY_CONFIABLE` | Redes de las que la API cree `X-Forwarded-For` | `172.16.0.0/12,192.168.0.0/16,10.0.0.0/8` |
+| `WEB_PUERTO_HOST`, `API_PUERTO_HOST`, `DB_PUERTO_HOST` | Solo con `docker-compose.local.yml` (en tu equipo) | `3000`, `8000`, `3308` |
+
+Sin Docker (`api/.env`) se usan además `DB_HOST`, `DB_PORT` y `REDIS_URL`.
 
 ---
 
@@ -324,7 +371,8 @@ importación desde Excel, tareas y novedades, sensores (incluido el envío por c
 el registro de cambios; y, lo más importante, que **una cuenta no pueda ver ni tocar los datos de
 otra**.
 
-Para correrlas en GitHub, copia `docs/github-actions-pruebas.yml` a `.github/workflows/pruebas.yml`.
+En GitHub corren solas en cada push y pull request (`.github/workflows/pruebas.yml`), junto con
+`alembic check` y la compilación de la web.
 
 ---
 
@@ -332,12 +380,16 @@ Para correrlas en GitHub, copia `docs/github-actions-pruebas.yml` a `.github/wor
 
 ```
 avicola/
-├── docker-compose.v2.yml        # base de datos + caché + API + web
+├── docker-compose.yml           # producción: base + caché + API + web, sin puertos publicados
+├── docker-compose.local.yml     # en tu equipo: Caddy en localhost:8080 y demo automatica
+├── local/Caddyfile              # el bloque de Caddy del README, para localhost
 ├── .env.example                 # variables de entorno (copiar a .env)
+├── .github/workflows/pruebas.yml
+├── db/inicio/                   # crea el usuario de la aplicación en MySQL
+├── scripts/                     # respaldo y demo (reinicio nocturno)
 ├── docs/
 │   ├── manual/                  # manual de usuario con capturas
-│   ├── DISENO_V2.md             # diseño del sistema
-│   └── github-actions-pruebas.yml
+│   └── DISENO_V2.md             # diseño del sistema
 ├── api/
 │   ├── app/
 │   │   ├── main.py              # aplicación FastAPI
@@ -347,7 +399,7 @@ avicola/
 │   │   ├── servicios/           # reglas del negocio (inventario, aves, ventas, avisos...)
 │   │   ├── rutas/               # endpoints por módulo
 │   │   ├── semilla.py           # datos iniciales
-│   │   └── demo.py              # seis meses de datos de ejemplo
+│   │   └── demo/                # seis meses de datos de ejemplo (python -m app.demo)
 │   ├── migraciones/             # Alembic
 │   └── tests/                   # pruebas
 └── web/
@@ -409,15 +461,189 @@ en cada petición; la web solo oculta lo que el rol no puede usar.
 
 ## Poner en un servidor
 
-Resumen para una máquina virtual con Linux (Azure, AWS, DigitalOcean…):
+Pensado para una máquina virtual Linux (Azure, AWS, DigitalOcean…) con **Docker** y un **Caddy** que ya
+da HTTPS a otras apps. Ningún contenedor de Avícola publica puertos: Caddy es el único que expone 80 y 443
+y llega a la web y a la API por la red de Docker `proxy`.
 
-1. Instala Docker y Git, clona el repositorio y crea el `.env` con contraseñas y `JWT_SECRET` nuevos.
-2. Levanta con `docker compose -f docker-compose.v2.yml up -d --build`.
-3. Pon delante un proxy con HTTPS (Nginx o Caddy) que apunte al puerto 3000 y cambia
-   `COOKIE_SEGURA=true`.
-4. Abre en el firewall solo los puertos 80 y 443. La API y la base de datos quedan escuchando solo en
-   `127.0.0.1`.
-5. Programa una copia diaria de la base de datos con `mysqldump`.
+```text
+Internet ──443──> Caddy ──/api/*──> avicola-api:8000 ──┐
+                    │                                  ├── red "interna" ── avicola-db, avicola-cache
+                    └──── resto ───> avicola-web:3000 ─┘
+                (red "proxy", compartida con las demás apps)
+```
+
+### 1. Preparar la VM
+
+```bash
+sudo mkdir -p /opt/avicola && sudo chown "$USER" /opt/avicola
+git clone https://github.com/Breiner1412/avicola.git /opt/avicola
+cd /opt/avicola
+docker network create proxy 2>/dev/null || true   # la red que comparte Caddy (si no existe)
+cp .env.example .env && chmod 600 .env
+```
+
+En el `.env` del servidor:
+
+- `ENTORNO=produccion` y `COOKIE_SEGURA=true` (la API no arranca en producción con las claves de
+  ejemplo ni sin cookie segura).
+- Claves nuevas para `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD`, `DB_MIGRA_PASSWORD`, `JWT_SECRET` y
+  `ADMIN_PASSWORD` (12 caracteres o más).
+- Para la demo pública: `DEMO=true` y `DB_NAME=avicola_demo` (ver [Demo pública](#demo-pública)).
+
+### 2. Levantar
+
+```bash
+docker compose up -d --build
+docker compose ps        # avicola-db, avicola-cache, avicola-api y avicola-web deben quedar "healthy"
+```
+
+`avicola-migrar` corre antes que la API: aplica las migraciones y los datos iniciales y termina (sale con
+código 0). Es el único contenedor con las credenciales del dueño del esquema; la API trabaja con un usuario
+que no puede crear ni quitar tablas ni triggers. Si una migración falla, la API no arranca:
+
+```bash
+docker compose logs migrar
+```
+
+### 3. Caddy
+
+En el `Caddyfile` del Caddy compartido (que debe estar en la red `proxy`):
+
+```caddy
+granja.ejemplo.com {
+	encode zstd gzip
+
+	# HSTS solo para este dominio (sin includeSubDomains: otras apps comparten el dominio padre).
+	# Las demas cabeceras de seguridad (CSP, nosniff, frame-ancestors...) las pone la aplicacion.
+	header Strict-Transport-Security "max-age=31536000"
+	header -Server
+
+	# La API va directo a su contenedor: Caddy le pasa la IP real del visitante
+	# (los limites de intentos y el registro de cambios la usan)
+	handle /api/* {
+		# Tope al tamano de lo que se envia: el Excel admite 5 MB, lo demas es JSON
+		@importacion path /api/v1/importacion/analizar
+		@resto not path /api/v1/importacion/analizar
+		request_body @importacion {
+			max_size 6MB
+		}
+		request_body @resto {
+			max_size 1MB
+		}
+		reverse_proxy avicola-api:8000
+	}
+
+	# Todo lo demas es la aplicacion web
+	handle {
+		reverse_proxy avicola-web:3000
+	}
+}
+```
+
+Y se recarga sin cortar las demás apps:
+
+```bash
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile   # usa el nombre de tu contenedor de Caddy
+```
+
+La API solo cree la cabecera `X-Forwarded-For` (la IP del visitante) de los proxies de `PROXY_CONFIABLE`.
+Por defecto son las redes privadas de Docker, lo que incluye a **cualquier contenedor de la red `proxy`**,
+también los de otras apps. Lo recomendado es dejar solo a Caddy, con una IP fija en la red `proxy`:
+
+```yaml
+# En el docker-compose de Caddy
+services:
+  caddy:
+    networks:
+      proxy:
+        ipv4_address: 172.30.0.2
+networks:
+  proxy:
+    external: true
+```
+
+```bash
+# Si la red proxy aun no existe, crearla con una subred conocida
+docker network create --subnet 172.30.0.0/24 proxy
+# Y en el .env de Avicola
+PROXY_CONFIABLE=172.30.0.2
+```
+
+Sin esto, otra app de la VM podría hacerse pasar por cualquier IP ante la API. Desde internet no se puede:
+Caddy reescribe esa cabecera. La API corta de todos modos los cuerpos de más de 1 MB (6 MB en la
+importación) aunque le lleguen sin pasar por Caddy.
+
+### 4. Firewall
+
+En el grupo de seguridad de Azure deja abiertos solo **80**, **443** y el **22** (SSH, mejor limitado a tu
+IP). La base de datos, Redis y la API no tienen puertos publicados.
+
+### 5. Respaldos
+
+`scripts/respaldo.sh` saca un `mysqldump` consistente (`--single-transaction`, con los triggers del
+registro de cambios), lo comprime, verifica que quedó completo y borra los de más de 14 días:
+
+```bash
+sudo mkdir -p /var/backups/avicola && sudo chown "$USER" /var/backups/avicola
+sh scripts/respaldo.sh                         # deja /var/backups/avicola/<base>_AAAA-MM-DD_HHMM.sql.gz
+```
+
+Cron del host (`crontab -e`), todos los días a las 2:00, antes del reinicio de la demo:
+
+```cron
+0 2 * * *  cd /opt/avicola && sh scripts/respaldo.sh >> /var/log/avicola-respaldo.log 2>&1
+```
+
+El comando que hace por dentro, por si lo quieres correr a mano:
+
+```bash
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot \
+  --single-transaction --quick --routines --triggers --events --hex-blob \
+  --default-character-set=utf8mb4 --set-gtid-purged=OFF --no-tablespaces "$MYSQL_DATABASE"' \
+  | gzip -9 > /var/backups/avicola/avicola_$(date +%F_%H%M).sql.gz
+```
+
+Para restaurar (**borra los datos actuales**; detiene la API mientras tanto):
+
+```bash
+sh scripts/restaurar.sh /var/backups/avicola/avicola_2026-10-09_0200.sql.gz --confirmo
+```
+
+Copia la carpeta de respaldos fuera de la VM (por ejemplo a Azure Blob Storage con `azcopy sync`): si
+se pierde el disco, se pierden también los respaldos que estén en él.
+
+### Si ya tenías Avícola corriendo en la VM
+
+La base existente sigue sirviendo (el volumen `avicola_db_datos` no cambia). **Antes de nada, saca un
+respaldo con la versión que está corriendo**: en MySQL los cambios de estructura no se pueden deshacer
+a mitad de camino, y si una migración falla lo más rápido es restaurar y reintentar.
+
+```bash
+cd /opt/avicola
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers "$MYSQL_DATABASE"' | gzip > ~/antes-de-actualizar.sql.gz
+git pull
+```
+
+Después, crear una vez el usuario de la aplicación, que no puede tocar el registro de cambios:
+
+```bash
+# En el .env: DB_MIGRA_USER y DB_MIGRA_PASSWORD = el usuario y la clave que ya tenias en DB_USER/DB_PASSWORD;
+# DB_USER=avicola_app y DB_PASSWORD = una clave nueva
+docker compose up -d db
+docker compose exec db sh /docker-entrypoint-initdb.d/01-usuario-app.sh
+docker compose up -d --build      # las migraciones crean los triggers y los permisos por empresa
+```
+
+Para pasar la demo pública a su propia base (`avicola_demo`), después de lo anterior: en el `.env` pon
+`DEMO=true` y `DB_NAME=avicola_demo`, saca un respaldo de la base vieja y luego:
+
+```bash
+sh scripts/respaldo.sh                                        # por si acaso, la base anterior
+docker compose up -d db                                       # recrea el contenedor con el nombre nuevo
+docker compose exec db sh /docker-entrypoint-initdb.d/01-usuario-app.sh   # permisos sobre avicola_demo
+sh scripts/demo/crear_base.sh                                 # crea la base, la llena y deja el volcado base
+docker compose up -d --build
+```
 
 ---
 
@@ -429,8 +655,8 @@ arquitectura. Bórrala y vuelve a construir:
 ```bash
 docker image rm -f node:22-alpine python:3.11-slim
 docker builder prune -af
-docker compose -f docker-compose.v2.yml build --no-cache
-docker compose -f docker-compose.v2.yml up -d
+docker compose build --no-cache
+docker compose up -d
 ```
 
 **`rpc error: code = Unavailable ... EOF`.** Docker Desktop se quedó sin memoria o se cerró el motor.
@@ -443,7 +669,7 @@ cero con `down -v`.
 **El puerto 3000, 8000 o 3308 ya está en uso.** Cambia `WEB_PUERTO_HOST`, `API_PUERTO_HOST` o
 `DB_PUERTO_HOST` en el `.env`.
 
-**No recuerdo la contraseña del admin.** `docker compose -f docker-compose.v2.yml exec api python -m
+**No recuerdo la contraseña del admin.** `docker compose exec api python -m
 app.semilla --reiniciar-admin` la deja como está en el `.env`.
 
 ---

@@ -158,7 +158,11 @@ export default function Caja() {
       peligro: true,
       requerido: true,
     });
-    if (!motivo || motivo.length < 3) return;
+    if (!motivo) return;
+    if (motivo.trim().length < 10) {
+      avisar.error("Explica el motivo en al menos 10 letras");
+      return;
+    }
     try {
       await api(`/ventas/${venta.id}/anular`, { metodo: "POST", cuerpo: { motivo } });
       setRecargas((n) => n + 1);

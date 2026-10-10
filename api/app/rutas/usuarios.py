@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
 from app.core.db import obtener_db
+from app.core.demo import bloqueado_en_demo, no_en_demo
 from app.core.errores import conflicto, datos_invalidos, no_encontrado, sin_permiso
 from app.core.seguridad import cifrar_clave
 from app.esquemas.comunes import Mensaje
@@ -19,7 +20,7 @@ from app.esquemas.usuarios import (
 )
 from app.modelos.acceso import Rol, Sesion, Usuario, UsuarioFinca
 from app.modelos.organizacion import Finca
-from app.servicios.alcance import cuenta_objetivo
+from app.servicios.alcance import cuenta_objetivo, ids_fincas_visibles
 from app.servicios.sesion import ahora_simple
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
@@ -64,10 +65,16 @@ def _usuario_de_la_cuenta(db: Session, ctx: Contexto, usuario_id: int) -> Usuari
         raise no_encontrado("El usuario no existe")
     if not ctx.es_plataforma and usuario.rol.nivel < ctx.usuario.rol.nivel:
         raise sin_permiso("No puedes administrar a ese usuario")
+    if not ctx.es_plataforma and not ctx.ve_toda_la_cuenta and usuario.id != ctx.usuario.id:
+        visibles = set(ids_fincas_visibles(db, ctx))
+        if not visibles & {f.finca_id for f in usuario.fincas}:
+            raise no_encontrado("El usuario no existe")
     return usuario
 
 
-def _guardar_fincas(db: Session, usuario: Usuario, cuenta_id: int | None, asignaciones: list[FincaAsignada]) -> None:
+def _guardar_fincas(
+    db: Session, ctx: Contexto, usuario: Usuario, cuenta_id: int | None, asignaciones: list[FincaAsignada]
+) -> None:
     ids = [a.finca_id for a in asignaciones]
     if ids:
         validas = set(
@@ -77,8 +84,23 @@ def _guardar_fincas(db: Session, usuario: Usuario, cuenta_id: int | None, asigna
         if faltantes:
             raise datos_invalidos(f"Estas fincas no son de la cuenta: {sorted(faltantes)}")
 
+    # Quien no ve toda la cuenta solo reparte las fincas que el mismo tiene, y no toca
+    # las asignaciones del usuario en fincas que no son suyas
+    conservar: list[UsuarioFinca] = []
+    if not ctx.es_plataforma and not ctx.ve_toda_la_cuenta:
+        propias = set(ids_fincas_visibles(db, ctx))
+        ajenas = set(ids) - propias
+        if ajenas:
+            raise sin_permiso(f"No puedes asignar fincas que no tienes a cargo: {sorted(ajenas)}")
+        conservar = [
+            UsuarioFinca(finca_id=f.finca_id, solo_lectura=f.solo_lectura)
+            for f in usuario.fincas
+            if f.finca_id not in propias
+        ]
+
     usuario.fincas.clear()
     db.flush()
+    usuario.fincas.extend(conservar)
     for asignacion in asignaciones:
         usuario.fincas.append(
             UsuarioFinca(finca_id=asignacion.finca_id, solo_lectura=asignacion.solo_lectura)
@@ -98,6 +120,12 @@ def listar(
             consulta = consulta.where(Usuario.cuenta_id == cuenta_id)
     else:
         consulta = consulta.where(Usuario.cuenta_id == ctx.cuenta_id)
+        if not ctx.ve_toda_la_cuenta:
+            # El supervisor solo ve a la gente que trabaja en sus fincas
+            companeros = select(UsuarioFinca.usuario_id).where(
+                UsuarioFinca.finca_id.in_(ids_fincas_visibles(db, ctx) or [0])
+            )
+            consulta = consulta.where(Usuario.id.in_(companeros))
     if not incluir_inactivos:
         consulta = consulta.where(Usuario.activo.is_(True))
 
@@ -131,7 +159,7 @@ def crear(
     )
     db.add(usuario)
     db.flush()
-    _guardar_fincas(db, usuario, cuenta_id, datos.fincas)
+    _guardar_fincas(db, ctx, usuario, cuenta_id, datos.fincas)
 
     registrar(
         db, ctx, "crear", "usuarios", usuario.id,
@@ -157,6 +185,14 @@ def editar(
 ):
     usuario = _usuario_de_la_cuenta(db, ctx, usuario_id)
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("email") and cambios["email"].lower() != usuario.email:
+        no_en_demo("cambiar correos")
+    if cambios.get("rol") and cambios["rol"] != usuario.rol.clave:
+        no_en_demo("cambiar el rol de los usuarios")
+    if cambios.get("activo") is False:
+        no_en_demo("desactivar usuarios")
+    if datos.fincas is not None:
+        no_en_demo("cambiar las fincas de los usuarios")
 
     if "email" in cambios and cambios["email"]:
         nuevo = cambios["email"].lower()
@@ -177,7 +213,7 @@ def editar(
             setattr(usuario, campo, cambios[campo])
 
     if datos.fincas is not None:
-        _guardar_fincas(db, usuario, usuario.cuenta_id, datos.fincas)
+        _guardar_fincas(db, ctx, usuario, usuario.cuenta_id, datos.fincas)
 
     registrar(db, ctx, "editar", "usuarios", usuario.id, f"Edito el usuario {usuario.email}", cambios)
     db.commit()
@@ -185,7 +221,12 @@ def editar(
     return _salida(usuario)
 
 
-@router.post("/{usuario_id}/clave", response_model=Mensaje, summary="Asignar una contrasena nueva")
+@router.post(
+    "/{usuario_id}/clave",
+    response_model=Mensaje,
+    summary="Asignar una contrasena nueva",
+    dependencies=[Depends(bloqueado_en_demo("cambiar contrasenas"))],
+)
 def cambiar_clave(
     usuario_id: int,
     datos: ClaveNueva,
@@ -207,7 +248,12 @@ def cambiar_clave(
     return Mensaje(mensaje="Contrasena actualizada")
 
 
-@router.delete("/{usuario_id}", response_model=Mensaje, summary="Desactivar usuario")
+@router.delete(
+    "/{usuario_id}",
+    response_model=Mensaje,
+    summary="Desactivar usuario",
+    dependencies=[Depends(bloqueado_en_demo("desactivar usuarios"))],
+)
 def desactivar(
     usuario_id: int,
     db: Session = Depends(obtener_db),

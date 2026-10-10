@@ -1,9 +1,13 @@
 """Cliente de Redis con respaldo en memoria si no esta disponible."""
 
+import logging
+from urllib.parse import urlsplit
 import threading
 import time
 
 from app.core.config import config
+
+log = logging.getLogger("avicola.cache")
 
 try:  # redis es opcional: sin el, se usa memoria
     import redis as _redis
@@ -28,6 +32,14 @@ class _Memoria:
             self._datos[clave] = (valor, vence)
             return valor, int(vence - ahora)
 
+    def leer(self, clave: str) -> tuple[int, int]:
+        ahora = time.time()
+        with self._candado:
+            valor, vence = self._datos.get(clave, (0, 0.0))
+            if vence <= ahora:
+                return 0, 0
+            return valor, int(vence - ahora)
+
     def borrar(self, clave: str) -> None:
         with self._candado:
             self._datos.pop(clave, None)
@@ -35,6 +47,12 @@ class _Memoria:
 
 _memoria = _Memoria()
 _cliente = None
+
+
+def _sin_clave(url: str) -> str:
+    """La direccion de Redis sin usuario ni clave, para poder escribirla en el log."""
+    partes = urlsplit(url)
+    return f"{partes.scheme}://{partes.hostname or ''}:{partes.port or 6379}{partes.path}"
 
 
 def cliente():
@@ -48,6 +66,7 @@ def cliente():
         _cliente = _redis.from_url(config.redis_url, decode_responses=True, socket_timeout=2)
         _cliente.ping()
     except Exception:  # noqa: BLE001 - si falla, seguimos en memoria
+        log.warning("Redis no responde en %s: los limites de intentos quedan en memoria", _sin_clave(config.redis_url))
         _cliente = None
     return _cliente
 
@@ -68,6 +87,21 @@ def contar(clave: str, ventana: int) -> tuple[int, int]:
         return int(total), int(ttl)
     except Exception:  # noqa: BLE001
         return _memoria.incr(clave, ventana)
+
+
+def leer(clave: str) -> tuple[int, int]:
+    """Total de la clave y segundos que faltan, sin sumar."""
+    red = cliente()
+    if red is None:
+        return _memoria.leer(clave)
+    try:
+        tubo = red.pipeline()
+        tubo.get(clave)
+        tubo.ttl(clave)
+        total, ttl = tubo.execute()
+        return int(total or 0), max(int(ttl or 0), 0)
+    except Exception:  # noqa: BLE001
+        return _memoria.leer(clave)
 
 
 def reiniciar(clave: str) -> None:

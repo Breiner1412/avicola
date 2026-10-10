@@ -164,6 +164,30 @@ def test_abrir_caja(cliente, tienda):
     )
 
 
+@pytest.mark.parametrize(
+    "cuerpo",
+    [
+        {"items": [{"producto_id": 1, "cantidad": 1}], "pagos": [{"metodo_pago_id": 1, "monto": 10**15}]},
+        {"items": [{"producto_id": 1, "cantidad": 1}], "descuento": 10**15},
+        {"items": [{"producto_id": 1, "cantidad": 1}] * 101},
+        {"items": [{"producto_id": 1, "cantidad": 1}], "pagos": [{"metodo_pago_id": 1, "monto": 1}] * 11},
+    ],
+)
+def test_valores_y_listas_enormes_se_rechazan(cliente, tienda, cuerpo):
+    respuesta = cliente.post(f"{API}/ventas", headers=tienda["cab_cajero"], json=cuerpo)
+    assert respuesta.status_code == 422
+
+
+def test_el_cajero_no_pone_el_precio(cliente, tienda):
+    respuesta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["panal"]["id"], "cantidad": 1, "precio_unitario": 0}]},
+    )
+    assert respuesta.status_code == 422
+
+
+
 def test_vender_panales_descuenta_huevos(cliente, tienda):
     antes = stock_aaa(cliente, tienda)
     respuesta = cliente.post(
@@ -247,6 +271,50 @@ def test_vender_engorde_por_kilo(cliente, tienda):
 
     despues = lote(cliente, tienda, "engorde")
     assert despues["aves_actuales"] == antes["aves_actuales"] - 20
+
+
+def test_no_se_venden_aves_de_otra_finca(cliente, tienda):
+    admin = cabeceras(tienda["token"])
+    otra = cliente.post(f"{API}/fincas", headers=admin, json={"codigo": "P9", "nombre": unico("Otra")}).json()
+    cab_otra = cabeceras(tienda["token"], otra["id"])
+    galpon = cliente.post(
+        f"{API}/galpones", headers=cab_otra, json={"codigo": "G9", "nombre": "Galpon 9", "capacidad": 500}
+    ).json()
+    ajeno = cliente.post(
+        f"{API}/lotes",
+        headers=cab_otra,
+        json={"codigo": "E9", "galpon_id": galpon["id"], "proposito": "engorde",
+              "fecha_ingreso": "2026-05-01", "aves_iniciales": 100},
+    ).json()
+
+    venta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["pollo"]["id"], "cantidad": 10, "aves": 5, "lote_id": ajeno["id"]}]},
+    )
+    assert venta.status_code == 400
+    assert cliente.get(f"{API}/lotes/{ajeno['id']}", headers=cab_otra).json()["aves_actuales"] == 100
+
+
+def test_no_se_venden_fracciones_de_huevo(cliente, tienda):
+    respuesta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["unidad"]["id"], "cantidad": 1.5}]},
+    )
+    assert respuesta.status_code == 400
+    assert "enteros" in respuesta.json()["detail"]["mensaje"]
+
+
+def test_el_pollo_por_kilo_pide_cuantas_aves(cliente, tienda):
+    antes = lote(cliente, tienda, "engorde")["aves_actuales"]
+    respuesta = cliente.post(
+        f"{API}/ventas",
+        headers=tienda["cab_cajero"],
+        json={"items": [{"producto_id": tienda["pollo"]["id"], "cantidad": 30.5, "lote_id": tienda["engorde"]["id"]}]},
+    )
+    assert respuesta.status_code == 400
+    assert lote(cliente, tienda, "engorde")["aves_actuales"] == antes
 
 
 def test_el_cajero_no_puede_pasarse_del_tope_de_descuento(cliente, tienda):
@@ -356,18 +424,40 @@ def test_anular_devuelve_los_huevos(cliente, tienda):
     # queda registrada y no se puede anular dos veces
     assert (
         cliente.post(
-            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "otra vez"}
+            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "otra vez por error"}
         ).status_code
         == 400
     )
+    # una venta anulada no se puede borrar: sigue en el historial
+    assert cliente.delete(f"{API}/ventas/{venta['id']}", headers=tienda["cab"]).status_code == 405
+    assert cliente.get(f"{API}/ventas/{venta['id']}", headers=tienda["cab"]).json()["estado"] == "anulada"
+
+
+def test_el_motivo_de_anulacion_debe_explicar_algo(cliente, tienda):
+    venta = tienda["venta_huevos"]
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "error"}
+    )
+    assert respuesta.status_code == 422
 
 
 def test_anular_devuelve_las_gallinas(cliente, tienda):
     antes = lote(cliente, tienda)
     venta = tienda["venta_gallinas"]
 
+    # La salida de la venta no se puede anular por separado (las aves volverian dos veces)
+    salidas = cliente.get(
+        f"{API}/movimientos-aves", headers=tienda["cab"], params={"lote_id": tienda["lote"]["id"], "tipo": "venta"}
+    ).json()
+    salida = next(m for m in salidas if venta["numero"] in (m["motivo"] or ""))
     respuesta = cliente.post(
-        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "Se cobro mal"}
+        f"{API}/movimientos-aves/{salida['id']}/anular", headers=tienda["cab"], json={"motivo": "deshacer la salida"}
+    )
+    assert respuesta.status_code == 400
+    assert lote(cliente, tienda)["aves_descarte"] == antes["aves_descarte"]
+
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "Se cobro mal la venta"}
     )
     assert respuesta.status_code == 200, respuesta.text
     assert lote(cliente, tienda)["aves_descarte"] == antes["aves_descarte"] + 10
@@ -385,14 +475,14 @@ def test_el_cajero_no_anula_ventas_de_otro_turno(cliente, tienda):
     ).json()
 
     intento = cliente.post(
-        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "no es mia"}
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab_cajero"], json={"motivo": "no es mia, es de otro turno"}
     )
     assert intento.status_code == 403
 
     # el administrador si puede
     assert (
         cliente.post(
-            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab"], json={"motivo": "prueba"}
+            f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab"], json={"motivo": "prueba del administrador"}
         ).status_code
         == 200
     )
@@ -421,6 +511,39 @@ def test_cerrar_la_caja_calcula_la_diferencia(cliente, tienda):
     )
 
 
+def test_anular_con_la_caja_cerrada(cliente, tienda):
+    turnos = cliente.get(f"{API}/caja/turnos", headers=tienda["cab"]).json()
+    turno = next(t for t in turnos if t["estado"] == "cerrado" and t["ventas"] > 0)
+    activas = cliente.get(
+        f"{API}/ventas", headers=tienda["cab"], params={"turno_id": turno["id"], "incluir_anuladas": False}
+    ).json()["datos"]
+    venta = activas[0]
+
+    # El supervisor (y el cajero) ya no pueden: la caja se cerro
+    supervisor = cliente.post(
+        f"{API}/usuarios",
+        headers=tienda["cab"],
+        json={"nombres": "Super", "email": f"{unico('sup')}@avicola.com", "rol": "supervisor", "clave": CLAVE,
+              "debe_cambiar_clave": False, "fincas": [{"finca_id": tienda["finca_id"], "solo_lectura": False}]},
+    ).json()
+    token = cliente.post(f"{API}/auth/login", json={"email": supervisor["email"], "clave": CLAVE}).json()["token"]
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular",
+        headers=cabeceras(token, tienda["finca_id"]),
+        json={"motivo": "se cobro de mas al cliente"},
+    )
+    assert respuesta.status_code == 403
+
+    # El administrador si, y el cierre de la caja no cambia
+    respuesta = cliente.post(
+        f"{API}/ventas/{venta['id']}/anular", headers=tienda["cab"], json={"motivo": "se cobro de mas al cliente"}
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    despues = next(t for t in cliente.get(f"{API}/caja/turnos", headers=tienda["cab"]).json() if t["id"] == turno["id"])
+    assert despues["esperado_en_caja"] == turno["esperado_en_caja"]
+    assert despues["ventas"] == turno["ventas"]
+
+
 def test_resumen_de_ventas(cliente, tienda):
     resumen = cliente.get(f"{API}/ventas/resumen", headers=tienda["cab"]).json()
     assert resumen["ventas"] >= 1
@@ -438,3 +561,17 @@ def test_otra_cuenta_no_ve_las_ventas(cliente, tienda, token_plataforma):
     assert cliente.get(f"{API}/ventas", headers=cab).json()["total"] == 0
     assert cliente.get(f"{API}/ventas/{tienda['venta_huevos']['id']}", headers=cab).status_code == 404
 
+
+
+def test_no_se_abre_caja_en_un_punto_desactivado(cliente, tienda):
+    punto = cliente.post(
+        f"{API}/puntos-venta",
+        headers=tienda["cab"],
+        json={"codigo": "PVX", "nombre": "Punto cerrado", "finca_id": tienda["finca_id"]},
+    ).json()
+    cliente.patch(f"{API}/puntos-venta/{punto['id']}", headers=tienda["cab"], json={"activo": False})
+    respuesta = cliente.post(
+        f"{API}/caja/abrir", headers=tienda["cab_cajero"], json={"punto_venta_id": punto["id"], "base_inicial": 0}
+    )
+    assert respuesta.status_code == 400
+    assert "desactivado" in respuesta.json()["detail"]["mensaje"]

@@ -5,6 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.esquemas.comunes import CANTIDAD_MAXIMA, DINERO_MAXIMO
+
+
 Clase = Literal["huevo", "ave_descarte", "ave_engorde", "otro"]
 Presentacion = Literal["unidad", "docena", "medio_panal", "panal", "kg"]
 CobroPor = Literal["unidad", "kg"]
@@ -50,7 +53,7 @@ class ProductoCrear(BaseModel):
     presentacion: Presentacion = "unidad"
     tipo_huevo_id: int | None = None
     cobro_por: CobroPor = "unidad"
-    precio: float | None = Field(default=None, ge=0)
+    precio: float | None = Field(default=None, ge=0, le=DINERO_MAXIMO)
     orden: int = Field(default=0, ge=0, le=999)
 
 
@@ -79,7 +82,7 @@ class ProductoSalida(BaseModel):
 
 class PrecioCrear(BaseModel):
     producto_id: int
-    precio: float = Field(ge=0)
+    precio: float = Field(ge=0, le=DINERO_MAXIMO)
     punto_venta_id: int | None = None
     desde: date | None = None
 
@@ -105,12 +108,12 @@ class MetodoPagoSalida(BaseModel):
 # --- Caja ---
 class AbrirTurno(BaseModel):
     punto_venta_id: int
-    base_inicial: float = Field(default=0, ge=0)
+    base_inicial: float = Field(default=0, ge=0, le=DINERO_MAXIMO)
     observaciones: str | None = Field(default=None, max_length=255)
 
 
 class CerrarTurno(BaseModel):
-    efectivo_contado: float = Field(ge=0)
+    efectivo_contado: float = Field(ge=0, le=DINERO_MAXIMO)
     observaciones: str | None = Field(default=None, max_length=255)
 
 
@@ -135,24 +138,27 @@ class TurnoSalida(BaseModel):
 
 # --- Ventas ---
 class ItemVenta(BaseModel):
+    # El precio no viene de quien vende: sale siempre de la lista de precios.
+    # Campos de mas (como precio_unitario) se rechazan en vez de ignorarse.
+    model_config = {"extra": "forbid"}
+
     producto_id: int
     # Presentaciones (panales, docenas, unidades) o kilos si se cobra por kg
     cantidad: float = Field(gt=0, le=1_000_000)
-    precio_unitario: float | None = Field(default=None, ge=0)
     lote_id: int | None = None
-    aves: int | None = Field(default=None, ge=0)
+    aves: int | None = Field(default=None, ge=0, le=CANTIDAD_MAXIMA)
 
 
 class PagoVenta(BaseModel):
     metodo_pago_id: int
-    monto: float = Field(gt=0)
+    monto: float = Field(gt=0, le=DINERO_MAXIMO)
     referencia: str | None = Field(default=None, max_length=60)
 
 
 class VentaCrear(BaseModel):
-    items: list[ItemVenta] = Field(min_length=1)
-    pagos: list[PagoVenta] = []
-    descuento: float = Field(default=0, ge=0)
+    items: list[ItemVenta] = Field(min_length=1, max_length=100)
+    pagos: list[PagoVenta] = Field(default_factory=list, max_length=10)
+    descuento: float = Field(default=0, ge=0, le=DINERO_MAXIMO)
     # Si se indica, el descuento se calcula como porcentaje del subtotal (y 'descuento' se ignora)
     descuento_porcentaje: float | None = Field(default=None, ge=0, le=100)
     observaciones: str | None = Field(default=None, max_length=255)
@@ -201,7 +207,8 @@ class VentaSalida(BaseModel):
 
 
 class AnularVenta(BaseModel):
-    motivo: str = Field(min_length=3, max_length=255)
+    # La anulacion queda en el historial: el motivo debe explicar algo
+    motivo: str = Field(min_length=10, max_length=255)
 
 
 class ResumenVentas(BaseModel):

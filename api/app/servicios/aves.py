@@ -8,11 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto
+from app.core.db import bloquear
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
+from app.core.tiempo import hoy
 from app.esquemas.aves import MovimientoAvesCrear
-from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, StockHuevos, TipoHuevo
+from app.modelos.aves import AplicacionSanitaria, Lote, MovimientoAves, Raza, StockHuevos, TipoHuevo
 from app.modelos.organizacion import Galpon
-from app.servicios.alcance import cuenta_filtro, ids_fincas_visibles
+from app.modelos.ventas import Venta, VentaDetalle
+from app.servicios.alcance import cuenta_filtro, de_la_cuenta, ids_fincas_visibles
 
 # Movimientos que sacan aves del galpon
 SALEN_DEL_GALPON = ("muerte", "fuga", "robo", "venta", "consumo", "regalo")
@@ -27,7 +30,7 @@ def dec(valor) -> Decimal:
 
 
 def edad_dias(lote: Lote, hasta: date | None = None) -> int:
-    referencia = hasta or (lote.fecha_cierre or date.today())
+    referencia = hasta or (lote.fecha_cierre or hoy())
     return max(0, (referencia - lote.fecha_ingreso).days + lote.edad_dias_ingreso)
 
 
@@ -97,6 +100,7 @@ def crear_lote(db: Session, ctx: Contexto, datos) -> Lote:
     if repetido:
         raise datos_invalidos(f"Ya existe un lote con el codigo {datos.codigo} en esta finca")
 
+    de_la_cuenta(db, Raza, datos.raza_id, ctx.cuenta_activa_id or ctx.cuenta_id, "La raza", compartido=True)
     lote = Lote(
         cuenta_id=ctx.cuenta_activa_id or ctx.cuenta_id,
         finca_id=ctx.finca_id,
@@ -137,6 +141,7 @@ def crear_lote(db: Session, ctx: Contexto, datos) -> Lote:
 
 
 def cerrar_lote(db: Session, ctx: Contexto, lote: Lote, fecha: date, observaciones: str | None) -> None:
+    bloquear(db, Lote, lote.id)
     if lote.estado == "cerrado":
         raise datos_invalidos("Ese lote ya esta cerrado")
     if lote.aves_actuales > 0 or lote.aves_descarte > 0:
@@ -190,6 +195,7 @@ def _aplicar(db: Session, lote: Lote, tipo: str, cantidad: int, desde_descarte: 
 
 def crear_movimiento_aves(db: Session, ctx: Contexto, datos: MovimientoAvesCrear) -> MovimientoAves:
     lote = lote_de(db, ctx, datos.lote_id)
+    bloquear(db, Lote, lote.id)
     if lote.estado == "cerrado":
         raise datos_invalidos("El lote esta cerrado")
 
@@ -226,10 +232,20 @@ def crear_movimiento_aves(db: Session, ctx: Contexto, datos: MovimientoAvesCrear
 
 
 def anular_movimiento_aves(db: Session, ctx: Contexto, movimiento: MovimientoAves, motivo: str) -> None:
+    bloquear(db, MovimientoAves, movimiento.id)
     if movimiento.anulado:
         raise datos_invalidos("Ese movimiento ya estaba anulado")
 
-    lote = db.get(Lote, movimiento.lote_id)
+    # La salida de una venta se deshace anulando la venta (que tambien devuelve el dinero);
+    # si se anulara aqui, al anular despues la venta las aves volverian dos veces.
+    venta = db.scalars(
+        select(Venta.numero).join(VentaDetalle, VentaDetalle.venta_id == Venta.id)
+        .where(VentaDetalle.movimiento_aves_id == movimiento.id)
+    ).first()
+    if venta is not None:
+        raise datos_invalidos(f"Estas aves salieron en la venta {venta}: anula la venta desde la caja")
+
+    lote = bloquear(db, Lote, movimiento.lote_id)
     if lote is None:
         raise no_encontrado("El lote no existe")
 

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.modelos.base import Base
@@ -13,7 +13,10 @@ NIVELES = ("info", "aviso", "critico")
 
 class Alerta(Base):
     __tablename__ = "alertas"
-    __table_args__ = (UniqueConstraint("cuenta_id", "clave", name="uq_alerta_clave"),)
+    __table_args__ = (
+        UniqueConstraint("cuenta_id", "clave", name="uq_alerta_clave"),
+        Index("ix_alertas_cuenta_activa", "cuenta_id", "activa"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)

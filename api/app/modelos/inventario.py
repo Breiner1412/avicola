@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -91,6 +92,7 @@ class Existencia(Base):
     """Cuanto hay de cada articulo en cada bodega."""
 
     __tablename__ = "existencias"
+    __table_args__ = (CheckConstraint("cantidad >= 0", name="ck_existencia_no_negativa"),)
 
     bodega_id: Mapped[int] = mapped_column(ForeignKey("bodegas.id", ondelete="CASCADE"), primary_key=True)
     articulo_id: Mapped[int] = mapped_column(ForeignKey("articulos.id", ondelete="CASCADE"), primary_key=True)
@@ -105,8 +107,8 @@ class MovimientoInventario(Base):
     __tablename__ = "movimientos_inventario"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
-    finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="SET NULL"), index=True)
+    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="RESTRICT"), index=True)
     tipo: Mapped[str] = mapped_column(Enum(*TIPOS_MOVIMIENTO, name="tipo_movimiento"), nullable=False, index=True)
     fecha: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     bodega_id: Mapped[int] = mapped_column(ForeignKey("bodegas.id"), nullable=False, index=True)

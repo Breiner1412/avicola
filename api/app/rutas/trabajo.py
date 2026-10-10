@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar
 from app.core.contexto import Contexto, requiere
-from app.core.db import obtener_db
+from app.core.db import bloquear, obtener_db
 from app.core.errores import datos_invalidos, no_encontrado, sin_permiso
+from app.core.tiempo import hoy
 from app.esquemas.comunes import Mensaje
 from app.esquemas.trabajo import (
     CerrarNovedad,
@@ -28,7 +29,7 @@ from app.modelos.acceso import Usuario
 from app.modelos.aves import Lote, MovimientoAves
 from app.modelos.organizacion import Galpon
 from app.modelos.trabajo import Novedad, Rutina, Tarea
-from app.servicios.alcance import cuenta_filtro, ids_fincas_visibles
+from app.servicios.alcance import cuenta_filtro, de_la_finca, ids_fincas_visibles
 from app.servicios.aves import mover_ocupacion
 
 router = APIRouter(tags=["Tareas y novedades"])
@@ -74,7 +75,7 @@ def _usuario_de_la_cuenta(db: Session, ctx: Contexto, usuario_id: int | None) ->
     if usuario_id is None:
         return None
     usuario = db.get(Usuario, usuario_id)
-    if usuario is None or (ctx.cuenta_activa_id and usuario.cuenta_id != ctx.cuenta_activa_id):
+    if usuario is None or usuario.cuenta_id != (ctx.cuenta_activa_id or ctx.cuenta_id):
         raise datos_invalidos("Ese usuario no es de la cuenta")
     return usuario
 
@@ -119,10 +120,8 @@ def crear_tarea(
     ctx: Contexto = Depends(requiere("tareas", "crear", con_finca=True)),
 ):
     asignado = _usuario_de_la_cuenta(db, ctx, datos.asignado_a)
-    if datos.galpon_id and db.get(Galpon, datos.galpon_id) is None:
-        raise datos_invalidos("El galpon no existe")
-    if datos.lote_id and db.get(Lote, datos.lote_id) is None:
-        raise datos_invalidos("El lote no existe")
+    de_la_finca(db, Galpon, datos.galpon_id, ctx.finca_id, "El galpon")
+    de_la_finca(db, Lote, datos.lote_id, ctx.finca_id, "El lote")
 
     tarea = Tarea(
         cuenta_id=ctx.cuenta_activa_id or ctx.cuenta_id,
@@ -165,6 +164,8 @@ def editar_tarea(
         if set(cambios) - permitidos:
             raise sin_permiso("Solo puedes cambiar el estado de tus tareas")
 
+    de_la_finca(db, Galpon, cambios.get("galpon_id"), tarea.finca_id, "El galpon")
+    de_la_finca(db, Lote, cambios.get("lote_id"), tarea.finca_id, "El lote")
     if "asignado_a" in cambios:
         asignado = _usuario_de_la_cuenta(db, ctx, cambios["asignado_a"])
         tarea.asignado_a = asignado.id if asignado else None
@@ -237,6 +238,7 @@ def crear_rutina(
         raise datos_invalidos("Indica que dia del mes se hace")
 
     asignado = _usuario_de_la_cuenta(db, ctx, datos.asignado_a)
+    de_la_finca(db, Galpon, datos.galpon_id, ctx.finca_id, "El galpon")
     rutina = Rutina(
         cuenta_id=ctx.cuenta_activa_id or ctx.cuenta_id,
         finca_id=ctx.finca_id,
@@ -271,6 +273,9 @@ def editar_rutina(
         raise no_encontrado("La rutina no existe")
 
     cambios = datos.model_dump(exclude_unset=True)
+    de_la_finca(db, Galpon, cambios.get("galpon_id"), rutina.finca_id, "El galpon")
+    if cambios.get("asignado_a") is not None:
+        _usuario_de_la_cuenta(db, ctx, cambios["asignado_a"])
     for campo, valor in cambios.items():
         setattr(rutina, campo, valor)
     registrar(db, ctx, "editar", "rutinas", rutina.id, f"Edito la rutina {rutina.titulo}", cambios)
@@ -293,7 +298,7 @@ def generar(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("tareas", "crear", con_finca=True)),
 ):
-    dia = datos.fecha or date.today()
+    dia = datos.fecha or hoy()
     rutinas = db.scalars(
         select(Rutina).where(Rutina.finca_id == ctx.finca_id, Rutina.activo.is_(True))
     ).all()
@@ -388,9 +393,10 @@ def crear_novedad(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("novedades", "crear", con_finca=True)),
 ):
-    lote = db.get(Lote, datos.lote_id) if datos.lote_id else None
+    lote = bloquear(db, Lote, datos.lote_id)
     if datos.lote_id and (lote is None or lote.finca_id != ctx.finca_id):
         raise datos_invalidos("El lote no existe en esta finca")
+    de_la_finca(db, Galpon, datos.galpon_id, ctx.finca_id, "El galpon")
 
     movimiento_id = None
     if datos.descontar_aves and datos.aves_afectadas:

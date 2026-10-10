@@ -4,16 +4,21 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
+    CheckConstraint,
+    Computed,
     Date,
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modelos.aves import TipoHuevo
@@ -110,16 +115,26 @@ class TurnoCaja(Base):
     """Cada jornada de un cajero en un punto de venta."""
 
     __tablename__ = "turnos_caja"
+    __table_args__ = (
+        UniqueConstraint("abierto_de", name="uq_turno_abierto_por_usuario"),
+        Index("ix_turnos_usuario_estado", "usuario_id", "estado"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
+    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
     punto_venta_id: Mapped[int] = mapped_column(ForeignKey("puntos_venta.id"), nullable=False, index=True)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False, index=True)
     usuario_nombre: Mapped[str | None] = mapped_column(String(160))
+    # Solo tiene valor mientras el turno esta abierto: el indice unico impide que un
+    # usuario tenga dos cajas abiertas aunque lleguen dos peticiones a la vez
+    abierto_de: Mapped[int | None] = mapped_column(
+        Integer, Computed("(case when `estado` = 'abierto' then `usuario_id` end)", persisted=True)
+    )
     estado: Mapped[str] = mapped_column(Enum(*ESTADOS_TURNO, name="estado_turno"), default="abierto", nullable=False)
     base_inicial: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, nullable=False)
     abierto_en: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    cerrado_en: Mapped[datetime | None] = mapped_column(DateTime)
+    # Con microsegundos: se compara con anulada_en para saber si se anulo despues del cierre
+    cerrado_en: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6))
     efectivo_contado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     diferencia: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     observaciones: Mapped[str | None] = mapped_column(String(255))
@@ -129,11 +144,17 @@ class Venta(Base):
     """Una venta. No se borra: se anula y queda registrada."""
 
     __tablename__ = "ventas"
-    __table_args__ = (UniqueConstraint("punto_venta_id", "numero", name="uq_venta_numero"),)
+    __table_args__ = (
+        UniqueConstraint("punto_venta_id", "numero", name="uq_venta_numero"),
+        CheckConstraint("subtotal >= 0 and descuento >= 0 and total >= 0", name="ck_venta_valores_no_negativos"),
+        Index("ix_ventas_cuenta_fecha", "cuenta_id", "fecha"),
+        Index("ix_ventas_punto_fecha", "punto_venta_id", "fecha"),
+        Index("ix_ventas_turno_estado", "turno_id", "estado"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="CASCADE"), nullable=False, index=True)
-    finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="SET NULL"), index=True)
+    cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuentas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    finca_id: Mapped[int | None] = mapped_column(ForeignKey("fincas.id", ondelete="RESTRICT"), index=True)
     punto_venta_id: Mapped[int] = mapped_column(ForeignKey("puntos_venta.id"), nullable=False, index=True)
     turno_id: Mapped[int | None] = mapped_column(ForeignKey("turnos_caja.id"), index=True)
     numero: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -145,7 +166,7 @@ class Venta(Base):
     observaciones: Mapped[str | None] = mapped_column(String(255))
     usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id", ondelete="SET NULL"))
     usuario_nombre: Mapped[str | None] = mapped_column(String(160))
-    anulada_en: Mapped[datetime | None] = mapped_column(DateTime)
+    anulada_en: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6))
     anulada_por: Mapped[str | None] = mapped_column(String(160))
     motivo_anulacion: Mapped[str | None] = mapped_column(String(255))
     creado_en: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -162,7 +183,7 @@ class Venta(Base):
 class VentaDetalle(Base):
     __tablename__ = "venta_detalles"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     venta_id: Mapped[int] = mapped_column(ForeignKey("ventas.id", ondelete="CASCADE"), nullable=False, index=True)
     producto_id: Mapped[int] = mapped_column(ForeignKey("productos_venta.id"), nullable=False)
     descripcion: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -183,6 +204,7 @@ class VentaDetalle(Base):
 
 class VentaPago(Base):
     __tablename__ = "venta_pagos"
+    __table_args__ = (CheckConstraint("monto > 0", name="ck_pago_positivo"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     venta_id: Mapped[int] = mapped_column(ForeignKey("ventas.id", ondelete="CASCADE"), nullable=False, index=True)

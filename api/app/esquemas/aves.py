@@ -5,6 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.esquemas.comunes import CANTIDAD_MAXIMA, DINERO_MAXIMO
+
+
 Proposito = Literal["postura", "engorde", "levante"]
 TipoMovimientoAves = Literal["ingreso", "muerte", "descarte", "fuga", "robo", "venta", "traslado", "consumo", "regalo"]
 TipoSanidad = Literal["vacuna", "medicamento", "vitamina", "desinfeccion", "otro"]
@@ -35,14 +38,14 @@ class LoteCrear(BaseModel):
     fecha_ingreso: date
     edad_dias_ingreso: int = Field(default=1, ge=0, le=2000)
     aves_iniciales: int = Field(gt=0, le=1_000_000)
-    costo_ave: float = Field(default=0, ge=0)
+    costo_ave: float = Field(default=0, ge=0, le=DINERO_MAXIMO)
     observaciones: str | None = Field(default=None, max_length=255)
 
 
 class LoteActualizar(BaseModel):
     codigo: str | None = Field(default=None, min_length=1, max_length=30)
     raza_id: int | None = None
-    costo_ave: float | None = Field(default=None, ge=0)
+    costo_ave: float | None = Field(default=None, ge=0, le=DINERO_MAXIMO)
     observaciones: str | None = Field(default=None, max_length=255)
 
 
@@ -82,7 +85,7 @@ class MovimientoAvesCrear(BaseModel):
     tipo: TipoMovimientoAves
     cantidad: int = Field(gt=0, le=1_000_000)
     galpon_destino_id: int | None = None
-    peso_kg: float | None = Field(default=None, ge=0)
+    peso_kg: float | None = Field(default=None, ge=0, le=CANTIDAD_MAXIMA)
     motivo: str | None = Field(default=None, max_length=80)
     observaciones: str | None = Field(default=None, max_length=255)
 
@@ -134,7 +137,7 @@ class DetalleProduccion(BaseModel):
 class ProduccionCrear(BaseModel):
     lote_id: int
     fecha: date
-    detalles: list[DetalleProduccion] = Field(min_length=1)
+    detalles: list[DetalleProduccion] = Field(min_length=1, max_length=20)
 
 
 class ProduccionDia(BaseModel):
@@ -210,7 +213,7 @@ class SanidadCrear(BaseModel):
     galpon_id: int | None = None
     articulo_id: int | None = None
     bodega_id: int | None = None
-    cantidad_usada: float | None = Field(default=None, ge=0)
+    cantidad_usada: float | None = Field(default=None, ge=0, le=CANTIDAD_MAXIMA)
     lote_producto: str | None = Field(default=None, max_length=60)
     dosis: str | None = Field(default=None, max_length=60)
     via: Via = "agua"

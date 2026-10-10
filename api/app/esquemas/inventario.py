@@ -5,6 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.esquemas.comunes import CANTIDAD_MAXIMA, DINERO_MAXIMO
+
+
 Unidad = Literal["unidad", "kg", "litro", "bulto", "dosis", "metro"]
 Clase = Literal["alimento", "medicamento", "vacuna", "herramienta", "repuesto", "insumo", "otro"]
 TipoMovimiento = Literal["entrada", "salida", "traslado", "ajuste"]
@@ -62,7 +65,7 @@ class ArticuloCrear(BaseModel):
     categoria_id: int
     unidad: Unidad = "unidad"
     kg_por_bulto: float | None = Field(default=None, ge=0, le=100000)
-    stock_minimo: float = Field(default=0, ge=0)
+    stock_minimo: float = Field(default=0, ge=0, le=CANTIDAD_MAXIMA)
     observaciones: str | None = Field(default=None, max_length=255)
 
 
@@ -72,7 +75,7 @@ class ArticuloActualizar(BaseModel):
     categoria_id: int | None = None
     unidad: Unidad | None = None
     kg_por_bulto: float | None = Field(default=None, ge=0, le=100000)
-    stock_minimo: float | None = Field(default=None, ge=0)
+    stock_minimo: float | None = Field(default=None, ge=0, le=CANTIDAD_MAXIMA)
     observaciones: str | None = Field(default=None, max_length=255)
     activo: bool | None = None
 
@@ -143,8 +146,8 @@ class ExistenciaSalida(BaseModel):
 class ItemEntrada(BaseModel):
     articulo_id: int
     # En un ajuste es la cantidad contada; en los demas, lo que entra o sale.
-    cantidad: float = Field(ge=0)
-    costo_unitario: float = Field(default=0, ge=0)
+    cantidad: float = Field(ge=0, le=CANTIDAD_MAXIMA)
+    costo_unitario: float = Field(default=0, ge=0, le=DINERO_MAXIMO)
     lote: str | None = Field(default=None, max_length=40)
     vencimiento: date | None = None
 
@@ -158,7 +161,7 @@ class MovimientoCrear(BaseModel):
     motivo: str | None = Field(default=None, max_length=60)
     documento: str | None = Field(default=None, max_length=60)
     observaciones: str | None = Field(default=None, max_length=255)
-    items: list[ItemEntrada] = Field(min_length=1)
+    items: list[ItemEntrada] = Field(min_length=1, max_length=500)
 
 
 class ItemSalida(BaseModel):

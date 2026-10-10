@@ -36,6 +36,8 @@ export type Sesion = {
   finca_activa: Finca | null;
   fincas: Finca[];
   permisos: Permisos;
+  // Demo publica: se reinicia cada noche y no deja cambiar claves, correos ni permisos
+  demo?: boolean;
 };
 
 export type Galpon = {
@@ -680,4 +682,6 @@ export type ResumenPanel = {
   sensores: number;
   sensores_alerta: number;
   alertas: number;
+  // Solo para el supervisor: numeros generales de las fincas que no tiene a cargo
+  otras_fincas: { id: number; nombre: string; aves: number; huevos_periodo: number; lotes_activos: number }[];
 };

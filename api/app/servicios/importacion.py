@@ -7,13 +7,23 @@ puede guardar como plantilla para la proxima vez.
 
 import csv
 import io
+import itertools
+import re
 import unicodedata
+import zipfile
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 from openpyxl import load_workbook
 
 MAX_FILAS = 5000
+MAX_TEXTO = 150  # el campo de texto mas largo que se guarda
+# Topes para que un archivo hecho a proposito no tumbe el servidor
+MAX_COLUMNAS = 60
+MAX_FILAS_RECORRIDAS = MAX_FILAS * 4  # incluidas las vacias
+MAX_DESCOMPRIMIDO = 60 * 1024 * 1024  # un .xlsx es un zip: tope a lo que ocupa abierto
+MAX_PROPORCION_ZIP = 100  # mas de 100 a 1 es una bomba de descompresion
+MAX_PARTES_ZIP = 2000
 
 
 # --------------------------- Campos por tipo ---------------------------
@@ -107,24 +117,67 @@ def _valor_plano(valor):
     return valor
 
 
+def _nombres_de_columnas(fila: list) -> list[str]:
+    """Nombres unicos para las columnas: las vacias o repetidas se numeran."""
+    encabezados: list[str] = []
+    for posicion, celda in enumerate(fila[:MAX_COLUMNAS], start=1):
+        nombre_columna = str(celda).strip() if celda is not None and str(celda).strip() else f"Columna {posicion}"
+        while nombre_columna in encabezados:
+            nombre_columna = f"{nombre_columna} ({posicion})"
+        encabezados.append(nombre_columna)
+    return encabezados
+
+
+def _revisar_zip(contenido: bytes) -> None:
+    """Un .xlsx es un zip: se revisa antes de abrirlo (firma y tamano descomprimido)."""
+    if not contenido.startswith(b"PK\x03\x04"):
+        raise ValueError("El archivo no es un Excel .xlsx valido")
+    try:
+        with zipfile.ZipFile(io.BytesIO(contenido)) as comprimido:
+            partes = comprimido.infolist()
+    except zipfile.BadZipFile as error:
+        raise ValueError("El archivo no es un Excel .xlsx valido") from error
+    if len(partes) > MAX_PARTES_ZIP:
+        raise ValueError("El archivo tiene una estructura demasiado grande")
+    abierto = sum(parte.file_size for parte in partes)
+    comprimido_total = sum(parte.compress_size for parte in partes) or 1
+    if abierto > MAX_DESCOMPRIMIDO or abierto / comprimido_total > MAX_PROPORCION_ZIP:
+        raise ValueError("El archivo es demasiado grande al abrirlo. Divide la informacion en varios archivos.")
+
+
 def leer_archivo(contenido: bytes, nombre: str) -> tuple[str | None, list[str], list[dict]]:
     """Devuelve (hoja, columnas, filas). Acepta .xlsx y .csv."""
     minusculas = nombre.lower()
 
     if minusculas.endswith((".csv", ".txt")):
-        texto = contenido.decode("utf-8-sig", errors="replace")
+        if b"\x00" in contenido[:8192]:
+            raise ValueError("El archivo no es un CSV de texto")
+        try:
+            texto = contenido.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            # Excel en Windows guarda los CSV en cp1252: asi no se pierden las tildes
+            texto = contenido.decode("cp1252", errors="replace")
         muestra = texto[:4000]
         try:
             dialecto = csv.Sniffer().sniff(muestra, delimiters=",;\t|")
         except csv.Error:
-            dialecto = csv.excel
-            dialecto.delimiter = ";" if muestra.count(";") > muestra.count(",") else ","
+            # Una subclase propia: cambiar csv.excel afectaria a todo el proceso
+            separador = ";" if muestra.count(";") > muestra.count(",") else ","
+            dialecto = type("DialectoArchivo", (csv.excel,), {"delimiter": separador})
 
         lector = csv.reader(io.StringIO(texto), dialecto)
-        filas_brutas = [fila for fila in lector if any(str(c).strip() for c in fila)]
+        # Igual que en el xlsx: se corta mientras se lee (filas vacias incluidas) y cada
+        # fila se recorta a MAX_COLUMNAS. Armar todas las filas antes de recortar
+        # dejaba que un CSV de 5 MB con millones de lineas agotara la memoria.
+        filas_brutas = []
+        for fila in itertools.islice(lector, MAX_FILAS_RECORRIDAS):
+            if any(str(c).strip() for c in fila[:MAX_COLUMNAS]):
+                filas_brutas.append(fila[:MAX_COLUMNAS])
+                if len(filas_brutas) > MAX_FILAS:
+                    break
         if not filas_brutas:
             raise ValueError("El archivo esta vacio")
-        encabezados = [str(c).strip() for c in filas_brutas[0]]
+        encabezados = _nombres_de_columnas(filas_brutas[0])
         datos = [
             {encabezados[i]: _valor_plano(fila[i]) if i < len(fila) else None for i in range(len(encabezados))}
             for fila in filas_brutas[1:]
@@ -134,17 +187,19 @@ def leer_archivo(contenido: bytes, nombre: str) -> tuple[str | None, list[str], 
     if not minusculas.endswith((".xlsx", ".xlsm")):
         raise ValueError("Solo se pueden leer archivos .xlsx o .csv. Si tienes un .xls antiguo, guardalo como .xlsx")
 
+    _revisar_zip(contenido)
     libro = load_workbook(io.BytesIO(contenido), read_only=True, data_only=True)
-    hoja = libro.worksheets[0]
-
-    filas_brutas = []
-    for fila in hoja.iter_rows(values_only=True):
-        if fila is None:
-            continue
-        if any(celda is not None and str(celda).strip() != "" for celda in fila):
-            filas_brutas.append(list(fila))
-        if len(filas_brutas) > MAX_FILAS + 20:
-            break
+    try:
+        hoja = libro.worksheets[0]
+        filas_brutas = []
+        for recorridas, fila in enumerate(hoja.iter_rows(values_only=True, max_col=MAX_COLUMNAS), start=1):
+            # Las filas vacias tambien cuentan: una hoja con un millon de filas en blanco no se recorre entera
+            if recorridas > MAX_FILAS_RECORRIDAS or len(filas_brutas) > MAX_FILAS + 20:
+                break
+            if fila is not None and any(celda is not None and str(celda).strip() != "" for celda in fila):
+                filas_brutas.append(list(fila))
+    finally:
+        libro.close()
 
     if not filas_brutas:
         raise ValueError("La hoja esta vacia")
@@ -157,12 +212,7 @@ def leer_archivo(contenido: bytes, nombre: str) -> tuple[str | None, list[str], 
             indice_encabezado = indice
             break
 
-    encabezados = []
-    for posicion, celda in enumerate(filas_brutas[indice_encabezado], start=1):
-        nombre_columna = str(celda).strip() if celda is not None and str(celda).strip() else f"Columna {posicion}"
-        while nombre_columna in encabezados:
-            nombre_columna = f"{nombre_columna} ({posicion})"
-        encabezados.append(nombre_columna)
+    encabezados = _nombres_de_columnas(filas_brutas[indice_encabezado])
 
     datos = []
     for fila in filas_brutas[indice_encabezado + 1 :]:
@@ -212,19 +262,43 @@ def texto(valor) -> str | None:
     return limpio or None
 
 
+MAYOR_NUMERO = Decimal("1000000000")
+# Un numero que empieza por 0 no lleva separador de miles: 0.500 es medio, no quinientos
+MILES_CON_PUNTO = re.compile(r"-?[1-9]\d{0,2}(\.\d{3})+")
+MILES_CON_COMA = re.compile(r"-?[1-9]\d{0,2}(,\d{3}){2,}")
+
+
+def _texto_a_decimal(crudo: str) -> str:
+    """Formatos de Colombia: 1.500 es mil quinientos y 1.234,56 lleva coma decimal."""
+    if "," in crudo and "." in crudo:
+        # El separador decimal es el que aparece de ultimo
+        if crudo.rfind(",") > crudo.rfind("."):
+            return crudo.replace(".", "").replace(",", ".")
+        return crudo.replace(",", "")
+    if "," in crudo:
+        return crudo.replace(",", "") if MILES_CON_COMA.fullmatch(crudo) else crudo.replace(",", ".")
+    if MILES_CON_PUNTO.fullmatch(crudo):
+        return crudo.replace(".", "")
+    return crudo
+
+
 def numero(valor, campo: str) -> Decimal | None:
     if valor is None or str(valor).strip() == "":
         return None
-    crudo = str(valor).strip().replace("$", "").replace(" ", "")
-    # 1.234,56 (formato de Colombia) o 1234.56
-    if "," in crudo and "." in crudo:
-        crudo = crudo.replace(".", "").replace(",", ".")
-    elif "," in crudo:
-        crudo = crudo.replace(",", ".")
     try:
-        return Decimal(crudo)
+        if isinstance(valor, bool):
+            raise InvalidOperation
+        if isinstance(valor, (int, float, Decimal)):
+            # Celda numerica de Excel: ya viene como numero, no se reinterpreta
+            convertido = Decimal(str(valor))
+        else:
+            crudo = str(valor).strip().replace("$", "").replace(" ", "")
+            convertido = Decimal(_texto_a_decimal(crudo))
     except (InvalidOperation, ValueError) as exc:
         raise ValueError(f"{campo}: '{valor}' no es un numero") from exc
+    if not convertido.is_finite() or abs(convertido) >= MAYOR_NUMERO:
+        raise ValueError(f"{campo}: '{valor}' no es un numero valido")
+    return convertido
 
 
 def fecha(valor, campo: str) -> date | None:
@@ -265,6 +339,10 @@ def validar_fila(tipo: str, valores: dict) -> dict:
 
         if obligatorio and convertido in (None, ""):
             raise ValueError(f"Falta {etiqueta}")
+        if isinstance(convertido, Decimal) and convertido < 0:
+            raise ValueError(f"{etiqueta} no puede ser negativo")
+        if isinstance(convertido, str) and len(convertido) > MAX_TEXTO:
+            raise ValueError(f"{etiqueta} tiene mas de {MAX_TEXTO} letras")
         limpio[clave] = convertido
 
     if tipo in ("entrada_inventario", "produccion"):

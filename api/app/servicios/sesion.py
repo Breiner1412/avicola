@@ -3,11 +3,12 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Response
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import config
 from app.core.contexto import fincas_del_usuario, permisos_de_rol
+from app.core.db import bloquear
 from app.core.seguridad import crear_token_acceso, huella, nuevo_refresco
 from app.esquemas.auth import FincaResumen, SesionSalida, UsuarioSesion
 from app.modelos.acceso import Sesion, Usuario
@@ -38,7 +39,7 @@ def abrir_sesion(db: Session, usuario: Usuario, finca_id: int | None, ip: str | 
         usuario_id=usuario.id,
         huella=marca,
         finca_id=finca_id,
-        ip=ip,
+        ip=(ip or "")[:45] or None,
         agente=(agente or "")[:255] or None,
         expira_en=ahora_simple() + timedelta(days=config.dias_refresco),
         creado_en=ahora_simple(),
@@ -48,11 +49,45 @@ def abrir_sesion(db: Session, usuario: Usuario, finca_id: int | None, ip: str | 
     return sesion, token
 
 
-def buscar_sesion(db: Session, token: str) -> Sesion | None:
-    sesion = db.scalars(select(Sesion).where(Sesion.huella == huella(token))).first()
-    if sesion is None or sesion.revocada_en is not None or sesion.expira_en < ahora_simple():
-        return None
-    return sesion
+SEGUNDOS_DE_GRACIA = 30
+
+
+def _vigente(sesion: Sesion | None) -> bool:
+    return sesion is not None and sesion.revocada_en is None and sesion.expira_en >= ahora_simple()
+
+
+def buscar_sesion(db: Session, token: str) -> tuple[Sesion | None, bool]:
+    """Sesion del token de refresco y si se debe rotar.
+
+    Con el token actual se rota. Con el anterior, dentro de unos segundos, se acepta
+    sin rotar (otra pestana ya lo hizo); despues se toma como robado y se cierra.
+    """
+    marca = huella(token)
+    encontrada = db.scalars(
+        select(Sesion.id).where(or_(Sesion.huella == marca, Sesion.huella_anterior == marca))
+    ).first()
+    # Se bloquea la fila: dos pestanas que refrescan a la vez no rotan dos veces (la
+    # segunda espera, ve el token ya rotado y entra por el margen de gracia)
+    sesion = bloquear(db, Sesion, encontrada)
+    if not _vigente(sesion):
+        return None, False
+    if sesion.huella == marca:
+        return sesion, True
+    if sesion.huella_anterior != marca:
+        return None, False
+    if sesion.rotada_en and sesion.rotada_en >= ahora_simple() - timedelta(seconds=SEGUNDOS_DE_GRACIA):
+        return sesion, False
+    cerrar_sesion(db, sesion)
+    return None, False
+
+
+def rotar_refresco(sesion: Sesion) -> str:
+    """Cambia el token de refresco de la sesion y devuelve el nuevo en claro."""
+    token, marca = nuevo_refresco()
+    sesion.huella_anterior = sesion.huella
+    sesion.huella = marca
+    sesion.rotada_en = ahora_simple()
+    return token
 
 
 def cerrar_sesion(db: Session, sesion: Sesion) -> None:
@@ -117,5 +152,6 @@ def armar_respuesta(db: Session, usuario: Usuario, sesion: Sesion) -> SesionSali
             )
             for f, lectura in fincas
         ],
-        permisos=permisos_de_rol(db, usuario.rol_id),
+        permisos=permisos_de_rol(db, usuario.rol_id, usuario.cuenta_id),
+        demo=config.demo,
     )

@@ -1,0 +1,76 @@
+# Avicola en tu equipo, armado igual que en la VM: un Caddy delante (como el compartido del
+# servidor) que sirve todo en http://localhost:8080. No reemplaza a docker-compose.yml: se
+# suma encima de el.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local up -d --build
+#
+# Diferencias con la VM: aqui no hay HTTPS (COOKIE_SEGURA=false y ENTORNO=desarrollo en
+# .env.local), la red "proxy" la crea este proyecto (en la VM es la de Caddy) y la demo se
+# genera sola la primera vez.
+name: avicola-local
+
+services:
+  # Hace de Caddy compartido: mismo bloque del README (local/Caddyfile), en el puerto 8080
+  caddy:
+    image: caddy:2
+    container_name: avicola-caddy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./local/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+    networks:
+      proxy:
+        # IP fija: la API solo cree X-Forwarded-For de esta direccion (PROXY_CONFIABLE)
+        ipv4_address: 172.31.250.10
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  # De un solo uso: carga la demo (seis meses de datos) si todavia no esta. Tarda unos
+  # minutos la primera vez; despues termina enseguida. Ver: docker compose ... logs -f demo
+  demo:
+    build:
+      context: ./api
+      args:
+        INSTALAR_DEMO: "true"
+    container_name: avicola-demo
+    restart: "no"
+    command: ["python", "-m", "app.demo", "--solo-si-falta"]
+    healthcheck:
+      disable: true
+    networks: [interna]
+    environment:
+      ENTORNO: ${ENTORNO:-desarrollo}
+      DEMO: ${DEMO:-true}
+      ZONA_HORARIA: ${ZONA_HORARIA:-America/Bogota}
+      TZ: ${TZ:-America/Bogota}
+      MIGRAR: "false"
+      DB_HOST: avicola-db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-avicola_demo}
+      DB_USER: ${DB_USER:-avicola_app}
+      DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET}
+      COOKIE_SEGURA: ${COOKIE_SEGURA:-false}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?falta ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?falta ADMIN_PASSWORD}
+    depends_on:
+      migrar:
+        condition: service_completed_successfully
+
+networks:
+  # En la VM la red proxy es la de Caddy (externa). Aqui la crea este proyecto, con una
+  # subred conocida para darle a Caddy su IP fija.
+  proxy:
+    external: false
+    name: avicola-local-proxy
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
+
+volumes:
+  caddy_datos:

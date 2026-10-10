@@ -1,9 +1,12 @@
 """Tareas, rutinas y novedades."""
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
+
+from app.esquemas.comunes import CANTIDAD_MAXIMA, DINERO_MAXIMO
+
 
 Prioridad = Literal["baja", "media", "alta"]
 EstadoTarea = Literal["pendiente", "en_proceso", "hecha", "cancelada"]
@@ -64,7 +67,7 @@ class RutinaCrear(BaseModel):
     titulo: str = Field(min_length=3, max_length=120)
     descripcion: str | None = None
     frecuencia: Frecuencia = "diaria"
-    dias_semana: list[int] = Field(default_factory=list)
+    dias_semana: list[Annotated[int, Field(ge=0, le=6)]] = Field(default_factory=list, max_length=7)
     dia_mes: int | None = Field(default=None, ge=1, le=31)
     hora: str | None = Field(default=None, max_length=5)
     prioridad: Prioridad = "media"
@@ -76,7 +79,7 @@ class RutinaActualizar(BaseModel):
     titulo: str | None = Field(default=None, min_length=3, max_length=120)
     descripcion: str | None = None
     frecuencia: Frecuencia | None = None
-    dias_semana: list[int] | None = None
+    dias_semana: list[Annotated[int, Field(ge=0, le=6)]] | None = Field(default=None, max_length=7)
     dia_mes: int | None = Field(default=None, ge=1, le=31)
     hora: str | None = Field(default=None, max_length=5)
     prioridad: Prioridad | None = None
@@ -115,10 +118,10 @@ class NovedadCrear(BaseModel):
     gravedad: Gravedad = "media"
     galpon_id: int | None = None
     lote_id: int | None = None
-    aves_afectadas: int = Field(default=0, ge=0)
+    aves_afectadas: int = Field(default=0, ge=0, le=CANTIDAD_MAXIMA)
     # Si las aves murieron, tambien se descuentan del lote
     descontar_aves: bool = False
-    costo_estimado: float = Field(default=0, ge=0)
+    costo_estimado: float = Field(default=0, ge=0, le=DINERO_MAXIMO)
     acciones: str | None = None
 
 
@@ -129,7 +132,7 @@ class NovedadActualizar(BaseModel):
     descripcion: str | None = None
     gravedad: Gravedad | None = None
     estado: EstadoNovedad | None = None
-    costo_estimado: float | None = Field(default=None, ge=0)
+    costo_estimado: float | None = Field(default=None, ge=0, le=DINERO_MAXIMO)
     acciones: str | None = None
 
 
