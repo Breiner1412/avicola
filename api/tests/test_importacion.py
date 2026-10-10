@@ -358,6 +358,9 @@ def test_una_hoja_con_un_millon_de_filas_vacias_no_se_recorre_entera(cliente, fi
     "valor, esperado",
     [
         ("1.500", "1500"),
+        ("0.500", "0.500"),
+        ("0.125", "0.125"),
+        ("0,750", "0.750"),
         ("1.234,56", "1234.56"),
         ("1,234.56", "1234.56"),
         ("2,5", "2.5"),

@@ -254,8 +254,9 @@ def texto(valor) -> str | None:
 
 
 MAYOR_NUMERO = Decimal("1000000000")
-MILES_CON_PUNTO = re.compile(r"-?\d{1,3}(\.\d{3})+")
-MILES_CON_COMA = re.compile(r"-?\d{1,3}(,\d{3}){2,}")
+# Un numero que empieza por 0 no lleva separador de miles: 0.500 es medio, no quinientos
+MILES_CON_PUNTO = re.compile(r"-?[1-9]\d{0,2}(\.\d{3})+")
+MILES_CON_COMA = re.compile(r"-?[1-9]\d{0,2}(,\d{3}){2,}")
 
 
 def _texto_a_decimal(crudo: str) -> str:
