@@ -30,3 +30,12 @@ def test_en_produccion_sin_redis_no_arranca(monkeypatch):
     with pytest.raises(RuntimeError, match="Redis"):
         with TestClient(app):
             pass
+
+
+def test_el_429_dice_cuando_reintentar_y_lleva_cabeceras(cliente, token_plataforma, monkeypatch):
+    monkeypatch.setattr(limites.escrituras, "maximo", 1)
+    cliente.post(f"{API}/galpones", headers=cabeceras(token_plataforma), json={})
+    respuesta = cliente.post(f"{API}/galpones", headers=cabeceras(token_plataforma), json={})
+    assert respuesta.status_code == 429
+    assert int(respuesta.headers["Retry-After"]) > 0
+    assert respuesta.headers["X-Content-Type-Options"] == "nosniff"

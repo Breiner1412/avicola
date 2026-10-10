@@ -65,6 +65,36 @@ app = FastAPI(
 )
 
 
+# Orden de los middlewares: el primero que se registra queda mas adentro. El limitador
+# va primero para que sus respuestas 429 tambien pasen por las cabeceras de seguridad
+# y por la captura de errores; CORS (add_middleware, al final) envuelve todo.
+@app.middleware("http")
+async def limitar_peticiones(peticion: Request, siguiente):
+    """Tope general de cambios, subidas y descargas por usuario o por conexion."""
+    aplican = limites.limites_de_peticion(peticion.method, peticion.url.path)
+    if aplican:
+        quien = _quien_pide(peticion)
+        try:
+            for limite in aplican:
+                limite.registrar(quien)
+        except ErrorApi as error:
+            espera = (error.detail.get("detalles") or {}).get("reintentar_en_segundos")
+            cabeceras = {"Retry-After": str(espera)} if espera else None
+            return JSONResponse(status_code=error.status_code, content={"detail": error.detail}, headers=cabeceras)
+    return await siguiente(peticion)
+
+
+def _quien_pide(peticion: Request) -> str:
+    """El usuario del token (sin ir a la base) o, si no hay sesion valida, la conexion."""
+    cabecera = peticion.headers.get("authorization", "")
+    if cabecera.lower().startswith("bearer "):
+        try:
+            return f"usuario:{leer_token_acceso(cabecera[7:].strip()).get('sub')}"
+        except ErrorApi:
+            pass
+    return f"ip:{ip_de(peticion)}"
+
+
 @app.middleware("http")
 async def capturar_errores(peticion: Request, siguiente):
     """Ningun error interno sale con detalles de SQL ni rompe el CORS."""
@@ -87,31 +117,6 @@ async def cabeceras_de_seguridad(peticion: Request, siguiente):
     respuesta.headers.setdefault("Referrer-Policy", "no-referrer")
     respuesta.headers.setdefault("Cache-Control", "no-store")
     return respuesta
-
-
-@app.middleware("http")
-async def limitar_peticiones(peticion: Request, siguiente):
-    """Tope general de cambios, subidas y descargas por usuario o por conexion."""
-    aplican = limites.limites_de_peticion(peticion.method, peticion.url.path)
-    if aplican:
-        quien = _quien_pide(peticion)
-        try:
-            for limite in aplican:
-                limite.registrar(quien)
-        except ErrorApi as error:
-            return JSONResponse(status_code=error.status_code, content={"detail": error.detail})
-    return await siguiente(peticion)
-
-
-def _quien_pide(peticion: Request) -> str:
-    """El usuario del token (sin ir a la base) o, si no hay sesion valida, la conexion."""
-    cabecera = peticion.headers.get("authorization", "")
-    if cabecera.lower().startswith("bearer "):
-        try:
-            return f"usuario:{leer_token_acceso(cabecera[7:].strip()).get('sub')}"
-        except ErrorApi:
-            pass
-    return f"ip:{ip_de(peticion)}"
 
 
 app.add_middleware(
