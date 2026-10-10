@@ -224,3 +224,17 @@ def test_la_api_responde_con_cabeceras_de_seguridad(cliente):
     respuesta = cliente.get(f"{API}/salud")
     assert respuesta.headers["X-Content-Type-Options"] == "nosniff"
     assert respuesta.headers["Cache-Control"] == "no-store"
+
+
+def test_un_correo_que_no_existe_tarda_como_uno_que_si(cliente, victima):
+    import time
+
+    def tiempo(email):
+        inicio = time.perf_counter()
+        cliente.post(f"{API}/auth/login", json={"email": email, "clave": "mala"})
+        return time.perf_counter() - inicio
+
+    existente = min(tiempo(victima["email"]) for _ in range(3))
+    inexistente = min(tiempo("nadie-nunca@avicola.com") for _ in range(3))
+    # Ambos pasan por bcrypt: el inexistente no puede ser mucho mas rapido
+    assert inexistente > existente * 0.5

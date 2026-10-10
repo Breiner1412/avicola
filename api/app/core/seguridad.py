@@ -22,6 +22,10 @@ def cifrar_clave(clave: str) -> str:
     return bcrypt.hashpw(_a_bytes(clave), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
+# Para comparar cuando el correo no existe y tardar lo mismo que con uno real
+HUELLA_FALSA = cifrar_clave(secrets.token_urlsafe(16))
+
+
 def verificar_clave(clave: str, cifrada: str) -> bool:
     if not cifrada:
         return False

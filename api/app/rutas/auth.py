@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Request, Response, status
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, joinedload
 
@@ -14,7 +14,7 @@ from app.core.contexto import Contexto, contexto_actual, fincas_del_usuario, ip_
 from app.core.correo import enviar
 from app.core.db import obtener_db
 from app.core.errores import ErrorApi, datos_invalidos, sin_permiso, sin_sesion
-from app.core.seguridad import cifrar_clave, codigo_numerico, huella, verificar_clave
+from app.core.seguridad import HUELLA_FALSA, cifrar_clave, codigo_numerico, huella, verificar_clave
 from app.esquemas.auth import (
     CambiarClave,
     ElegirFinca,
@@ -67,7 +67,10 @@ def login(
         .where(Usuario.email == datos.email.lower())
     ).first()
 
-    if usuario is None or not verificar_clave(datos.clave, usuario.clave_hash):
+    # Con un correo que no existe tambien se hace el bcrypt: asi el tiempo de respuesta
+    # no revela que correos estan registrados
+    clave_correcta = verificar_clave(datos.clave, usuario.clave_hash if usuario else HUELLA_FALSA)
+    if usuario is None or not clave_correcta:
         limites.login_ip.sumar(ip)
         limites.login_email_ip.sumar(correo_ip)
         limites.login_email.sumar(datos.email)
@@ -243,7 +246,7 @@ def cambiar_clave(
     summary="Pedir un codigo de recuperacion",
     dependencies=[Depends(bloqueado_en_demo("recuperar contrasenas"))],
 )
-def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obtener_db)):
+def recuperar(datos: PedirCodigo, peticion: Request, tareas: BackgroundTasks, db: Session = Depends(obtener_db)):
     ip = ip_de(peticion) or "desconocida"
     limites.recuperar_ip.registrar(ip)
     limites.recuperar_email.registrar(datos.email)
@@ -261,7 +264,9 @@ def recuperar(datos: PedirCodigo, peticion: Request, db: Session = Depends(obten
         )
         registrar(db, None, "solicitud_clave", "usuarios", usuario.id, descripcion="Pidio codigo de recuperacion", usuario_id=usuario.id, ip=ip)
         db.commit()
-        enviar(
+        # El correo sale despues de responder: la demora del SMTP no revela si el correo existe
+        tareas.add_task(
+            enviar,
             usuario.email,
             "Codigo para recuperar tu contrasena de Avícola",
             f"Tu codigo es {codigo}. Vence en {MINUTOS_CODIGO} minutos.\n"
