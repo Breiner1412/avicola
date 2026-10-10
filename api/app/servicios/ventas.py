@@ -233,107 +233,99 @@ def siguiente_numero(db: Session, punto_id: int) -> tuple[str, PuntoVenta]:
     return f"{prefijo}-{punto.consecutivo:06d}", punto
 
 
-def _descontar_item(db: Session, ctx: Contexto, venta: Venta, producto: ProductoVenta, item, cantidad: Decimal):
-    """Saca del inventario lo que se vendio y devuelve (unidades, peso, lote, movimiento)."""
-    unidades = 0
-    peso = None
-    lote_id = None
-    movimiento_id = None
-
-    if producto.clase == "huevo":
-        if producto.tipo_huevo_id is None:
-            raise datos_invalidos(f"El producto {producto.nombre} no tiene tipo de huevo configurado")
-        if venta.finca_id is None:
-            raise datos_invalidos("Para vender huevos, el punto de venta debe estar en una finca")
-        total_unidades = cantidad * producto.factor
-        if total_unidades != total_unidades.to_integral_value():
-            raise datos_invalidos(f"{producto.nombre}: la cantidad debe dar huevos enteros")
-        unidades = int(total_unidades)
-        mover_stock_huevos(db, venta.finca_id, producto.tipo_huevo_id, -unidades)
-
-    elif producto.clase in ("ave_descarte", "ave_engorde"):
-        if item.lote_id is None:
-            raise datos_invalidos(f"Indica de que lote salen las aves de {producto.nombre}")
-
-        lote = bloquear(db, Lote, item.lote_id)
-        if lote is None or lote.cuenta_id != venta.cuenta_id:
-            raise no_encontrado("El lote no existe")
-        # Las aves salen de la finca del punto de venta (o, si el punto es central,
-        # de una finca en la que quien vende puede trabajar)
-        if venta.finca_id is not None:
-            if lote.finca_id != venta.finca_id:
-                raise datos_invalidos(f"El lote {lote.codigo} no es de la finca de este punto de venta")
-        elif not ctx.es_plataforma and lote.finca_id not in ids_fincas_visibles(db, ctx):
-            raise no_encontrado("El lote no existe")
-
-        if producto.cobro_por == "kg":
-            # Se cobra por kilo: cuantas aves son no se puede deducir de los kilos
-            if item.aves is None:
-                raise datos_invalidos(f"{producto.nombre} se cobra por kilo: indica cuantas aves se llevan")
-            aves = item.aves
-        else:
-            if cantidad != cantidad.to_integral_value():
-                raise datos_invalidos(f"{producto.nombre}: la cantidad de aves debe ser entera")
-            aves = int(cantidad)
-        if aves <= 0:
-            raise datos_invalidos("Indica cuantas aves se venden")
-
-        if producto.clase == "ave_descarte":
-            if lote.aves_descarte < aves:
-                raise datos_invalidos(f"El lote {lote.codigo} solo tiene {lote.aves_descarte} aves de descarte")
-            lote.aves_descarte -= aves
-            desde_descarte = True
-        else:
-            if lote.aves_actuales < aves:
-                raise datos_invalidos(f"El lote {lote.codigo} solo tiene {lote.aves_actuales} aves")
-            lote.aves_actuales -= aves
-            desde_descarte = False
-
-        mover_ocupacion(db, lote.galpon_id, -aves)
-        peso = cantidad if producto.cobro_por == "kg" else None
-
-        movimiento = MovimientoAves(
-            lote_id=lote.id,
-            fecha=venta.fecha,
-            tipo="venta",
-            cantidad=aves,
-            peso_kg=peso,
-            motivo=f"venta {venta.numero}",
-            desde_descarte=desde_descarte,
-            usuario_id=ctx.usuario.id,
-            usuario_nombre=ctx.usuario.nombre_completo,
-            creado_en=ahora(),
-        )
-        db.add(movimiento)
-        db.flush()
-        movimiento_id = movimiento.id
-        lote_id = lote.id
-        unidades = aves
-
-    return unidades, peso, lote_id, movimiento_id
+def _descontar_huevos(db: Session, venta: Venta, producto: ProductoVenta, cantidad: Decimal) -> int:
+    """Saca los huevos del stock de la finca y devuelve cuantas unidades fueron."""
+    if producto.tipo_huevo_id is None:
+        raise datos_invalidos(f"El producto {producto.nombre} no tiene tipo de huevo configurado")
+    if venta.finca_id is None:
+        raise datos_invalidos("Para vender huevos, el punto de venta debe estar en una finca")
+    total_unidades = cantidad * producto.factor
+    if total_unidades != total_unidades.to_integral_value():
+        raise datos_invalidos(f"{producto.nombre}: la cantidad debe dar huevos enteros")
+    unidades = int(total_unidades)
+    mover_stock_huevos(db, venta.finca_id, producto.tipo_huevo_id, -unidades)
+    return unidades
 
 
-def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja, datos: VentaCrear) -> Venta:
-    numero, punto = siguiente_numero(db, punto.id)
+def _lote_para_venta(db: Session, ctx: Contexto, venta: Venta, producto: ProductoVenta, item) -> Lote:
+    """El lote del que salen las aves, bloqueado para descontarlo sin carreras."""
+    if item.lote_id is None:
+        raise datos_invalidos(f"Indica de que lote salen las aves de {producto.nombre}")
+    lote = bloquear(db, Lote, item.lote_id)
+    if lote is None or lote.cuenta_id != venta.cuenta_id:
+        raise no_encontrado("El lote no existe")
+    # Las aves salen de la finca del punto de venta (o, si el punto es central,
+    # de una finca en la que quien vende puede trabajar)
+    if venta.finca_id is not None:
+        if lote.finca_id != venta.finca_id:
+            raise datos_invalidos(f"El lote {lote.codigo} no es de la finca de este punto de venta")
+    elif not ctx.es_plataforma and lote.finca_id not in ids_fincas_visibles(db, ctx):
+        raise no_encontrado("El lote no existe")
+    return lote
 
-    venta = Venta(
-        cuenta_id=punto.cuenta_id,
-        finca_id=punto.finca_id or ctx.finca_id,
-        punto_venta_id=punto.id,
-        turno_id=turno.id,
-        numero=numero,
-        fecha=hoy_en_la_granja(),
-        estado="activa",
-        observaciones=datos.observaciones,
+
+def _cuantas_aves(producto: ProductoVenta, item, cantidad: Decimal) -> int:
+    if producto.cobro_por == "kg":
+        # Se cobra por kilo: cuantas aves son no se puede deducir de los kilos
+        if item.aves is None:
+            raise datos_invalidos(f"{producto.nombre} se cobra por kilo: indica cuantas aves se llevan")
+        aves = item.aves
+    else:
+        if cantidad != cantidad.to_integral_value():
+            raise datos_invalidos(f"{producto.nombre}: la cantidad de aves debe ser entera")
+        aves = int(cantidad)
+    if aves <= 0:
+        raise datos_invalidos("Indica cuantas aves se venden")
+    return aves
+
+
+def _descontar_aves(db: Session, ctx: Contexto, venta: Venta, producto: ProductoVenta, item, cantidad: Decimal):
+    """Saca las aves del lote y del galpon, deja el movimiento y devuelve (aves, peso, lote, movimiento)."""
+    lote = _lote_para_venta(db, ctx, venta, producto, item)
+    aves = _cuantas_aves(producto, item, cantidad)
+
+    desde_descarte = producto.clase == "ave_descarte"
+    if desde_descarte:
+        if lote.aves_descarte < aves:
+            raise datos_invalidos(f"El lote {lote.codigo} solo tiene {lote.aves_descarte} aves de descarte")
+        lote.aves_descarte -= aves
+    else:
+        if lote.aves_actuales < aves:
+            raise datos_invalidos(f"El lote {lote.codigo} solo tiene {lote.aves_actuales} aves")
+        lote.aves_actuales -= aves
+    mover_ocupacion(db, lote.galpon_id, -aves)
+
+    peso = cantidad if producto.cobro_por == "kg" else None
+    movimiento = MovimientoAves(
+        lote_id=lote.id,
+        fecha=venta.fecha,
+        tipo="venta",
+        cantidad=aves,
+        peso_kg=peso,
+        motivo=f"venta {venta.numero}",
+        desde_descarte=desde_descarte,
         usuario_id=ctx.usuario.id,
         usuario_nombre=ctx.usuario.nombre_completo,
         creado_en=ahora(),
     )
-    db.add(venta)
+    db.add(movimiento)
     db.flush()
+    return aves, peso, lote.id, movimiento.id
 
+
+def _descontar_item(db: Session, ctx: Contexto, venta: Venta, producto: ProductoVenta, item, cantidad: Decimal):
+    """Saca del inventario lo que se vendio y devuelve (unidades, peso, lote, movimiento)."""
+    if producto.clase == "huevo":
+        return _descontar_huevos(db, venta, producto, cantidad), None, None, None
+    if producto.clase in ("ave_descarte", "ave_engorde"):
+        return _descontar_aves(db, ctx, venta, producto, item, cantidad)
+    return 0, None, None, None
+
+
+def _agregar_detalles(db: Session, ctx: Contexto, venta: Venta, punto: PuntoVenta, items) -> Decimal:
+    """Una linea por producto, con el precio de la lista; devuelve el subtotal."""
     subtotal = CERO
-    for item in datos.items:
+    for item in items:
         producto = db.get(ProductoVenta, item.producto_id)
         if producto is None or producto.cuenta_id != punto.cuenta_id or not producto.activo:
             raise datos_invalidos("Ese producto no esta disponible")
@@ -346,7 +338,6 @@ def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja,
         unidades, peso, lote_id, movimiento_id = _descontar_item(db, ctx, venta, producto, item, cantidad)
         linea = pesos(cantidad * precio)
         subtotal += linea
-
         db.add(
             VentaDetalle(
                 venta_id=venta.id,
@@ -363,7 +354,11 @@ def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja,
                 movimiento_aves_id=movimiento_id,
             )
         )
+    return subtotal
 
+
+def _descuento(db: Session, ctx: Contexto, punto: PuntoVenta, datos: VentaCrear, subtotal: Decimal) -> Decimal:
+    """Descuento en valor o en porcentaje, respetando el tope de la cuenta para quien lo tiene."""
     cuenta = db.get(Cuenta, punto.cuenta_id)
     tope = int(cuenta.descuento_maximo or 0) if cuenta else 0
 
@@ -381,53 +376,83 @@ def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja,
         maximo = pesos(subtotal * dec(tope) / dec(100))
         if descuento > maximo:
             raise datos_invalidos(f"El descuento maximo que puedes dar es {tope}% ({maximo})")
+    return descuento
 
-    venta.subtotal = pesos(subtotal)
-    venta.descuento = pesos(descuento)
-    venta.total = pesos(subtotal - descuento)
 
-    # Pagos: si no los indican, se asume efectivo
-    pagos = datos.pagos
+def _pago_en_efectivo(db: Session, venta: Venta, punto: PuntoVenta) -> None:
+    """Sin pagos indicados, la venta se paga completa en efectivo."""
+    efectivo = db.scalars(
+        select(MetodoPago)
+        .where(
+            (MetodoPago.cuenta_id.is_(None)) | (MetodoPago.cuenta_id == punto.cuenta_id),
+            MetodoPago.es_efectivo.is_(True),
+            MetodoPago.activo.is_(True),
+        )
+        .order_by(MetodoPago.id)
+    ).first()
+    if efectivo is None:
+        raise datos_invalidos("No hay forma de pago configurada")
+    db.add(
+        VentaPago(
+            venta_id=venta.id,
+            metodo_pago_id=efectivo.id,
+            metodo_nombre=efectivo.nombre,
+            es_efectivo=True,
+            monto=venta.total,
+        )
+    )
+
+
+def _registrar_pagos(db: Session, venta: Venta, punto: PuntoVenta, pagos) -> None:
+    """Los pagos deben cuadrar con el total; si no los indican, se asume efectivo."""
     if not pagos:
-        efectivo = db.scalars(
-            select(MetodoPago)
-            .where(
-                (MetodoPago.cuenta_id.is_(None)) | (MetodoPago.cuenta_id == punto.cuenta_id),
-                MetodoPago.es_efectivo.is_(True),
-                MetodoPago.activo.is_(True),
-            )
-            .order_by(MetodoPago.id)
-        ).first()
-        if efectivo is None:
-            raise datos_invalidos("No hay forma de pago configurada")
+        _pago_en_efectivo(db, venta, punto)
+        return
+
+    suma = CERO
+    for pago in pagos:
+        metodo = db.get(MetodoPago, pago.metodo_pago_id)
+        if metodo is None or (metodo.cuenta_id is not None and metodo.cuenta_id != punto.cuenta_id):
+            raise datos_invalidos("Forma de pago no valida")
+        suma += dec(pago.monto)
         db.add(
             VentaPago(
                 venta_id=venta.id,
-                metodo_pago_id=efectivo.id,
-                metodo_nombre=efectivo.nombre,
-                es_efectivo=True,
-                monto=venta.total,
+                metodo_pago_id=metodo.id,
+                metodo_nombre=metodo.nombre,
+                es_efectivo=metodo.es_efectivo,
+                monto=dec(pago.monto),
+                referencia=pago.referencia,
             )
         )
-    else:
-        suma = CERO
-        for pago in pagos:
-            metodo = db.get(MetodoPago, pago.metodo_pago_id)
-            if metodo is None or (metodo.cuenta_id is not None and metodo.cuenta_id != punto.cuenta_id):
-                raise datos_invalidos("Forma de pago no valida")
-            suma += dec(pago.monto)
-            db.add(
-                VentaPago(
-                    venta_id=venta.id,
-                    metodo_pago_id=metodo.id,
-                    metodo_nombre=metodo.nombre,
-                    es_efectivo=metodo.es_efectivo,
-                    monto=dec(pago.monto),
-                    referencia=pago.referencia,
-                )
-            )
-        if pesos(suma) != venta.total:
-            raise datos_invalidos(f"Los pagos suman {pesos(suma)} y la venta es de {venta.total}")
+    if pesos(suma) != venta.total:
+        raise datos_invalidos(f"Los pagos suman {pesos(suma)} y la venta es de {venta.total}")
+
+
+def crear_venta(db: Session, ctx: Contexto, punto: PuntoVenta, turno: TurnoCaja, datos: VentaCrear) -> Venta:
+    numero, punto = siguiente_numero(db, punto.id)
+    venta = Venta(
+        cuenta_id=punto.cuenta_id,
+        finca_id=punto.finca_id or ctx.finca_id,
+        punto_venta_id=punto.id,
+        turno_id=turno.id,
+        numero=numero,
+        fecha=hoy_en_la_granja(),
+        estado="activa",
+        observaciones=datos.observaciones,
+        usuario_id=ctx.usuario.id,
+        usuario_nombre=ctx.usuario.nombre_completo,
+        creado_en=ahora(),
+    )
+    db.add(venta)
+    db.flush()
+
+    subtotal = _agregar_detalles(db, ctx, venta, punto, datos.items)
+    descuento = _descuento(db, ctx, punto, datos, subtotal)
+    venta.subtotal = pesos(subtotal)
+    venta.descuento = pesos(descuento)
+    venta.total = pesos(subtotal - descuento)
+    _registrar_pagos(db, venta, punto, datos.pagos)
 
     registrar(
         db, ctx, "crear", "ventas", venta.id,
