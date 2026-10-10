@@ -43,7 +43,9 @@ export function useDatos<T>(ruta: string | null, clave: string | number = "") {
     } finally {
       if (vigente()) setCargando(false);
     }
-  }, [ruta]);
+    // La finca es parte de lo que se pide (va en la cabecera X-Finca-Id): al cambiarla
+    // se vuelve a cargar aunque la pagina no la incluya en la clave
+  }, [ruta, finca]);
 
   useEffect(() => {
     setDatos(null);
