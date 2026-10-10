@@ -64,6 +64,18 @@ def test_los_ingresos_correctos_no_cuentan_para_el_limite(cliente, victima):
         assert respuesta.status_code == 200, respuesta.text
 
 
+def test_los_ingresos_correctos_tambien_tienen_tope(cliente, victima, monkeypatch):
+    from app.core import limites
+    from tests.test_multicuenta import CLAVE
+
+    monkeypatch.setattr(limites.ingresos_ip, "maximo", 3)
+    codigos = [
+        cliente.post(f"{API}/auth/login", json={"email": victima["email"], "clave": CLAVE}).status_code
+        for _ in range(4)
+    ]
+    assert codigos == [200, 200, 200, 429]
+
+
 def test_un_atacante_no_deja_sin_entrar_a_los_demas(cliente, victima, monkeypatch):
     from app.rutas import auth
     from tests.test_multicuenta import CLAVE

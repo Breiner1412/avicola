@@ -57,6 +57,7 @@ def login(
     ip = ip_de(peticion) or "desconocida"
     correo_ip = f"{datos.email}|{ip}"
     limites.login_ip.revisar(ip)
+    limites.ingresos_ip.revisar(ip)
     limites.login_email_ip.revisar(correo_ip)
     limites.login_email.revisar(datos.email)
 
@@ -103,6 +104,7 @@ def login(
     else:
         finca_id = None  # el usuario elige en la siguiente pantalla
 
+    limites.ingresos_ip.sumar(ip)
     sesion, refresco = abrir_sesion(db, usuario, finca_id, ip, peticion.headers.get("user-agent"))
     usuario.ultimo_ingreso = ahora_simple()
     limites.login_email_ip.limpiar(correo_ip)
