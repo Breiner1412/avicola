@@ -13,7 +13,7 @@ from app.esquemas.alertas import AlertaSalida, ResumenAlertas
 from app.esquemas.comunes import Mensaje
 from app.modelos.alertas import Alerta
 from app.servicios.alcance import cuenta_filtro
-from app.servicios.alertas import recalcular
+from app.servicios.alertas import avisos_visibles, recalcular
 
 router = APIRouter(prefix="/alertas", tags=["Alertas"])
 
@@ -37,7 +37,12 @@ def marcar_todas(db: Session = Depends(obtener_db), ctx: Contexto = Depends(requ
     if cuenta_id is not None:
         db.execute(
             update(Alerta)
-            .where(Alerta.cuenta_id == cuenta_id, Alerta.activa.is_(True), Alerta.leida.is_(False))
+            .where(
+                Alerta.cuenta_id == cuenta_id,
+                Alerta.activa.is_(True),
+                Alerta.leida.is_(False),
+                avisos_visibles(db, ctx),
+            )
             .values(leida=True, actualizado_en=datetime.now(timezone.utc).replace(tzinfo=None))
         )
         db.commit()
@@ -50,8 +55,10 @@ def marcar(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("panel", "ver")),
 ):
-    alerta = db.get(Alerta, alerta_id)
-    if alerta is None or alerta.cuenta_id != cuenta_filtro(ctx):
+    alerta = db.scalars(
+        select(Alerta).where(Alerta.id == alerta_id, Alerta.cuenta_id == cuenta_filtro(ctx), avisos_visibles(db, ctx))
+    ).first()
+    if alerta is None:
         raise no_encontrado("El aviso no existe")
 
     alerta.leida = True

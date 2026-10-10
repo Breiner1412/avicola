@@ -249,3 +249,40 @@ def test_supervisor_ve_un_resumen_de_las_demas_fincas(cliente, empresa_con_dos_f
     assert set(otras[datos["finca2"]["id"]]) == {"id", "nombre", "aves", "huevos_periodo", "lotes_activos"}
     # y no puede entrar al detalle de esa finca
     assert cliente.get(f"{API}/galpones", headers=cabeceras(datos["supervisor"]["token"], datos["finca2"]["id"])).status_code == 403
+
+
+def test_supervisor_no_ve_ni_marca_avisos_de_otras_fincas(cliente, empresa_con_dos_fincas):
+    from datetime import datetime
+
+    from sqlalchemy import select
+
+    from app.core.db import SesionLocal
+    from app.modelos.alertas import Alerta
+    from app.modelos.organizacion import Finca
+
+    datos = empresa_con_dos_fincas
+    finca2 = datos["finca2"]["id"]
+    with SesionLocal() as db:
+        ajeno = Alerta(
+            cuenta_id=db.get(Finca, finca2).cuenta_id,
+            finca_id=finca2,
+            clave=unico("ajeno"),
+            tipo="tarea",
+            nivel="aviso",
+            titulo="Tarea atrasada: de la otra finca",
+            activa=True,
+            leida=False,
+            creado_en=datetime(2026, 1, 1),
+            actualizado_en=datetime(2026, 1, 1),
+        )
+        db.add(ajeno)
+        db.commit()
+        ajeno_id = ajeno.id
+
+    sin_finca = cabeceras(datos["supervisor"]["token"])
+    vistos = {a["id"] for a in cliente.get(f"{API}/alertas", headers=sin_finca).json()["alertas"]}
+    assert ajeno_id not in vistos
+    assert cliente.post(f"{API}/alertas/{ajeno_id}/leida", headers=sin_finca).status_code == 404
+    cliente.post(f"{API}/alertas/leidas", headers=sin_finca)
+    with SesionLocal() as db:
+        assert db.scalar(select(Alerta.leida).where(Alerta.id == ajeno_id)) is False

@@ -2,7 +2,7 @@
 
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, true
 from sqlalchemy.orm import Session
 
 from app.core.contexto import Contexto
@@ -289,6 +289,19 @@ def _guardar_aviso(db: Session, cuenta_id: int, alerta: Alerta | None, situacion
     alerta.actualizado_en = momento
 
 
+def avisos_visibles(db: Session, ctx: Contexto):
+    """Condicion para ver o marcar avisos: los de la cuenta y los de las fincas del usuario.
+
+    Con finca activa, solo los de esa finca; sin ella, quien no ve toda la cuenta (el
+    supervisor) solo ve los de sus fincas.
+    """
+    if ctx.finca_id is not None:
+        return or_(Alerta.finca_id.is_(None), Alerta.finca_id == ctx.finca_id)
+    if ctx.es_plataforma or ctx.ve_toda_la_cuenta:
+        return true()
+    return or_(Alerta.finca_id.is_(None), Alerta.finca_id.in_(ids_fincas_visibles(db, ctx) or [0]))
+
+
 def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
     """Actualiza la lista de avisos: agrega los nuevos y cierra los que ya se resolvieron."""
     cuenta_id = cuenta_filtro(ctx)
@@ -323,9 +336,7 @@ def recalcular(db: Session, ctx: Contexto) -> list[Alerta]:
 
     db.flush()
 
-    consulta = select(Alerta).where(Alerta.cuenta_id == cuenta_id, Alerta.activa.is_(True))
-    if ctx.finca_id is not None:
-        consulta = consulta.where((Alerta.finca_id.is_(None)) | (Alerta.finca_id == ctx.finca_id))
+    consulta = select(Alerta).where(Alerta.cuenta_id == cuenta_id, Alerta.activa.is_(True), avisos_visibles(db, ctx))
 
     orden = {"critico": 0, "aviso": 1, "info": 2}
     alertas = db.scalars(consulta).all()
