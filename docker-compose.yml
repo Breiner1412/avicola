@@ -1,6 +1,6 @@
 # Produccion: ningun puerto publicado. Solo Caddy (otro proyecto) expone 80 y 443
 # y llega a la web y a la API por la red de Docker.
-# Para probar en tu equipo con puertos: docker compose -f docker-compose.yml -f docker-compose.local.yml up
+# Para probarlo en tu equipo (Caddy en http://localhost:8080): ver docker-compose.local.yml
 name: avicola
 
 # Comun a todos: logs con tope (no llenan el disco de la VM) y sin escalar privilegios
@@ -134,6 +134,8 @@ services:
     container_name: avicola-migrar
     restart: "no"
     command: ["true"]
+    healthcheck:
+      disable: true
     networks: [interna]
     mem_limit: 512m
     environment:

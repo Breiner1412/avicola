@@ -151,31 +151,33 @@ flowchart LR
 **Requisitos:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows o macOS) o
 Docker Engine con Compose (Linux), y Git.
 
-```bash
+En tu equipo se levanta igual que en la VM: un Caddy delante sirve todo en **http://localhost:8080**, con
+el mismo bloque del README (`local/Caddyfile`), y la demo de seis meses se genera sola la primera vez.
+
+```powershell
 # 1. Descargar el proyecto
 git clone https://github.com/Breiner1412/avicola.git
 cd avicola
 
-# 2. Crear el archivo de configuración y cambiar las contraseñas
-cp .env.example .env          # en Windows (PowerShell): copy .env.example .env
+# 2. Crear el archivo de configuracion local y cambiar sus claves (solo letras y numeros)
+copy .env.local.example .env.local          # en Linux/macOS: cp .env.local.example .env.local
 
-# 3. Construir y levantar todo (en tu equipo, con los puertos publicados en 127.0.0.1)
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# 3. Construir y levantar todo
+docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local up -d --build
 
-# 4. Ver que todo esté arriba (api y db deben decir "healthy")
-docker compose ps
+# 4. Ver el avance de la demo (la primera vez tarda unos minutos; termina con la lista de usuarios)
+docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local logs -f demo
 ```
 
-Abre:
+Abre **http://localhost:8080** y entra con los [usuarios de la demo](#datos-de-ejemplo) (clave
+`Granja2026`) o con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env.local` (usuario de plataforma).
 
-| Qué | Dirección |
+| Acción | Comando (desde la carpeta del proyecto) |
 |---|---|
-| Aplicación | http://localhost:3000 |
-| Documentación de la API | http://localhost:8000/docs |
+| Apagar (los datos se conservan) | `docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local down` |
+| Borrar todo (base, demo e imágenes) | `docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local down -v --rmi local` |
 
-Entra con el `ADMIN_EMAIL` y el `ADMIN_PASSWORD` del `.env`. La primera vez el sistema crea solo las
-tablas, los módulos, los roles, los permisos, el usuario de plataforma y una cuenta con una finca de
-ejemplo para empezar.
+En local no hay HTTPS: por eso `.env.local` usa `ENTORNO=desarrollo` y `COOKIE_SEGURA=false`.
 
 ### Comandos útiles
 
@@ -243,7 +245,9 @@ Todo se registra con las mismas reglas del sistema, así que el inventario, las 
 | `dueno@demo-avicola.com` | Propietario |
 | `admin@demo-avicola.com` | Administrador |
 | `supervisor@demo-avicola.com` | Supervisor |
-| `operario1@demo-avicola.com` | Operario |
+| `operario1@demo-avicola.com` | Operario (La Esperanza) |
+| `operario2@demo-avicola.com` | Operario (La Esperanza) |
+| `operario3@demo-avicola.com` | Operario (El Recreo) |
 | `caja@demo-avicola.com` | Cajero |
 
 Contraseña de todos: **`Granja2026`**. Los datos se cargan una sola vez por base de datos; para volver a
@@ -377,7 +381,8 @@ En GitHub corren solas en cada push y pull request (`.github/workflows/pruebas.y
 ```
 avicola/
 ├── docker-compose.yml           # producción: base + caché + API + web, sin puertos publicados
-├── docker-compose.local.yml     # desarrollo: publica los puertos en 127.0.0.1
+├── docker-compose.local.yml     # en tu equipo: Caddy en localhost:8080 y demo automatica
+├── local/Caddyfile              # el bloque de Caddy del README, para localhost
 ├── .env.example                 # variables de entorno (copiar a .env)
 ├── .github/workflows/pruebas.yml
 ├── db/inicio/                   # crea el usuario de la aplicación en MySQL

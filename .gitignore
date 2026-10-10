@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+!.env.local.example
+# Configuracion local de docker-compose.local.yml (claves de tu equipo)
+.env.local
 
 # Python
 __pycache__/
@@ -27,6 +30,7 @@ Thumbs.db
 # Version anterior (se queda solo en tu computador, no se sube)
 BACKEND/
 FRONTEND/
+docker-compose.anterior.yml
 REVISION_ERRORES.md
 
 # Archivos personales con claves (nunca se suben)

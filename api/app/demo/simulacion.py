@@ -20,6 +20,14 @@ from app.demo.trabajo import TrabajoMixin
 from app.demo.sensores import SensoresMixin
 
 
+def demo_cargada() -> bool:
+    """Si la cuenta de ejemplo ya existe en la base."""
+    from app.core.db import SesionLocal
+
+    with SesionLocal() as db:
+        return db.scalars(select(Cuenta.id).where(Cuenta.nombre == NOMBRE_CUENTA)).first() is not None
+
+
 class Demo(EstructuraMixin, GranjaMixin, TiendaMixin, TrabajoMixin, SensoresMixin, DemoBase):
     """La granja completa: arma la estructura y simula cada dia del periodo."""
 
