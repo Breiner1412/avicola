@@ -286,3 +286,14 @@ def test_supervisor_no_ve_ni_marca_avisos_de_otras_fincas(cliente, empresa_con_d
     cliente.post(f"{API}/alertas/leidas", headers=sin_finca)
     with SesionLocal() as db:
         assert db.scalar(select(Alerta.leida).where(Alerta.id == ajeno_id)) is False
+
+
+def test_un_punto_de_venta_no_se_pasa_a_una_finca_ajena(cliente, propietario_a, propietario_b):
+    cab_a = cabeceras(propietario_a["token"], propietario_a["finca_id"])
+    punto = cliente.post(
+        f"{API}/puntos-venta", headers=cab_a, json={"codigo": unico("P")[:10], "nombre": "Tienda A", "finca_id": propietario_a["finca_id"]}
+    ).json()
+    respuesta = cliente.patch(
+        f"{API}/puntos-venta/{punto['id']}", headers=cab_a, json={"finca_id": propietario_b["finca_id"]}
+    )
+    assert respuesta.status_code == 400

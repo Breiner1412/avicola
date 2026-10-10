@@ -117,6 +117,8 @@ def editar_punto(
 ):
     punto = punto_de(db, ctx, punto_id)
     cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("finca_id") is not None and cambios["finca_id"] not in ids_fincas_visibles(db, ctx):
+        raise datos_invalidos("Esa finca no es tuya o no tienes acceso")
 
     if "codigo" in cambios and db.scalars(
         select(PuntoVenta.id).where(
