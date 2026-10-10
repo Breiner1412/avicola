@@ -110,6 +110,8 @@ class Configuracion(BaseSettings):
             problemas.append("DB_PASSWORD esta vacia o es la de ejemplo")
         if self.db_migra_password and self.db_migra_password in CLAVES_DE_EJEMPLO:
             problemas.append("DB_MIGRA_PASSWORD es la de ejemplo")
+        if self.db_migra_user and self.db_migra_user == self.db_user:
+            problemas.append("DB_USER no puede ser el duenio del esquema (DB_MIGRA_USER): la app no debe poder quitar triggers")
         if not self.cookie_segura:
             problemas.append("COOKIE_SEGURA debe ser true (la app va detras de HTTPS)")
         if problemas:

@@ -19,6 +19,7 @@ recrear_base
 log "Cargando $DEMO_BASE"
 gunzip -c "$DEMO_BASE" | dc exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot "$MYSQL_DATABASE"'
 vaciar_cache
+dc run --rm migrar    # por si el codigo trae migraciones nuevas desde que se hizo el volcado
 dc start api
 esperar_api
 log "Demo reiniciada"

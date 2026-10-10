@@ -489,6 +489,14 @@ docker compose up -d --build
 docker compose ps        # avicola-db, avicola-cache, avicola-api y avicola-web deben quedar "healthy"
 ```
 
+`avicola-migrar` corre antes que la API: aplica las migraciones y los datos iniciales y termina (sale con
+código 0). Es el único contenedor con las credenciales del dueño del esquema; la API trabaja con un usuario
+que no puede crear ni quitar tablas ni triggers. Si una migración falla, la API no arranca:
+
+```bash
+docker compose logs migrar
+```
+
 ### 3. Caddy
 
 En el `Caddyfile` del Caddy compartido (que debe estar en la red `proxy`):

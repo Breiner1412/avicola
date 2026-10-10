@@ -21,7 +21,8 @@ bloquear
 log "Creando la base de la demo con $DIAS dias de datos"
 dc stop api
 recrear_base
-dc start api          # el arranque aplica migraciones y datos iniciales
+dc run --rm migrar    # migraciones y datos iniciales (el unico con permisos de esquema)
+dc start api
 esperar_api
 
 log "Simulando el trabajo de la granja (puede tardar unos minutos)"

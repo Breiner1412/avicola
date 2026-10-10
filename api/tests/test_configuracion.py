@@ -26,6 +26,7 @@ def test_una_configuracion_segura_arranca():
         {"admin_password": "corta"},
         {"db_password": "CambiaEstaClave123"},
         {"cookie_segura": False},
+        {"db_user": "avicola", "db_migra_user": "avicola", "db_migra_password": "OtraClaveMigra2026"},
     ],
 )
 def test_en_produccion_se_rechazan_los_valores_de_ejemplo(cambio):

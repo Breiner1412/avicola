@@ -95,8 +95,8 @@ services:
       DB_NAME: ${DB_NAME:-avicola}
       DB_USER: ${DB_USER:-avicola_app}
       DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
-      DB_MIGRA_USER: ${DB_MIGRA_USER:-avicola}
-      DB_MIGRA_PASSWORD: ${DB_MIGRA_PASSWORD:?falta DB_MIGRA_PASSWORD}
+      # Sin las credenciales del duenio del esquema: las migraciones las hace "migrar"
+      MIGRAR: "false"
       REDIS_URL: redis://:${REDIS_PASSWORD:?falta REDIS_PASSWORD}@avicola-cache:6379/0
       JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET}
       MINUTOS_ACCESO: ${MINUTOS_ACCESO:-30}
@@ -117,9 +117,47 @@ services:
       # (Caddy y la web): la API no tiene puertos publicados
       FORWARDED_ALLOW_IPS: ${PROXY_CONFIABLE:-172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}
     depends_on:
-      db:
-        condition: service_healthy
+      migrar:
+        condition: service_completed_successfully
       cache:
+        condition: service_healthy
+
+  # De un solo uso: aplica las migraciones y los datos iniciales, y termina. Es el unico
+  # con las credenciales del duenio del esquema (puede crear tablas y triggers), asi
+  # que la API, que atiende al publico, nunca las tiene.
+  migrar:
+    <<: *comun
+    build:
+      context: ./api
+      args:
+        INSTALAR_DEMO: ${DEMO:-false}
+    container_name: avicola-migrar
+    restart: "no"
+    command: ["true"]
+    networks: [interna]
+    mem_limit: 512m
+    environment:
+      ENTORNO: ${ENTORNO:-produccion}
+      DEMO: ${DEMO:-false}
+      ZONA_HORARIA: ${ZONA_HORARIA:-America/Bogota}
+      TZ: ${TZ:-America/Bogota}
+      MIGRAR: "true"
+      DB_HOST: avicola-db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-avicola}
+      DB_USER: ${DB_USER:-avicola_app}
+      DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD}
+      DB_MIGRA_USER: ${DB_MIGRA_USER:-avicola}
+      DB_MIGRA_PASSWORD: ${DB_MIGRA_PASSWORD:?falta DB_MIGRA_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET}
+      COOKIE_SEGURA: ${COOKIE_SEGURA:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?falta ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?falta ADMIN_PASSWORD}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador}
+      CUENTA_DEMO: ${CUENTA_DEMO:-Granja de ejemplo}
+      FINCA_DEMO: ${FINCA_DEMO:-Finca principal}
+    depends_on:
+      db:
         condition: service_healthy
 
   web:

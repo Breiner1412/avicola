@@ -22,11 +22,15 @@ finally:
     sleep 2
 done
 
-echo "Aplicando migraciones..."
-alembic upgrade head
+# Las migraciones las corre el servicio "migrar" de docker-compose, el unico que tiene
+# las credenciales del duenio del esquema; la API arranca con MIGRAR=false.
+if [ "${MIGRAR:-true}" = "true" ]; then
+    echo "Aplicando migraciones..."
+    alembic upgrade head
 
-echo "Cargando datos iniciales..."
-python -m app.semilla
+    echo "Cargando datos iniciales..."
+    python -m app.semilla
+fi
 
-echo "Iniciando la API..."
+echo "Iniciando..."
 exec "$@"
