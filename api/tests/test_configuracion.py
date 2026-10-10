@@ -36,3 +36,8 @@ def test_en_produccion_se_rechazan_los_valores_de_ejemplo(cambio):
 
 def test_en_desarrollo_se_permiten():
     Configuracion(_env_file=None, **{**SEGURA, "entorno": "desarrollo", "admin_password": "Admin12345", "cookie_segura": False})
+
+
+def test_un_entorno_mal_escrito_no_arranca():
+    with pytest.raises(ValidationError, match="ENTORNO"):
+        Configuracion(_env_file=None, **{**SEGURA, "entorno": "prd"})

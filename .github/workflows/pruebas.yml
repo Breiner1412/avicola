@@ -5,6 +5,10 @@ on:
     branches: [main, auditoria]
   pull_request:
 
+# Solo lectura: el flujo no necesita escribir en el repositorio
+permissions:
+  contents: read
+
 jobs:
   api:
     runs-on: ubuntu-latest

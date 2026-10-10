@@ -15,7 +15,9 @@ CLAVES_DE_EJEMPLO = {
     "CambiaEstaClaveMigra123",
     "CambiaEstaClaveRoot123",
     "cambia-esta-clave",
+    "CambiaEstaClaveRedis123",
 }
+ENTORNOS = ("desarrollo", "pruebas", "produccion")
 
 
 class Configuracion(BaseSettings):
@@ -74,6 +76,15 @@ class Configuracion(BaseSettings):
 
     # --- Navegador ---
     cors_origenes: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @field_validator("entorno")
+    @classmethod
+    def _entorno_conocido(cls, valor: str) -> str:
+        # Un valor mal escrito (prd, live...) no debe dejar la app como si fuera desarrollo
+        limpio = valor.strip().lower()
+        if limpio not in ENTORNOS:
+            raise ValueError(f"ENTORNO debe ser uno de: {', '.join(ENTORNOS)}")
+        return limpio
 
     @field_validator("jwt_secret")
     @classmethod

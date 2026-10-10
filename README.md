@@ -276,6 +276,9 @@ Cron del host (`crontab -e` del usuario que maneja Docker; ajusta la ruta del pr
 30 2 * * 0 cd /opt/avicola && sh scripts/demo/crear_base.sh >> /var/log/avicola-demo.log 2>&1
 ```
 
+El volcado base guarda tambien el usuario de plataforma con la clave que tenia al crearse: si cambias
+`ADMIN_PASSWORD`, vuelve a correr `crear_base.sh` para que el reinicio nocturno no traiga la clave vieja.
+
 Variables opcionales de los scripts: `ENV_FILE` (por defecto `.env`), `COMPOSE_FILE` y `DEMO_BASE`
 (por defecto `demo/base_demo.sql.gz`, fuera del repositorio).
 
