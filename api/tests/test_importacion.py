@@ -471,3 +471,17 @@ def test_leer_un_csv_no_cambia_el_dialecto_global():
     leer_archivo("solo una columna\nvalor\n".encode(), "x.csv")
     leer_archivo("a;b\n1;2\n".encode(), "y.csv")
     assert csv.excel.delimiter == ","
+
+
+def test_un_csv_con_millones_de_lineas_no_agota_la_memoria():
+    import tracemalloc
+
+    from app.servicios.importacion import MAX_FILAS, leer_archivo
+
+    contenido = b"codigo;nombre\n" + b"A;b\n" * 1_200_000  # unos 5 MB
+    tracemalloc.start()
+    _hoja, _columnas, filas = leer_archivo(contenido, "enorme.csv")
+    _actual, pico = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    assert len(filas) == MAX_FILAS
+    assert pico < 100 * 1024 * 1024

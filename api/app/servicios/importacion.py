@@ -7,6 +7,7 @@ puede guardar como plantilla para la proxima vez.
 
 import csv
 import io
+import itertools
 import re
 import unicodedata
 import zipfile
@@ -165,7 +166,15 @@ def leer_archivo(contenido: bytes, nombre: str) -> tuple[str | None, list[str], 
             dialecto = type("DialectoArchivo", (csv.excel,), {"delimiter": separador})
 
         lector = csv.reader(io.StringIO(texto), dialecto)
-        filas_brutas = [fila for fila in lector if any(str(c).strip() for c in fila)]
+        # Igual que en el xlsx: se corta mientras se lee (filas vacias incluidas) y cada
+        # fila se recorta a MAX_COLUMNAS. Armar todas las filas antes de recortar
+        # dejaba que un CSV de 5 MB con millones de lineas agotara la memoria.
+        filas_brutas = []
+        for fila in itertools.islice(lector, MAX_FILAS_RECORRIDAS):
+            if any(str(c).strip() for c in fila[:MAX_COLUMNAS]):
+                filas_brutas.append(fila[:MAX_COLUMNAS])
+                if len(filas_brutas) > MAX_FILAS:
+                    break
         if not filas_brutas:
             raise ValueError("El archivo esta vacio")
         encabezados = _nombres_de_columnas(filas_brutas[0])
