@@ -348,7 +348,7 @@ def abrir(
     db: Session = Depends(obtener_db),
     ctx: Contexto = Depends(requiere("caja", "crear")),
 ):
-    punto = punto_de(db, ctx, datos.punto_venta_id)
+    punto = punto_de(db, ctx, datos.punto_venta_id, para_vender=True)
     turno = abrir_turno(db, ctx, punto, datos.base_inicial, datos.observaciones)
     db.commit()
     db.refresh(turno)
@@ -495,7 +495,7 @@ def vender(
     if turno is None:
         raise datos_invalidos("Primero abre la caja")
 
-    punto = punto_de(db, ctx, turno.punto_venta_id)
+    punto = punto_de(db, ctx, turno.punto_venta_id, para_vender=True)
     venta = crear_venta(db, ctx, punto, turno, datos)
     db.commit()
     db.refresh(venta)

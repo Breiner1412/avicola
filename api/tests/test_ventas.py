@@ -561,3 +561,17 @@ def test_otra_cuenta_no_ve_las_ventas(cliente, tienda, token_plataforma):
     assert cliente.get(f"{API}/ventas", headers=cab).json()["total"] == 0
     assert cliente.get(f"{API}/ventas/{tienda['venta_huevos']['id']}", headers=cab).status_code == 404
 
+
+
+def test_no_se_abre_caja_en_un_punto_desactivado(cliente, tienda):
+    punto = cliente.post(
+        f"{API}/puntos-venta",
+        headers=tienda["cab"],
+        json={"codigo": "PVX", "nombre": "Punto cerrado", "finca_id": tienda["finca_id"]},
+    ).json()
+    cliente.patch(f"{API}/puntos-venta/{punto['id']}", headers=tienda["cab"], json={"activo": False})
+    respuesta = cliente.post(
+        f"{API}/caja/abrir", headers=tienda["cab_cajero"], json={"punto_venta_id": punto["id"], "base_inicial": 0}
+    )
+    assert respuesta.status_code == 400
+    assert "desactivado" in respuesta.json()["detail"]["mensaje"]

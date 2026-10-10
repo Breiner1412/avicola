@@ -75,13 +75,16 @@ def puntos_visibles(db: Session, ctx: Contexto, incluir_inactivos: bool = False)
     return puntos
 
 
-def punto_de(db: Session, ctx: Contexto, punto_id: int) -> PuntoVenta:
+def punto_de(db: Session, ctx: Contexto, punto_id: int, para_vender: bool = False) -> PuntoVenta:
     punto = db.get(PuntoVenta, punto_id)
     cuenta = cuenta_filtro(ctx)
     if punto is None or (cuenta is not None and punto.cuenta_id != cuenta):
         raise no_encontrado("El punto de venta no existe")
     if punto.finca_id is not None and punto.finca_id not in ids_fincas_visibles(db, ctx):
         raise sin_permiso("Ese punto de venta es de otra finca")
+    # Un punto desactivado se puede consultar y volver a activar, pero no usar
+    if para_vender and not punto.activo:
+        raise datos_invalidos("Ese punto de venta esta desactivado")
     return punto
 
 
