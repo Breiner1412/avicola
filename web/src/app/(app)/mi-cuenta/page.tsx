@@ -10,32 +10,32 @@ export default function MiCuenta() {
 
   return (
     <>
-      <h1 className="text-xl font-semibold text-slate-800">Mi cuenta</h1>
+      <h1 className="titulo-pantalla">Mi cuenta</h1>
 
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <Tarjeta titulo="Mis datos">
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Nombre</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-tinta-2">Nombre</dt>
+              <dd className="font-medium text-tinta">
                 {sesion.usuario.nombres} {sesion.usuario.apellidos}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Correo</dt>
-              <dd className="font-medium text-slate-800">{sesion.usuario.email}</dd>
+              <dt className="text-tinta-2">Correo</dt>
+              <dd className="font-medium text-tinta">{sesion.usuario.email}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Rol</dt>
-              <dd className="font-medium text-slate-800">{sesion.usuario.rol_nombre}</dd>
+              <dt className="text-tinta-2">Rol</dt>
+              <dd className="font-medium text-tinta">{sesion.usuario.rol_nombre}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Cuenta</dt>
-              <dd className="font-medium text-slate-800">{sesion.usuario.cuenta_nombre ?? "Plataforma"}</dd>
+              <dt className="text-tinta-2">Cuenta</dt>
+              <dd className="font-medium text-tinta">{sesion.usuario.cuenta_nombre ?? "Plataforma"}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Fincas</dt>
-              <dd className="font-medium text-slate-800">{sesion.fincas.map((f) => f.nombre).join(", ")}</dd>
+              <dt className="text-tinta-2">Fincas</dt>
+              <dd className="font-medium text-tinta">{sesion.fincas.map((f) => f.nombre).join(", ")}</dd>
             </div>
           </dl>
         </Tarjeta>
