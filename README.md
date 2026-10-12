@@ -13,9 +13,9 @@ los reportes, para una o varias fincas y para varias empresas a la vez.
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![Licencia](https://img.shields.io/badge/License-GPLv3-blue)
 
-![Panel de Avícola](docs/manual/imagenes/03-panel.png)
+![Panel principal de Avícola: huevos disponibles, aves, ventas y lo que pide atención](docs/capturas/panel-escritorio.png)
 
-📘 **[Manual de usuario completo](docs/manual/MANUAL_DE_USUARIO.md)** — cómo usar cada pantalla, paso a paso.
+📘 **[Manual de usuario](docs/manual-usuario.md)**: qué puede hacer el dueño, el supervisor, el cajero y el operario, paso a paso y con capturas.
 
 ---
 
@@ -84,19 +84,25 @@ La demo tiene dos fincas con seis meses de trabajo simulado. Entra con cualquier
 
 ## Capturas
 
-| Historial de un sensor | Caja |
+| Caja con una venta en curso | Reportes del periodo |
 |---|---|
-| ![Sensor](docs/manual/imagenes/16-sensor-detalle.png) | ![Caja](docs/manual/imagenes/35-caja.png) |
+| ![Caja con una venta en curso](docs/capturas/caja-escritorio.png) | ![Reportes](docs/capturas/reportes-escritorio.png) |
 
-| Detalle de un lote | Avisos |
+| Lotes de aves | Inventario de las bodegas |
 |---|---|
-| ![Lote](docs/manual/imagenes/10-lote-detalle.png) | ![Campana](docs/manual/imagenes/05-campana.png) |
+| ![Lotes de aves](docs/capturas/aves-escritorio.png) | ![Inventario](docs/capturas/inventario-escritorio.png) |
 
-| En el celular | Menú en el celular |
+| Importar desde Excel | Avisos |
 |---|---|
-| <img src="docs/manual/imagenes/37-celular-panel.png" width="280" alt="Panel en el celular"> | <img src="docs/manual/imagenes/38-celular-menu.png" width="280" alt="Menú en el celular"> |
+| ![Importar desde Excel](docs/capturas/importar-excel-escritorio.png) | ![Avisos](docs/capturas/alertas-escritorio.png) |
 
-Todas las pantallas están en el [manual de usuario](docs/manual/MANUAL_DE_USUARIO.md).
+En el celular, el panel pone primero los accesos del operario y la caja deja el cobro al alcance del pulgar:
+
+| Panel | Caja | Entrar |
+|---|---|---|
+| <img src="docs/capturas/panel-celular.png" width="240" alt="Panel en el celular"> | <img src="docs/capturas/caja-celular.png" width="240" alt="Caja en el celular"> | <img src="docs/capturas/login-celular.png" width="240" alt="Pantalla para entrar en el celular"> |
+
+Más pantallas, y cómo se usa cada una, en el [manual de usuario](docs/manual-usuario.md).
 
 ---
 
@@ -388,7 +394,8 @@ avicola/
 ├── db/inicio/                   # crea el usuario de la aplicación en MySQL
 ├── scripts/                     # respaldo y demo (reinicio nocturno)
 ├── docs/
-│   ├── manual/                  # manual de usuario con capturas
+│   ├── manual-usuario.md        # manual de usuario por rol, con preguntas frecuentes
+│   ├── capturas/                # capturas de la web (escritorio y celular)
 │   └── DISENO_V2.md             # diseño del sistema
 ├── api/
 │   ├── app/
