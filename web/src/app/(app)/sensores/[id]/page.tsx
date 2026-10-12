@@ -115,28 +115,28 @@ export default function DetalleSensor() {
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href="/sensores" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-emerald-700">
+          <Link href="/sensores" className="inline-flex min-h-10 items-center gap-1 text-base font-semibold text-galpon hover:underline">
             <Icono nombre="izquierda" className="h-4 w-4" />
             Sensores
           </Link>
-          <h1 className="mt-1 flex flex-wrap items-center gap-2 text-xl font-semibold text-slate-800">
+          <h1 className="titulo-pantalla flex flex-wrap items-center gap-3">
             {sensor.nombre}
             <Insignia tono={estado.tono} punto>
               {estado.texto}
             </Insignia>
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="bajada">
             {sensor.tipo}
             {sensor.galpon_nombre ? ` · ${sensor.galpon_nombre}` : ""}
             {sensor.ubicacion ? ` · ${sensor.ubicacion}` : ""} · codigo {sensor.codigo}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-3xl font-semibold tracking-tight text-slate-900">
+        <div className="sm:text-right">
+          <p className="cifra text-[2.5rem] leading-none font-bold text-tinta">
             {sensor.ultimo_valor !== null ? redondo(sensor.ultimo_valor) : "—"}
-            <span className="ml-1 text-base font-normal text-slate-500">{u}</span>
+            <span className="ml-1 text-base font-normal text-tinta-2">{u}</span>
           </p>
-          <p className="text-xs text-slate-500">ultima medicion {haceCuanto(sensor.ultima_medicion)}</p>
+          <p className="text-sm text-tinta-2">ultima medicion {haceCuanto(sensor.ultima_medicion)}</p>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export default function DetalleSensor() {
             value={dia}
             max={hoy()}
             onChange={(e) => e.target.value && setDia(e.target.value)}
-            className="rounded-xl border-0 bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-300 focus:ring-2 focus:ring-emerald-600"
+            className="min-h-11 rounded-lg border-[1.5px] border-linea bg-superficie px-3 text-base text-tinta focus:border-galpon focus:ring-3 focus:ring-galpon/15 focus:outline-none"
             aria-label="Dia a consultar"
           />
         ) : null}
@@ -193,12 +193,12 @@ export default function DetalleSensor() {
         descripcion="De la mas reciente a la mas antigua"
         icono="reloj"
         acciones={
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-tinta-2">
             <input
               type="checkbox"
               checked={soloFuera}
               onChange={(e) => setSoloFuera(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+              className="h-5 w-5"
             />
             Solo fuera de rango
           </label>
@@ -212,9 +212,9 @@ export default function DetalleSensor() {
           <>
             <Tabla columnas={["Fecha y hora", "Valor", "Estado", "Origen"]}>
               {paginas.visibles.map((lectura) => (
-                <tr key={lectura.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600">{fechaHora(lectura.medido_en)}</td>
-                  <td className="whitespace-nowrap px-3 py-2 font-medium text-slate-800">
+                <tr key={lectura.id} className="hover:bg-cal">
+                  <td className="whitespace-nowrap px-3 py-2 text-tinta-2">{fechaHora(lectura.medido_en)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 font-medium text-tinta">
                     {lectura.valor.toLocaleString("es-CO")} {u}
                   </td>
                   <td className="px-3 py-2">
@@ -228,7 +228,7 @@ export default function DetalleSensor() {
                       </Insignia>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-xs text-slate-500">
+                  <td className="px-3 py-2 text-sm text-tinta-2">
                     {lectura.origen === "dispositivo" ? "Equipo" : (lectura.usuario_nombre ?? "Manual")}
                   </td>
                 </tr>
