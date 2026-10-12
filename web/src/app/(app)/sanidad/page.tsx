@@ -108,8 +108,8 @@ export default function SanidadPagina() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Vacunas y tratamientos</h1>
-          <p className="text-sm text-slate-500">Que se aplico, a que lote, cuando y con que dosis</p>
+          <h1 className="titulo-pantalla">Vacunas y tratamientos</h1>
+          <p className="bajada">Que se aplico, a que lote, cuando y con que dosis</p>
         </div>
         {puede("sanidad", "crear") ? <Boton onClick={() => setAbierto(true)}>Registrar aplicacion</Boton> : null}
       </div>
@@ -133,21 +133,21 @@ export default function SanidadPagina() {
           <Vacio>Todavia no hay vacunas ni tratamientos registrados.</Vacio>
         ) : (
           <>
-            <Tabla columnas={["Fecha", "Tipo", "Producto", "Lote o galpon", "Via", "Dosis", "Aves", "Refuerzo"]}>
+            <Tabla columnas={["Fecha", "Tipo", "Producto", "Lote o galpon", "Via", "Dosis", "Aves", "Refuerzo"]} numericas={[6]}>
               {pagAplicaciones.visibles.map((fila) => (
-                <tr key={fila.id} className="hover:bg-slate-50">
+                <tr key={fila.id} className="hover:bg-cal">
                   <td className="whitespace-nowrap px-3 py-2">{fecha(fila.fecha)}</td>
                   <td className="px-3 py-2 capitalize">{fila.tipo}</td>
-                  <td className="px-3 py-2 font-medium text-slate-700">
+                  <td className="px-3 py-2 font-medium text-tinta">
                     {fila.producto}
                     {fila.lote_producto ? (
-                      <span className="block text-xs text-slate-400">lote del producto {fila.lote_producto}</span>
+                      <span className="block text-sm text-tinta-3">lote del producto {fila.lote_producto}</span>
                     ) : null}
                   </td>
                   <td className="px-3 py-2">{fila.lote_codigo ?? fila.galpon_nombre ?? "-"}</td>
                   <td className="px-3 py-2">{fila.via}</td>
-                  <td className="px-3 py-2 text-slate-500">{fila.dosis ?? "-"}</td>
-                  <td className="px-3 py-2">{fila.aves_tratadas?.toLocaleString("es-CO") ?? "-"}</td>
+                  <td className="px-3 py-2 text-tinta-2">{fila.dosis ?? "-"}</td>
+                  <td className="px-3 py-2 cifra text-right">{fila.aves_tratadas?.toLocaleString("es-CO") ?? "-"}</td>
                   <td className="px-3 py-2">
                     {fila.proximo_refuerzo ? <Insignia tono="azul">{fecha(fila.proximo_refuerzo)}</Insignia> : "-"}
                   </td>
@@ -248,8 +248,8 @@ export default function SanidadPagina() {
             />
           </div>
 
-          <div className="space-y-3 rounded-lg border border-dashed border-slate-300 p-3">
-            <p className="text-sm font-medium text-slate-700">Descontar de la bodega (opcional)</p>
+          <div className="space-y-3 rounded-lg border border-dashed border-linea p-3">
+            <p className="text-sm font-medium text-tinta">Descontar de la bodega (opcional)</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <Lista
                 etiqueta="Producto en bodega"
