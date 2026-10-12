@@ -81,8 +81,8 @@ export default function Sensores() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Sensores</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="titulo-pantalla">Sensores</h1>
+          <p className="bajada">
             Lo que miden los equipos en los galpones. Se actualiza solo.
           </p>
         </div>
@@ -109,11 +109,11 @@ export default function Sensores() {
         {(datos ?? []).map((sensor) => {
           const estado = ESTADO[sensor.estado];
           return (
-            <div key={sensor.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
+            <div key={sensor.id} className="rounded-xl bg-superficie p-4 border border-linea">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-800">{sensor.nombre}</p>
-                  <p className="truncate text-xs text-slate-500">
+                  <p className="truncate font-medium text-tinta">{sensor.nombre}</p>
+                  <p className="truncate text-sm text-tinta-2">
                     {sensor.tipo}
                     {sensor.galpon_nombre ? ` · ${sensor.galpon_nombre}` : ""}
                   </p>
@@ -124,28 +124,28 @@ export default function Sensores() {
               </div>
 
               <div className="mt-3 flex items-end justify-between gap-3">
-                <p className="text-3xl font-semibold tracking-tight text-slate-900">
+                <p className="cifra text-[2rem] leading-tight font-bold text-tinta">
                   {sensor.ultimo_valor !== null ? sensor.ultimo_valor : "—"}
-                  <span className="ml-1 text-base font-normal text-slate-500">{unidad(sensor.unidad)}</span>
+                  <span className="ml-1 text-base font-normal text-tinta-2">{unidad(sensor.unidad)}</span>
                 </p>
                 <span
                   className={`${
-                    sensor.estado === "ok" ? "text-emerald-600" : sensor.estado === "sin_datos" ? "text-slate-300" : "text-rose-600"
+                    sensor.estado === "ok" ? "text-galpon" : sensor.estado === "sin_datos" ? "text-tinta-3" : "text-alerta"
                   } w-24`}
                 >
                   <Linea valores={sensor.historial} />
                 </span>
               </div>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-sm text-tinta-2">
                 {haceCuanto(sensor.ultima_medicion)} · {rango(sensor.min_ok, sensor.max_ok, unidad(sensor.unidad))}
               </p>
 
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                <span className="text-xs text-slate-400">{sensor.codigo}</span>
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-linea-suave pt-3">
+                <span className="text-sm text-tinta-3">{sensor.codigo}</span>
                 <Link
                   href={`/sensores/${sensor.id}`}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-galpon transition hover:bg-galpon-suave"
                 >
                   Ver historial
                   <Icono nombre="derecha" className="h-4 w-4" />
