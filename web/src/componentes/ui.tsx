@@ -227,7 +227,7 @@ export function Dato({
           <p className="cifra mt-1 truncate text-[1.875rem] leading-tight font-bold text-tinta">{valor}</p>
           {detalle ? <p className="mt-0.5 text-sm text-tinta-2">{detalle}</p> : null}
         </div>
-        <Icono nombre={icono} className={`h-5 w-5 shrink-0 ${TONOS_DATO[tono]}`} />
+        <Icono nombre={icono} className={`hidden h-5 w-5 shrink-0 sm:block ${TONOS_DATO[tono]}`} />
       </div>
       {children ? <div className="mt-3">{children}</div> : null}
     </div>

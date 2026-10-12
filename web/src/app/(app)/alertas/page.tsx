@@ -48,8 +48,8 @@ export default function Alertas() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Avisos</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="titulo-pantalla">Avisos</h1>
+          <p className="bajada">
             Lo que el sistema encontro revisando el inventario, los sensores, las vacunas y el trabajo
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function Alertas() {
 
       {datos ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
             <Dato titulo="Avisos activos" valor={datos.total} icono="campana" tono={datos.total ? "ambar" : "gris"} />
             <Dato titulo="Urgentes" valor={datos.criticas} icono="alerta" tono={datos.criticas ? "rojo" : "gris"} />
             <Dato titulo="Sin ver" valor={datos.sin_leer} icono="reloj" tono={datos.sin_leer ? "azul" : "gris"} />
@@ -88,32 +88,32 @@ export default function Alertas() {
               <Vacio icono="bien">Nada pendiente por ahora.</Vacio>
             ) : (
               <>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-linea-suave">
                   {pagAvisos.visibles.map((alerta) => (
                     <li key={alerta.id}>
                       <Link
                         href={rutaInterna(alerta.ruta)}
-                        className="flex items-start gap-3 py-3 transition hover:bg-slate-50"
+                        className="flex items-start gap-3 py-3 transition hover:bg-cal"
                       >
                         <span
-                          className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
+                          className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
                             alerta.nivel === "critico"
-                              ? "bg-rose-50 text-rose-700"
+                              ? "bg-alerta-suave text-alerta"
                               : alerta.nivel === "aviso"
-                                ? "bg-amber-50 text-amber-700"
-                                : "bg-sky-50 text-sky-700"
+                                ? "bg-aten-suave text-aten"
+                                : "bg-info-suave text-info"
                           }`}
                         >
                           <Icono nombre={TIPO[alerta.tipo] ?? "alerta"} className="h-5 w-5" />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium text-slate-800">{alerta.titulo}</span>
+                            <span className="font-medium text-tinta">{alerta.titulo}</span>
                             <Insignia tono={NIVEL[alerta.nivel].tono}>{NIVEL[alerta.nivel].texto}</Insignia>
                             {!alerta.leida ? <Insignia tono="verde">Nuevo</Insignia> : null}
                           </span>
                           {alerta.detalle ? (
-                            <span className="mt-0.5 block text-sm text-slate-500">{alerta.detalle}</span>
+                            <span className="mt-0.5 block text-sm text-tinta-2">{alerta.detalle}</span>
                           ) : null}
                         </span>
                       </Link>
