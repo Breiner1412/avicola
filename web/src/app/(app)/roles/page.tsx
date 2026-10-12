@@ -52,8 +52,8 @@ export default function Roles() {
   return (
     <>
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Roles y permisos</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="titulo-pantalla">Roles y permisos</h1>
+        <p className="bajada">
           Marca lo que puede hacer cada rol. Los cambios se guardan al instante.
         </p>
       </div>
@@ -65,34 +65,37 @@ export default function Roles() {
       {(roles ?? []).map((rol) => (
         <Tarjeta key={rol.clave} titulo={rol.nombre}>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="tabla w-full text-left text-base">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-3 py-2">Modulo</th>
+                <tr className="border-b-2 border-galpon text-sm text-tinta-2">
+                  <th className="px-3 py-3 font-semibold">Modulo</th>
                   {ACCIONES.map((accion) => (
-                    <th key={accion} className="px-3 py-2 text-center capitalize">
+                    <th key={accion} className="px-3 py-3 text-center font-semibold capitalize">
                       {accion}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-linea-suave">
                 {(modulos ?? []).map((modulo) => {
                   const permisos = matriz[rol.clave]?.[modulo.clave];
                   return (
                     <tr key={modulo.clave}>
                       <td className="px-3 py-1.5">
-                        {modulo.nombre}
-                        <span className="ml-2 text-xs text-slate-400">{modulo.grupo}</span>
+                        <span className="font-semibold">{modulo.nombre}</span>
+                        <span className="ml-2 text-sm text-tinta-2">{modulo.grupo}</span>
                       </td>
                       {ACCIONES.map((accion) => (
-                        <td key={accion} className="px-3 py-1.5 text-center">
-                          <input
-                            type="checkbox"
-                            disabled={!editable}
-                            checked={Boolean(permisos?.[accion])}
-                            onChange={() => alternar(rol.clave, modulo.clave, accion)}
-                          />
+                        <td key={accion} className="px-1 py-0 text-center">
+                          <label className="inline-grid h-11 w-11 cursor-pointer place-items-center rounded-lg hover:bg-cal-honda">
+                            <input
+                              type="checkbox"
+                              aria-label={`${accion} en ${modulo.nombre}`}
+                              disabled={!editable}
+                              checked={Boolean(permisos?.[accion])}
+                              onChange={() => alternar(rol.clave, modulo.clave, accion)}
+                            />
+                          </label>
                         </td>
                       ))}
                     </tr>
