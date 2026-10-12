@@ -74,8 +74,8 @@ export default function Proveedores() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Proveedores</h1>
-          <p className="text-sm text-slate-500">A quien se le compra el alimento, las vacunas y los insumos</p>
+          <h1 className="titulo-pantalla">Proveedores</h1>
+          <p className="bajada">A quien se le compra el alimento, las vacunas y los insumos</p>
         </div>
         {puede("proveedores", "crear") ? <Boton onClick={() => abrir()}>Nuevo proveedor</Boton> : null}
       </div>
@@ -90,8 +90,8 @@ export default function Proveedores() {
         ) : (
           <Tabla columnas={["Nombre", "Documento", "Telefono", "Correo", "Estado", ""]}>
             {datos.map((proveedor) => (
-              <tr key={proveedor.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">{proveedor.nombre}</td>
+              <tr key={proveedor.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">{proveedor.nombre}</td>
                 <td className="px-3 py-2">{proveedor.documento ?? "-"}</td>
                 <td className="px-3 py-2">{proveedor.telefono ?? "-"}</td>
                 <td className="px-3 py-2">{proveedor.email ?? "-"}</td>
