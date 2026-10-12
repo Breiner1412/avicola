@@ -234,7 +234,16 @@ export function Dato({
   );
 }
 
-export function Tabla({ columnas, children }: { columnas: string[]; children: ReactNode }) {
+export function Tabla({
+  columnas,
+  numericas = [],
+  children,
+}: {
+  columnas: string[];
+  /** Posiciones de las columnas con cifras: van alineadas a la derecha */
+  numericas?: number[];
+  children: ReactNode;
+}) {
   return (
     <div className="-mx-5 overflow-x-auto">
       <table className="tabla w-full text-left text-base">
@@ -243,7 +252,9 @@ export function Tabla({ columnas, children }: { columnas: string[]; children: Re
             {columnas.map((columna, i) => (
               <th
                 key={`${columna}-${i}`}
-                className="px-3 py-3 text-sm font-semibold whitespace-nowrap text-tinta-2 first:pl-5 last:pr-5"
+                className={`px-3 py-3 text-sm font-semibold whitespace-nowrap text-tinta-2 first:pl-5 last:pr-5 ${
+                  numericas.includes(i) ? "text-right" : ""
+                }`}
               >
                 {columna}
               </th>
