@@ -188,10 +188,13 @@ export default function Caja() {
     }
   }
 
-  // Botones de mas y menos: cambian la cantidad con la misma funcion que el campo
+  // Botones de mas y menos: parten de la cantidad vigente para no perder toques seguidos
   function sumar(indice: number, paso: number) {
-    const actual = Number(lineas[indice]?.cantidad || 0);
-    cambiar(indice, "cantidad", String(Math.max(1, actual + paso)));
+    setLineas((actuales) =>
+      actuales.map((l, i) =>
+        i === indice ? { ...l, cantidad: String(Math.max(1, Number(l.cantidad || 0) + paso)) } : l,
+      ),
+    );
   }
 
   if (cargando) return <Cargando />;
@@ -473,6 +476,11 @@ export default function Caja() {
               Revisar
             </a>
           </div>
+          {fallo ? (
+            <p role="alert" className="mb-2 rounded-lg border-l-4 border-alerta bg-alerta-suave px-3 py-2 text-base text-tinta">
+              {fallo}
+            </p>
+          ) : null}
           <Boton onClick={cobrar} disabled={guardando} tamano="cobrar" className="w-full">
             {guardando ? "Cobrando..." : `Cobrar ${moneda(total)}`}
           </Boton>
