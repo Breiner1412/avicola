@@ -104,8 +104,8 @@ export default function ProductosVenta() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Productos y precios</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="titulo-pantalla">Productos y precios</h1>
+          <p className="bajada">
             Como se vende cada cosa: huevos por unidad, docena, medio panal o panal; gallinas de descarte por unidad y
             engorde por kilo.
           </p>
@@ -121,22 +121,22 @@ export default function ProductosVenta() {
         ) : !datos || datos.length === 0 ? (
           <Vacio>Todavia no hay productos.</Vacio>
         ) : (
-          <Tabla columnas={["Producto", "Tipo", "Presentacion", "Se cobra", "Precio", "Estado", ""]}>
+          <Tabla columnas={["Producto", "Tipo", "Presentacion", "Se cobra", "Precio", "Estado", ""]} numericas={[4]}>
             {datos.map((producto) => (
-              <tr key={producto.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">{producto.nombre}</td>
+              <tr key={producto.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">{producto.nombre}</td>
                 <td className="px-3 py-2">
                   {CLASES.find((c) => c.valor === producto.clase)?.texto ?? producto.clase}
-                  {producto.tipo_huevo ? <span className="block text-xs text-slate-500">{producto.tipo_huevo}</span> : null}
+                  {producto.tipo_huevo ? <span className="block text-sm text-tinta-2">{producto.tipo_huevo}</span> : null}
                 </td>
                 <td className="px-3 py-2">
                   {PRESENTACIONES.find((p) => p.valor === producto.presentacion)?.texto}
                   {producto.factor > 1 ? (
-                    <span className="block text-xs text-slate-500">{producto.factor} huevos</span>
+                    <span className="block text-sm text-tinta-2">{producto.factor} huevos</span>
                   ) : null}
                 </td>
                 <td className="px-3 py-2">{producto.cobro_por === "kg" ? "por kilo" : "por unidad"}</td>
-                <td className="px-3 py-2 font-medium">
+                <td className="cifra px-3 py-2 text-right font-semibold">
                   {producto.precio !== null ? moneda(producto.precio) : <Insignia tono="rojo">sin precio</Insignia>}
                 </td>
                 <td className="px-3 py-2">
@@ -253,13 +253,13 @@ export default function ProductosVenta() {
           <Boton type="submit">Guardar precio</Boton>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">Historial</p>
+            <p className="mb-2 text-sm font-medium text-tinta">Historial</p>
             {!historial || historial.length === 0 ? (
               <Vacio>Sin precios anteriores.</Vacio>
             ) : (
               <ul className="space-y-1 text-sm">
                 {historial.map((precio) => (
-                  <li key={precio.id} className="flex justify-between border-b border-slate-100 py-1">
+                  <li key={precio.id} className="flex justify-between border-b border-linea-suave py-1">
                     <span>
                       {moneda(precio.precio)}
                       {precio.hasta ? null : (
@@ -268,7 +268,7 @@ export default function ProductosVenta() {
                         </span>
                       )}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-sm text-tinta-2">
                       desde {precio.desde}
                       {precio.hasta ? ` hasta ${precio.hasta}` : ""} · {precio.usuario_nombre ?? ""}
                     </span>
