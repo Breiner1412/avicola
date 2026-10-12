@@ -90,7 +90,7 @@ body {
     @apply bg-superficie transition-colors hover:bg-cal;
   }
   .tabla td {
-    @apply h-13;
+    @apply h-13 max-sm:whitespace-nowrap;
   }
   .tabla th:first-child,
   .tabla td:first-child {
