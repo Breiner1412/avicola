@@ -38,6 +38,8 @@ const GRAVEDADES = [
 ];
 
 const TONO: Record<string, "rojo" | "azul" | "gris"> = { alta: "rojo", media: "azul", baja: "gris" };
+// Franja a la izquierda de cada novedad: la gravedad se ve antes de leer
+const FRANJA: Record<string, string> = { alta: "border-l-alerta", media: "border-l-info", baja: "border-l-linea" };
 const moneda = (valor: number) => `$${Math.round(valor).toLocaleString("es-CO")}`;
 
 const VACIO = {
@@ -136,8 +138,8 @@ export default function Novedades() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Novedades</h1>
-          <p className="text-sm text-slate-500">Lo que se sale de lo normal: danos, clima, servicios, plagas o robos</p>
+          <h1 className="titulo-pantalla">Novedades</h1>
+          <p className="bajada">Lo que se sale de lo normal: danos, clima, servicios, plagas o robos</p>
         </div>
         {puede("novedades", "crear") ? <Boton onClick={() => setAbierto(true)}>Reportar novedad</Boton> : null}
       </div>
@@ -174,14 +176,14 @@ export default function Novedades() {
         {pagNovedades.visibles.map((novedad) => (
           <div
             key={novedad.id}
-            className={`rounded-xl border bg-white p-4 shadow-sm ${
-              novedad.estado === "cerrada" ? "border-slate-200 opacity-70" : "border-slate-200"
+            className={`rounded-xl border border-l-[5px] border-linea bg-superficie p-4 ${FRANJA[novedad.gravedad] ?? ""} ${
+              novedad.estado === "cerrada" ? "opacity-70" : ""
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="font-medium text-slate-800">{novedad.titulo}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-base font-bold text-tinta">{novedad.titulo}</p>
+                <p className="text-sm text-tinta-2">
                   {fecha(novedad.fecha)} · {CATEGORIAS.find((c) => c.valor === novedad.categoria)?.texto.split(" (")[0] ?? novedad.categoria}
                   {novedad.subtipo ? ` · ${novedad.subtipo}` : ""}
                   {novedad.reportado_por ? ` · ${novedad.reportado_por}` : ""}
@@ -197,16 +199,16 @@ export default function Novedades() {
               </div>
             </div>
 
-            {novedad.descripcion ? <p className="mt-2 text-sm text-slate-600">{novedad.descripcion}</p> : null}
+            {novedad.descripcion ? <p className="mt-2 text-base text-tinta">{novedad.descripcion}</p> : null}
 
-            <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
+            <div className="mt-2 flex flex-wrap gap-4 text-sm text-tinta-2">
               {novedad.aves_afectadas ? <span>{novedad.aves_afectadas} ave(s) afectadas</span> : null}
               {novedad.costo_estimado ? <span>Costo estimado {moneda(novedad.costo_estimado)}</span> : null}
             </div>
 
-            {novedad.acciones ? <p className="mt-2 text-xs text-slate-600">Se hizo: {novedad.acciones}</p> : null}
+            {novedad.acciones ? <p className="mt-2 text-sm text-tinta-2">Se hizo: {novedad.acciones}</p> : null}
             {novedad.cerrada_por ? (
-              <p className="mt-1 text-xs text-emerald-700">Cerrada por {novedad.cerrada_por}</p>
+              <p className="mt-1 text-sm text-galpon">Cerrada por {novedad.cerrada_por}</p>
             ) : null}
 
             {puede("novedades", "editar") && novedad.estado !== "cerrada" ? (
@@ -316,7 +318,7 @@ export default function Novedades() {
           </div>
 
           {Number(formulario.aves_afectadas || 0) > 0 && formulario.lote_id ? (
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-tinta">
               <input
                 type="checkbox"
                 checked={formulario.descontar_aves}
