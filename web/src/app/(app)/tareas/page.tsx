@@ -35,6 +35,8 @@ const ESTADOS = [
 ];
 
 const TONO_PRIORIDAD: Record<string, "rojo" | "azul" | "gris"> = { alta: "rojo", media: "azul", baja: "gris" };
+// Franja a la izquierda de cada tarea: la prioridad se ve antes de leer
+const FRANJA_PRIORIDAD: Record<string, string> = { alta: "border-l-alerta", media: "border-l-info", baja: "border-l-linea" };
 
 export default function Tareas() {
   const { sesion, puede } = useSesion();
@@ -164,11 +166,11 @@ export default function Tareas() {
 
   function Tarjetita({ fila }: { fila: Tarea }) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={`rounded-xl border border-l-[5px] border-linea bg-superficie p-4 ${FRANJA_PRIORIDAD[fila.prioridad] ?? ""}`}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="font-medium text-slate-800">{fila.titulo}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-base font-bold text-tinta">{fila.titulo}</p>
+            <p className="text-sm text-tinta-2">
               {fecha(fila.fecha)}
               {fila.hora ? ` · ${fila.hora}` : ""}
               {fila.asignado_nombre ? ` · ${fila.asignado_nombre}` : " · sin asignar"}
@@ -178,9 +180,9 @@ export default function Tareas() {
           <Insignia tono={TONO_PRIORIDAD[fila.prioridad]}>{fila.prioridad}</Insignia>
         </div>
 
-        {fila.descripcion ? <p className="mt-2 text-sm text-slate-600">{fila.descripcion}</p> : null}
-        {fila.notas ? <p className="mt-1 text-xs text-slate-500">Nota: {fila.notas}</p> : null}
-        {fila.terminada_por ? <p className="mt-1 text-xs text-emerald-700">Hecha por {fila.terminada_por}</p> : null}
+        {fila.descripcion ? <p className="mt-2 text-sm text-tinta-2">{fila.descripcion}</p> : null}
+        {fila.notas ? <p className="mt-1 text-sm text-tinta-2">Nota: {fila.notas}</p> : null}
+        {fila.terminada_por ? <p className="mt-1 text-sm text-galpon">Hecha por {fila.terminada_por}</p> : null}
 
         {puede("tareas", "editar") ? (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -208,8 +210,8 @@ export default function Tareas() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Tareas</h1>
-          <p className="text-sm text-slate-500">Lo que hay que hacer hoy en {sesion?.finca_activa?.nombre}</p>
+          <h1 className="titulo-pantalla">Tareas</h1>
+          <p className="bajada">Lo que hay que hacer hoy en {sesion?.finca_activa?.nombre}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {puede("tareas", "crear") ? (
@@ -229,7 +231,7 @@ export default function Tareas() {
       <Tarjeta>
         <div className="flex flex-wrap items-end gap-3">
           <Campo etiqueta="Dia" type="date" value={dia} onChange={(e) => setDia(e.target.value)} disabled={verTodas} />
-          <label className="flex items-center gap-2 pb-2 text-sm text-slate-600">
+          <label className="flex min-h-11 items-center gap-2.5 text-base text-tinta">
             <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} />
             Ver todas las pendientes
           </label>
@@ -271,11 +273,11 @@ export default function Tareas() {
             {rutinas.map((fila) => (
               <li
                 key={fila.id}
-                className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2"
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-linea-suave pb-2"
               >
                 <span>
-                  <span className="font-medium text-slate-700">{fila.titulo}</span>
-                  <span className="block text-xs text-slate-500">
+                  <span className="font-medium text-tinta">{fila.titulo}</span>
+                  <span className="block text-sm text-tinta-2">
                     {fila.frecuencia === "diaria"
                       ? "Todos los dias"
                       : fila.frecuencia === "semanal"
@@ -402,7 +404,7 @@ export default function Tareas() {
               {DIAS.map((nombre, indice) => (
                 <label
                   key={nombre}
-                  className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+                  className="flex items-center gap-1 rounded-lg border border-linea px-2 py-1 text-sm"
                 >
                   <input
                     type="checkbox"
