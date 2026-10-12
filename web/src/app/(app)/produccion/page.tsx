@@ -91,35 +91,35 @@ export default function Produccion() {
   return (
     <>
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Produccion de huevos</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="titulo-pantalla">Produccion de huevos</h1>
+        <p className="bajada">
           Registra la recoleccion del dia. Si te equivocas, vuelve a registrar el mismo dia y se corrige.
         </p>
       </div>
 
       {resumen ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Recolectados</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
+          <div className="rounded-xl border border-linea bg-superficie p-4">
+            <p className="text-sm text-tinta-2">Recolectados</p>
+            <p className="cifra mt-1 text-[1.75rem] leading-tight font-bold text-tinta">
               {resumen.huevos_recolectados.toLocaleString("es-CO")}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Promedio diario</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">{Math.round(resumen.promedio_diario).toLocaleString("es-CO")}</p>
-            <p className="text-xs text-slate-500">{resumen.dias_con_registro} dias con registro</p>
+          <div className="rounded-xl border border-linea bg-superficie p-4">
+            <p className="text-sm text-tinta-2">Promedio diario</p>
+            <p className="cifra mt-1 text-[1.75rem] leading-tight font-bold text-tinta">{Math.round(resumen.promedio_diario).toLocaleString("es-CO")}</p>
+            <p className="text-sm text-tinta-2">{resumen.dias_con_registro} dias con registro</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Disponibles</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">
+          <div className="rounded-xl border border-linea bg-superficie p-4">
+            <p className="text-sm text-tinta-2">Disponibles</p>
+            <p className="cifra mt-1 text-[1.75rem] leading-tight font-bold text-tinta">
               {resumen.huevos_disponibles.toLocaleString("es-CO")}
             </p>
-            <p className="text-xs text-slate-500">{resumen.panales_disponibles.toLocaleString("es-CO", { maximumFractionDigits: 1 })} panales</p>
+            <p className="text-sm text-tinta-2">{resumen.panales_disponibles.toLocaleString("es-CO", { maximumFractionDigits: 1 })} panales</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Lotes en postura</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">
+          <div className="rounded-xl border border-linea bg-superficie p-4">
+            <p className="text-sm text-tinta-2">Lotes en postura</p>
+            <p className="cifra mt-1 text-[1.75rem] leading-tight font-bold text-tinta">
               {(lotes ?? []).filter((l) => l.proposito === "postura").length}
             </p>
           </div>
@@ -139,19 +139,23 @@ export default function Produccion() {
                 ))}
               </Lista>
               <Campo etiqueta="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-              <div className="flex items-end pb-2 text-sm text-slate-600">
-                Total: <span className="ml-2 font-semibold text-slate-800">{total.toLocaleString("es-CO")}</span>
-                {lote ? <span className="ml-3">postura {porcentaje}%</span> : null}
+              <div className="flex items-end gap-4 rounded-lg bg-cal px-4 py-2 sm:bg-transparent sm:px-0" aria-live="polite">
+                <span className="text-base text-tinta-2">
+                  Total <span className="cifra ml-1 text-2xl font-bold text-tinta">{total.toLocaleString("es-CO")}</span>
+                </span>
+                {lote ? <span className="pb-0.5 text-base text-tinta-2">postura {porcentaje} %</span> : null}
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {(tipos ?? []).map((tipo) => (
                 <Campo
                   key={tipo.id}
                   etiqueta={tipo.comercial ? tipo.nombre : `${tipo.nombre} (no se vende)`}
                   type="number"
                   min={0}
+                  inputMode="numeric"
+                  className="cifra text-lg"
                   value={cantidades[tipo.id] ?? ""}
                   onChange={(e) => setCantidades({ ...cantidades, [tipo.id]: e.target.value })}
                 />
@@ -161,7 +165,7 @@ export default function Produccion() {
             {fallo ? <Aviso>{fallo}</Aviso> : null}
             {aviso ? <Aviso tipo="bien">{aviso}</Aviso> : null}
 
-            <Boton type="submit" disabled={guardando}>
+            <Boton type="submit" tamano="grande" disabled={guardando} className="w-full sm:w-auto">
               {guardando ? "Guardando..." : "Guardar recoleccion"}
             </Boton>
           </form>
@@ -172,10 +176,10 @@ export default function Produccion() {
         {!stock || stock.length === 0 ? (
           <Vacio>No hay huevos en existencia.</Vacio>
         ) : (
-          <Tabla columnas={["Tipo", "Huevos", "Panales"]}>
+          <Tabla columnas={["Tipo", "Huevos", "Panales"]} numericas={[1, 2]}>
             {stock.map((fila) => (
-              <tr key={fila.tipo_huevo_id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">
+              <tr key={fila.tipo_huevo_id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">
                   {fila.tipo}
                   {!fila.comercial ? (
                     <span className="ml-2">
@@ -183,8 +187,8 @@ export default function Produccion() {
                     </span>
                   ) : null}
                 </td>
-                <td className="px-3 py-2">{fila.cantidad.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2">{fila.panales.toLocaleString("es-CO", { maximumFractionDigits: 1 })}</td>
+                <td className="px-3 py-2 cifra text-right">{fila.cantidad.toLocaleString("es-CO")}</td>
+                <td className="px-3 py-2 cifra text-right">{fila.panales.toLocaleString("es-CO", { maximumFractionDigits: 1 })}</td>
               </tr>
             ))}
           </Tabla>
@@ -198,15 +202,15 @@ export default function Produccion() {
           <Vacio>Todavia no hay recolecciones registradas.</Vacio>
         ) : (
           <>
-            <Tabla columnas={["Fecha", "Lote", "Total", "Se venden", "Postura", "Detalle"]}>
+            <Tabla columnas={["Fecha", "Lote", "Total", "Se venden", "Postura", "Detalle"]} numericas={[2, 3]}>
               {pagDias.visibles.map((dia) => (
-                <tr key={`${dia.lote_id}-${dia.fecha}`} className="hover:bg-slate-50">
+                <tr key={`${dia.lote_id}-${dia.fecha}`} className="hover:bg-cal">
                   <td className="whitespace-nowrap px-3 py-2">{verFecha(dia.fecha)}</td>
                   <td className="px-3 py-2">{dia.lote_codigo}</td>
-                  <td className="px-3 py-2 font-medium text-slate-700">{dia.total.toLocaleString("es-CO")}</td>
-                  <td className="px-3 py-2">{dia.comercial.toLocaleString("es-CO")}</td>
+                  <td className="px-3 py-2 font-medium text-tinta cifra text-right">{dia.total.toLocaleString("es-CO")}</td>
+                  <td className="px-3 py-2 cifra text-right">{dia.comercial.toLocaleString("es-CO")}</td>
                   <td className="px-3 py-2">{dia.porcentaje_postura}%</td>
-                  <td className="px-3 py-2 text-xs text-slate-500">
+                  <td className="px-3 py-2 text-sm text-tinta-2">
                     {Object.entries(dia.detalles)
                       .map(([tipo, cantidad]) => `${tipo}: ${cantidad}`)
                       .join(" · ")}
