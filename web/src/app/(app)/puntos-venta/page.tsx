@@ -84,8 +84,8 @@ export default function PuntosVenta() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Puntos de venta</h1>
-          <p className="text-sm text-slate-500">Puede haber uno por finca y uno o varios centrales</p>
+          <h1 className="titulo-pantalla">Puntos de venta</h1>
+          <p className="bajada">Puede haber uno por finca y uno o varios centrales</p>
         </div>
         {puede("puntos_venta", "crear") ? <Boton onClick={() => abrir()}>Nuevo punto</Boton> : null}
       </div>
@@ -100,11 +100,11 @@ export default function PuntosVenta() {
         ) : (
           <Tabla columnas={["Codigo", "Nombre", "Donde", "Numeracion", "Estado", ""]}>
             {datos.map((punto) => (
-              <tr key={punto.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">{punto.codigo}</td>
+              <tr key={punto.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">{punto.codigo}</td>
                 <td className="px-3 py-2">
                   {punto.nombre}
-                  {punto.direccion ? <span className="block text-xs text-slate-500">{punto.direccion}</span> : null}
+                  {punto.direccion ? <span className="block text-sm text-tinta-2">{punto.direccion}</span> : null}
                 </td>
                 <td className="px-3 py-2">
                   {punto.es_central ? (
@@ -113,7 +113,7 @@ export default function PuntosVenta() {
                     <Insignia>{sesion?.fincas.find((f) => f.id === punto.finca_id)?.nombre ?? "Finca"}</Insignia>
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-500">
+                <td className="px-3 py-2 text-sm text-tinta-2">
                   {punto.prefijo}-{String(punto.consecutivo + 1).padStart(6, "0")}
                 </td>
                 <td className="px-3 py-2">
@@ -137,12 +137,12 @@ export default function PuntosVenta() {
       {turnos && turnos.length > 0 ? (
         <Tarjeta titulo="Turnos de caja">
           <>
-            <Tabla columnas={["Punto", "Cajero", "Abierto", "Ventas", "Vendido", "Contado", "Diferencia"]}>
+            <Tabla columnas={["Punto", "Cajero", "Abierto", "Ventas", "Vendido", "Contado", "Diferencia"]} numericas={[3, 4, 5]}>
               {pagTurnos.visibles.map((turno) => (
-                <tr key={turno.id} className="hover:bg-slate-50">
+                <tr key={turno.id} className="hover:bg-cal">
                   <td className="px-3 py-2">{turno.punto_venta_nombre}</td>
                   <td className="px-3 py-2">{turno.usuario_nombre}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-500">
+                  <td className="whitespace-nowrap px-3 py-2 text-sm text-tinta-2">
                     {fechaHora(turno.abierto_en)}
                     {turno.estado === "abierto" ? (
                       <span className="ml-2">
@@ -150,9 +150,9 @@ export default function PuntosVenta() {
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2">{turno.ventas}</td>
-                  <td className="px-3 py-2">{moneda(turno.total_vendido)}</td>
-                  <td className="px-3 py-2">
+                  <td className="cifra px-3 py-2 text-right">{turno.ventas}</td>
+                  <td className="cifra px-3 py-2 text-right">{moneda(turno.total_vendido)}</td>
+                  <td className="cifra px-3 py-2 text-right">
                     {turno.efectivo_contado !== null ? moneda(turno.efectivo_contado) : "-"}
                   </td>
                   <td className="px-3 py-2">
