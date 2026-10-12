@@ -64,8 +64,8 @@ export default function Fincas() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Fincas</h1>
-          <p className="text-sm text-slate-500">Fincas a las que tienes acceso</p>
+          <h1 className="titulo-pantalla">Fincas</h1>
+          <p className="bajada">Fincas a las que tienes acceso</p>
         </div>
         {puede("fincas", "crear") ? <Boton onClick={() => abrir()}>Nueva finca</Boton> : null}
       </div>
@@ -80,8 +80,8 @@ export default function Fincas() {
         ) : (
           <Tabla columnas={["Codigo", "Nombre", "Municipio", "Telefono", "Estado", ""]}>
             {datos.map((finca) => (
-              <tr key={finca.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">{finca.codigo}</td>
+              <tr key={finca.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">{finca.codigo}</td>
                 <td className="px-3 py-2">{finca.nombre}</td>
                 <td className="px-3 py-2">
                   {finca.municipio ?? "-"}
