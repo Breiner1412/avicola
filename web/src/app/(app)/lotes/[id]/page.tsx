@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Icono } from "@/componentes/iconos";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { mensajeDeError, useDatos } from "@/lib/hooks";
@@ -25,6 +26,7 @@ import {
   Lista,
   Modal,
   Paginador,
+  Pestanas,
   Tabla,
   Tarjeta,
   Vacio,
@@ -54,10 +56,10 @@ const PESTANAS = [
 
 function Dato({ titulo, valor, detalle }: { titulo: string; valor: string | number; detalle?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{titulo}</p>
-      <p className="mt-1 text-xl font-semibold text-slate-800">{valor}</p>
-      {detalle ? <p className="mt-0.5 text-xs text-slate-500">{detalle}</p> : null}
+    <div className="rounded-xl border border-linea bg-superficie p-4">
+      <p className="text-sm text-tinta-2">{titulo}</p>
+      <p className="cifra mt-1 text-[1.3rem] leading-tight font-bold text-tinta [overflow-wrap:anywhere] sm:text-[1.75rem]">{valor}</p>
+      {detalle ? <p className="mt-0.5 text-sm text-tinta-2">{detalle}</p> : null}
     </div>
   );
 }
@@ -242,10 +244,11 @@ export default function DetalleLote() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Link href="/lotes" className="text-sm text-emerald-700 hover:underline">
-            ← Volver a los lotes
+          <Link href="/lotes" className="inline-flex min-h-10 items-center gap-1 text-base font-semibold text-galpon hover:underline">
+            <Icono nombre="izquierda" className="h-4 w-4" />
+            Volver a los lotes
           </Link>
-          <h1 className="mt-1 text-xl font-semibold text-slate-800">
+          <h1 className="titulo-pantalla">
             Lote {lote.codigo}
             {lote.estado === "cerrado" ? (
               <span className="ml-2">
@@ -253,11 +256,11 @@ export default function DetalleLote() {
               </span>
             ) : null}
           </h1>
-          <p className="text-sm text-slate-500">
-            {lote.galpon_nombre} · {lote.raza_nombre ?? "sin raza"} · {lote.proposito} · {lote.edad_semanas} semanas
+          <p className="bajada">
+            {lote.galpon_nombre}, {lote.raza_nombre ?? "sin raza"}, {lote.proposito}, {lote.edad_semanas} semanas
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {puede("movimientos_aves", "crear") && lote.estado === "activo" ? (
             <Boton onClick={() => setModal("movimiento")}>Registrar aves</Boton>
           ) : null}
@@ -279,7 +282,7 @@ export default function DetalleLote() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
         <Dato
           titulo="Aves"
           valor={lote.aves_actuales.toLocaleString("es-CO")}
@@ -315,7 +318,7 @@ export default function DetalleLote() {
       </div>
 
       <Tarjeta titulo="Costos hasta hoy">
-        <div className="grid gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
           <Dato titulo="Aves" valor={moneda(balance.costo_aves)} />
           <Dato titulo="Alimento" valor={moneda(balance.alimento_costo)} />
           <Dato titulo="Sanidad" valor={moneda(balance.costo_sanidad)} />
@@ -327,21 +330,7 @@ export default function DetalleLote() {
         </div>
       </Tarjeta>
 
-      <div className="flex gap-2 border-b border-slate-200">
-        {PESTANAS.map((p) => (
-          <button
-            key={p.clave}
-            onClick={() => setPestana(p.clave)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm ${
-              pestana === p.clave
-                ? "border-emerald-700 font-medium text-emerald-800"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {p.texto}
-          </button>
-        ))}
-      </div>
+      <Pestanas opciones={PESTANAS} activa={pestana} onCambiar={(clave) => setPestana(clave as typeof pestana)} />
 
       {pestana === "movimientos" ? (
         <Tarjeta>
@@ -349,9 +338,9 @@ export default function DetalleLote() {
             <Vacio>Sin movimientos registrados.</Vacio>
           ) : (
             <>
-              <Tabla columnas={["Fecha", "Tipo", "Cantidad", "Motivo", "Quien", ""]}>
+              <Tabla columnas={["Fecha", "Tipo", "Cantidad", "Motivo", "Quien", ""]} numericas={[2]}>
                 {pagMovimientos.visibles.map((m) => (
-                  <tr key={m.id} className={m.anulado ? "text-slate-400" : "hover:bg-slate-50"}>
+                  <tr key={m.id} className={m.anulado ? "text-tinta-3" : "hover:bg-cal"}>
                     <td className="whitespace-nowrap px-3 py-2">{fecha(m.fecha)}</td>
                     <td className="px-3 py-2 capitalize">
                       {m.tipo}
@@ -361,9 +350,9 @@ export default function DetalleLote() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2">{m.cantidad.toLocaleString("es-CO")}</td>
-                    <td className="px-3 py-2 text-slate-500">{m.motivo ?? "-"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{m.usuario_nombre ?? "-"}</td>
+                    <td className="px-3 py-2 cifra text-right">{m.cantidad.toLocaleString("es-CO")}</td>
+                    <td className="px-3 py-2 text-tinta-2">{m.motivo ?? "-"}</td>
+                    <td className="px-3 py-2 text-sm text-tinta-2">{m.usuario_nombre ?? "-"}</td>
                     <td className="px-3 py-2 text-right">
                       {puede("movimientos_aves", "editar") && !m.anulado && m.tipo !== "ingreso" ? (
                         <Boton tono="peligro" onClick={() => anularMovimiento(m.id)}>
@@ -386,16 +375,16 @@ export default function DetalleLote() {
             <Vacio>Todavia no se ha registrado alimento para este lote.</Vacio>
           ) : (
             <>
-              <Tabla columnas={["Fecha", "Alimento", "Cantidad", "Costo", "Quien"]}>
+              <Tabla columnas={["Fecha", "Alimento", "Cantidad", "Costo", "Quien"]} numericas={[3]}>
                 {pagConsumos.visibles.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50">
+                  <tr key={c.id} className="hover:bg-cal">
                     <td className="whitespace-nowrap px-3 py-2">{fecha(c.fecha)}</td>
                     <td className="px-3 py-2">{c.articulo_nombre}</td>
                     <td className="px-3 py-2">
                       {c.cantidad.toLocaleString("es-CO")} {c.unidad}
                     </td>
-                    <td className="px-3 py-2">{moneda(c.costo)}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{c.usuario_nombre ?? "-"}</td>
+                    <td className="px-3 py-2 cifra text-right">{moneda(c.costo)}</td>
+                    <td className="px-3 py-2 text-sm text-tinta-2">{c.usuario_nombre ?? "-"}</td>
                   </tr>
                 ))}
               </Tabla>
@@ -413,12 +402,12 @@ export default function DetalleLote() {
             <>
               <Tabla columnas={["Fecha", "Edad", "Aves pesadas", "Peso total", "Promedio"]}>
                 {pagPesajes.visibles.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50">
+                  <tr key={p.id} className="hover:bg-cal">
                     <td className="whitespace-nowrap px-3 py-2">{fecha(p.fecha)}</td>
                     <td className="px-3 py-2">{p.edad_dias ? `${p.edad_dias} dias` : "-"}</td>
                     <td className="px-3 py-2">{p.aves_muestra}</td>
                     <td className="px-3 py-2">{p.peso_total_kg} kg</td>
-                    <td className="px-3 py-2 font-medium text-slate-700">{p.peso_promedio_kg} kg</td>
+                    <td className="px-3 py-2 font-medium text-tinta">{p.peso_promedio_kg} kg</td>
                   </tr>
                 ))}
               </Tabla>
@@ -431,7 +420,7 @@ export default function DetalleLote() {
       {pestana === "sanidad" ? (
         <Tarjeta
           acciones={
-            <Link href="/sanidad" className="text-sm text-emerald-700 hover:underline">
+            <Link href="/sanidad" className="inline-flex min-h-10 items-center text-base font-semibold text-galpon hover:underline">
               Registrar
             </Link>
           }
@@ -442,10 +431,10 @@ export default function DetalleLote() {
             <>
               <Tabla columnas={["Fecha", "Tipo", "Producto", "Via", "Aves", "Refuerzo"]}>
                 {pagSanidad.visibles.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50">
+                  <tr key={s.id} className="hover:bg-cal">
                     <td className="whitespace-nowrap px-3 py-2">{fecha(s.fecha)}</td>
                     <td className="px-3 py-2 capitalize">{s.tipo}</td>
-                    <td className="px-3 py-2 font-medium text-slate-700">{s.producto}</td>
+                    <td className="px-3 py-2 font-medium text-tinta">{s.producto}</td>
                     <td className="px-3 py-2">{s.via}</td>
                     <td className="px-3 py-2">{s.aves_tratadas ?? "-"}</td>
                     <td className="px-3 py-2">{s.proximo_refuerzo ?? "-"}</td>
