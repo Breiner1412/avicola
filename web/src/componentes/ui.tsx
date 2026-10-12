@@ -141,18 +141,27 @@ export function CifraFranja({
   titulo,
   valor,
   detalle,
+  compacta = false,
   children,
 }: {
   titulo: string;
   valor: ReactNode;
   detalle?: ReactNode;
+  /** Cifra mas pequena, para cuando van dos por fila en el celular */
+  compacta?: boolean;
   children?: ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1 px-5 py-4 sm:px-6 sm:py-5">
       <span className="text-base text-galpon-claro">{titulo}</span>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="cifra text-[2.25rem] leading-none font-bold text-white [font-stretch:118%] sm:text-[2.75rem]">
+        <span
+          className={`cifra leading-none font-bold text-white [overflow-wrap:anywhere] ${
+            compacta
+              ? "text-[1.35rem] [font-stretch:100%] sm:text-[2.25rem] sm:[font-stretch:118%]"
+              : "text-[2.25rem] [font-stretch:118%] sm:text-[2.75rem]"
+          }`}
+        >
           {valor}
         </span>
         {children}
