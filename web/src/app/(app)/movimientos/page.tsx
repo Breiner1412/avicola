@@ -161,8 +161,8 @@ export default function Movimientos() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Entradas y salidas</h1>
-          <p className="text-sm text-slate-500">Todo movimiento queda registrado; si hay un error, se anula.</p>
+          <h1 className="titulo-pantalla">Entradas y salidas</h1>
+          <p className="bajada">Todo movimiento queda registrado; si hay un error, se anula.</p>
         </div>
         {puede("movimientos_inventario", "crear") ? <Boton onClick={abrir}>Nuevo movimiento</Boton> : null}
       </div>
@@ -211,10 +211,10 @@ export default function Movimientos() {
           <Vacio>No hay movimientos con esos filtros.</Vacio>
         ) : (
           <>
-            <Tabla columnas={["Fecha", "Tipo", "Bodega", "Articulos", "Valor", "Registro", ""]}>
+            <Tabla columnas={["Fecha", "Tipo", "Bodega", "Articulos", "Valor", "Registro", ""]} numericas={[3, 4]}>
               {datos.datos.map((movimiento) => (
                 <Fragment key={movimiento.id}>
-                  <tr className={movimiento.anulado ? "bg-slate-50 text-slate-400" : "hover:bg-slate-50"}>
+                  <tr className={movimiento.anulado ? "bg-cal text-tinta-3" : "hover:bg-cal"}>
                     <td className="whitespace-nowrap px-3 py-2">{fecha(movimiento.fecha)}</td>
                     <td className="px-3 py-2 capitalize">
                       {movimiento.tipo}
@@ -228,11 +228,11 @@ export default function Movimientos() {
                       {movimiento.bodega_nombre}
                       {movimiento.bodega_destino_nombre ? ` → ${movimiento.bodega_destino_nombre}` : ""}
                     </td>
-                    <td className="px-3 py-2">{movimiento.items.length}</td>
-                    <td className="px-3 py-2">
+                    <td className="cifra px-3 py-2 text-right">{movimiento.items.length}</td>
+                    <td className="cifra px-3 py-2 text-right">
                       {movimiento.total ? `$${movimiento.total.toLocaleString("es-CO")}` : "-"}
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{movimiento.usuario_nombre ?? "-"}</td>
+                    <td className="px-3 py-2 text-sm text-tinta-2">{movimiento.usuario_nombre ?? "-"}</td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex justify-end gap-2">
                         <Boton
@@ -251,7 +251,7 @@ export default function Movimientos() {
                   </tr>
                   {abiertoDetalle === movimiento.id ? (
                     <tr>
-                      <td colSpan={7} className="bg-slate-50 px-5 py-3">
+                      <td colSpan={7} className="bg-cal px-5 py-3">
                         <ul className="space-y-1 text-sm">
                           {movimiento.items.map((item) => (
                             <li key={item.id} className="flex flex-wrap justify-between gap-2">
@@ -260,7 +260,7 @@ export default function Movimientos() {
                                 {item.lote ? ` · lote ${item.lote}` : ""}
                                 {item.vencimiento ? ` · vence ${item.vencimiento}` : ""}
                               </span>
-                              <span className="text-slate-600">
+                              <span className="text-tinta-2">
                                 {item.cantidad.toLocaleString("es-CO")} {item.unidad}
                                 {movimiento.tipo === "ajuste"
                                   ? ` (diferencia ${item.cantidad_aplicada.toLocaleString("es-CO")})`
@@ -270,7 +270,7 @@ export default function Movimientos() {
                             </li>
                           ))}
                         </ul>
-                        <p className="mt-2 text-xs text-slate-500">
+                        <p className="mt-2 text-sm text-tinta-2">
                           {movimiento.motivo ? `Motivo: ${movimiento.motivo}. ` : ""}
                           {movimiento.documento ? `Documento: ${movimiento.documento}. ` : ""}
                           {movimiento.observaciones ?? ""}
@@ -401,8 +401,8 @@ export default function Movimientos() {
             ) : null}
           </div>
 
-          <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-            <p className="text-sm font-medium text-slate-700">
+          <div className="space-y-3 rounded-lg border border-linea p-3">
+            <p className="text-sm font-medium text-tinta">
               {cabecera.tipo === "ajuste" ? "Cantidad contada de cada articulo" : "Articulos"}
             </p>
 
@@ -448,7 +448,7 @@ export default function Movimientos() {
                     type="button"
                     onClick={() => setLineas((actuales) => actuales.filter((_, i) => i !== indice))}
                     disabled={lineas.length === 1}
-                    className="mb-1 rounded p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-40"
+                    className="mb-1 rounded p-2 text-tinta-3 hover:bg-cal-honda disabled:opacity-40"
                     aria-label="Quitar"
                   >
                     ✕
