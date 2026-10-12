@@ -69,7 +69,7 @@ export function ProveedorDialogos({ children }: { children: ReactNode }) {
         position="top-right"
         richColors
         closeButton
-        toastOptions={{ className: "!rounded-xl !text-sm", duration: 4000 }}
+        toastOptions={{ className: "!rounded-lg !font-sans !text-base", duration: 4000 }}
       />
     </Contexto.Provider>
   );
@@ -99,11 +99,11 @@ function Ventana({ abierto, cerrar }: { abierto: Abierto; cerrar: () => void }) 
   }, []);
 
   const clasesCampo =
-    "mt-1.5 block w-full rounded-xl border-0 bg-white px-3 py-2 text-sm text-slate-800 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-600";
+    "mt-1.5 block min-h-12 w-full rounded-lg border-[1.5px] border-linea bg-superficie px-3 py-2 text-base font-normal text-tinta placeholder:text-tinta-3 focus:border-galpon focus:ring-3 focus:ring-galpon/15 focus:outline-none";
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-galpon-honda/55 p-3 sm:items-center sm:p-4"
       onMouseDown={(e) => e.target === e.currentTarget && responder(false)}
     >
       <form
@@ -115,24 +115,24 @@ function Ventana({ abierto, cerrar }: { abierto: Abierto; cerrar: () => void }) 
           if (requerido && !texto.trim()) return;
           responder(true);
         }}
-        className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-slate-200"
+        className="w-full max-w-md rounded-xl bg-superficie p-5 shadow-[0_20px_50px_-12px_rgb(22_58_44/0.45)]"
       >
         <div className="flex gap-3">
           <span
             className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
-              opciones.peligro ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-700"
+              opciones.peligro ? "bg-alerta-suave text-alerta" : "bg-galpon-suave text-galpon"
             }`}
           >
             <Icono nombre={opciones.peligro ? "alerta" : abierto.tipo === "texto" ? "novedad" : "bien"} className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 id="dialogo-titulo" className="text-base font-semibold text-slate-800">
+            <h2 id="dialogo-titulo" className="font-cifra text-xl font-bold text-tinta [font-stretch:108%]">
               {opciones.titulo}
             </h2>
-            {opciones.mensaje ? <div className="mt-1 text-sm text-slate-600">{opciones.mensaje}</div> : null}
+            {opciones.mensaje ? <div className="mt-1 text-base text-tinta-2">{opciones.mensaje}</div> : null}
 
             {abierto.tipo === "texto" ? (
-              <label className="mt-4 block text-sm font-medium text-slate-700">
+              <label className="mt-4 block text-sm font-semibold text-tinta">
                 {abierto.opciones.etiqueta ?? "Escribe aqui"}
                 {abierto.opciones.largo ? (
                   <textarea
@@ -161,7 +161,7 @@ function Ventana({ abierto, cerrar }: { abierto: Abierto; cerrar: () => void }) 
           <button
             type="button"
             onClick={() => responder(false)}
-            className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
+            className="min-h-11 rounded-lg px-4 text-base font-semibold text-tinta ring-[1.5px] ring-inset ring-linea transition hover:bg-cal"
           >
             {opciones.cancelar ?? "Cancelar"}
           </button>
@@ -169,8 +169,10 @@ function Ventana({ abierto, cerrar }: { abierto: Abierto; cerrar: () => void }) 
             ref={aceptarBoton}
             type="submit"
             disabled={Boolean(requerido && !texto.trim())}
-            className={`rounded-xl px-4 py-2 text-sm font-medium text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
-              opciones.peligro ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-700 hover:bg-emerald-800"
+            className={`min-h-11 rounded-lg px-4 text-base font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              opciones.peligro
+                ? "bg-alerta text-white hover:bg-alerta/90"
+                : "bg-yema text-tinta shadow-[inset_0_-2px_0_var(--color-yema-honda)] hover:bg-yema-clara"
             }`}
           >
             {opciones.aceptar ?? "Aceptar"}

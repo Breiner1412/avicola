@@ -40,9 +40,9 @@ export function TopeDescuento({ editable }: { editable: boolean }) {
     >
       {editable ? (
         <form onSubmit={guardar} className="flex flex-wrap items-end gap-3">
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-semibold text-tinta">
             Tope de descuento
-            <span className="mt-1.5 flex w-32 items-center gap-1 rounded-xl bg-white px-3 ring-1 ring-slate-300 focus-within:ring-2 focus-within:ring-emerald-600">
+            <span className="mt-1.5 flex min-h-12 w-32 items-center gap-1 rounded-lg border-[1.5px] border-linea bg-superficie px-3 focus-within:border-galpon focus-within:ring-3 focus-within:ring-galpon/15">
               <input
                 type="number"
                 min={0}
@@ -50,9 +50,9 @@ export function TopeDescuento({ editable }: { editable: boolean }) {
                 required
                 value={valor}
                 onChange={(e) => setValor(e.target.value)}
-                className="w-full border-0 bg-transparent py-2 text-right text-sm focus:ring-0"
+                className="cifra w-full border-0 bg-transparent py-2 text-right text-base font-normal focus:ring-0 focus:outline-none"
               />
-              <span className="text-sm text-slate-500">%</span>
+              <span className="text-base text-tinta-2">%</span>
             </span>
           </label>
           <Boton type="submit" disabled={guardando || valor === String(datos?.descuento_maximo ?? "")}>
@@ -60,7 +60,7 @@ export function TopeDescuento({ editable }: { editable: boolean }) {
           </Boton>
         </form>
       ) : (
-        <p className="text-sm text-slate-600">
+        <p className="text-base text-tinta-2">
           Tope actual: <span className="font-semibold">{datos?.descuento_maximo ?? "—"}%</span>
         </p>
       )}

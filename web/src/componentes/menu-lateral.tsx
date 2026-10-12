@@ -77,15 +77,15 @@ export function MenuLateral({
           href={enlace.ruta}
           onClick={alNavegar}
           aria-current={activo ? "page" : undefined}
-          className={`flex items-center gap-3 rounded-xl py-2 pr-3 text-sm transition ${sangria ? "pl-4" : "pl-3"} ${
+          className={`flex min-h-11 items-center gap-3 rounded-lg pr-3 text-base transition ${sangria ? "pl-4" : "pl-3"} ${
             activo
-              ? "bg-emerald-800/80 font-medium text-white ring-1 ring-emerald-600/40"
-              : "text-emerald-100/90 hover:bg-emerald-900/70 hover:text-white"
+              ? "bg-yema font-bold text-tinta"
+              : "text-galpon-suave hover:bg-white/10 hover:text-white"
           }`}
         >
           <Icono
             nombre={enlace.icono}
-            className={`h-[18px] w-[18px] shrink-0 ${activo ? "text-emerald-300" : "text-emerald-400/80"}`}
+            className={`h-[18px] w-[18px] shrink-0 ${activo ? "text-tinta" : "text-galpon-claro"}`}
           />
           <span className="truncate">{enlace.etiqueta}</span>
         </Link>
@@ -118,16 +118,16 @@ export function MenuLateral({
               onClick={() => alternar(grupo.titulo)}
               aria-expanded={abierto}
               aria-controls={id}
-              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition hover:bg-emerald-900/60 ${
-                tieneActivo ? "text-emerald-200" : "text-emerald-400/80"
+              className={`flex min-h-10 w-full items-center justify-between rounded-lg px-3 text-sm font-semibold transition hover:bg-white/10 ${
+                tieneActivo ? "text-white" : "text-galpon-claro"
               }`}
             >
               <span className="flex items-center gap-2">
                 {grupo.titulo}
-                {tieneActivo && !abierto ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
+                {tieneActivo && !abierto ? <span className="h-2 w-2 rounded-full bg-yema" /> : null}
               </span>
               <span className="flex items-center gap-2">
-                <span className="rounded-md bg-emerald-900/70 px-1.5 text-[10px] font-medium normal-case tracking-normal text-emerald-300/80">
+                <span className="cifra rounded-md bg-galpon-honda px-1.5 text-xs font-medium text-galpon-claro">
                   {grupo.enlaces.length}
                 </span>
                 <Icono

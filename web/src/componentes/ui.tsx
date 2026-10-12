@@ -3,39 +3,52 @@
 import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { Icono } from "./iconos";
 
-type Tono = "principal" | "suave" | "peligro" | "fantasma";
+type Tono = "principal" | "galpon" | "suave" | "peligro" | "fantasma";
+type Tamano = "compacto" | "normal" | "grande" | "cobrar";
 
+// La yema es solo para la accion que termina el trabajo; lo demas va en verde o en blanco
 const TONOS: Record<Tono, string> = {
   principal:
-    "bg-emerald-700 text-white shadow-sm hover:bg-emerald-800 active:bg-emerald-900 disabled:bg-emerald-300 disabled:shadow-none",
+    "bg-yema text-tinta shadow-[inset_0_-2px_0_var(--color-yema-honda)] hover:bg-yema-clara active:bg-yema-honda disabled:bg-yema-suave disabled:text-tinta-3 disabled:shadow-none",
+  galpon: "bg-galpon text-white hover:bg-galpon-2 active:bg-galpon-honda disabled:bg-galpon-claro",
   suave:
-    "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:ring-slate-400 disabled:text-slate-400 disabled:ring-slate-200",
-  peligro: "bg-white text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50 hover:ring-rose-300 disabled:text-rose-300",
-  fantasma: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+    "bg-superficie text-tinta ring-[1.5px] ring-inset ring-linea hover:bg-cal hover:ring-tinta-3 disabled:text-tinta-3 disabled:ring-linea-suave",
+  peligro:
+    "bg-superficie text-alerta ring-[1.5px] ring-inset ring-alerta-borde hover:bg-alerta-suave disabled:text-alerta-borde",
+  fantasma: "text-tinta-2 hover:bg-cal-honda hover:text-tinta",
+};
+
+// Normal: 44 px, el minimo comodo para un dedo. Grande y cobrar: para la caja.
+const TAMANOS: Record<Tamano, string> = {
+  compacto: "min-h-10 rounded-lg px-3 text-sm",
+  normal: "min-h-11 rounded-lg px-4 text-base",
+  grande: "min-h-14 rounded-lg px-6 text-lg",
+  cobrar: "min-h-16 rounded-xl px-6 font-cifra text-[1.35rem] font-bold [font-stretch:110%]",
 };
 
 export function Boton({
   tono = "principal",
+  tamano = "normal",
   icono,
   className = "",
   children,
   ...resto
-}: ButtonHTMLAttributes<HTMLButtonElement> & { tono?: Tono; icono?: string }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { tono?: Tono; tamano?: Tamano; icono?: string }) {
   return (
     <button
       {...resto}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition
-        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600
-        disabled:cursor-not-allowed ${TONOS[tono]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-semibold transition
+        focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-yema-honda
+        disabled:cursor-not-allowed ${TAMANOS[tamano]} ${TONOS[tono]} ${className}`}
     >
-      {icono ? <Icono nombre={icono} className="h-4 w-4" /> : null}
+      {icono ? <Icono nombre={icono} className={tamano === "compacto" ? "h-4 w-4" : "h-5 w-5"} /> : null}
       {children}
     </button>
   );
 }
 
 const CAMPO =
-  "w-full rounded-xl border-0 bg-white px-3 py-2 text-slate-800 ring-1 ring-slate-300 transition placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400";
+  "min-h-12 w-full rounded-lg border-[1.5px] border-linea bg-superficie px-3 py-2 text-base text-tinta transition placeholder:text-tinta-3 focus:border-galpon focus:ring-3 focus:ring-galpon/15 focus:outline-none disabled:bg-cal disabled:text-tinta-3";
 
 export function Campo({
   etiqueta,
@@ -46,10 +59,10 @@ export function Campo({
 }: InputHTMLAttributes<HTMLInputElement> & { etiqueta: string; error?: string; ayuda?: string }) {
   return (
     <label className="block text-sm">
-      {etiqueta ? <span className="mb-1.5 block font-medium text-slate-700">{etiqueta}</span> : null}
-      <input {...resto} className={`${CAMPO} ${error ? "ring-rose-400" : ""} ${className}`} />
-      {ayuda && !error ? <span className="mt-1 block text-xs text-slate-500">{ayuda}</span> : null}
-      {error ? <span className="mt-1 block text-xs text-rose-600">{error}</span> : null}
+      {etiqueta ? <span className="mb-1.5 block font-semibold text-tinta">{etiqueta}</span> : null}
+      <input {...resto} className={`${CAMPO} ${error ? "border-alerta" : ""} ${className}`} />
+      {ayuda && !error ? <span className="mt-1 block text-sm text-tinta-2">{ayuda}</span> : null}
+      {error ? <span className="mt-1 block text-sm font-semibold text-alerta">{error}</span> : null}
     </label>
   );
 }
@@ -63,27 +76,88 @@ export function Lista({
 }: SelectHTMLAttributes<HTMLSelectElement> & { etiqueta: string; ayuda?: string }) {
   return (
     <label className="block text-sm">
-      {etiqueta ? <span className="mb-1.5 block font-medium text-slate-700">{etiqueta}</span> : null}
-      <select {...resto} className={`${CAMPO} appearance-none pr-8 ${className}`}>
-        {children}
-      </select>
-      {ayuda ? <span className="mt-1 block text-xs text-slate-500">{ayuda}</span> : null}
+      {etiqueta ? <span className="mb-1.5 block font-semibold text-tinta">{etiqueta}</span> : null}
+      <span className="relative block">
+        <select {...resto} className={`${CAMPO} appearance-none pr-10 ${className}`}>
+          {children}
+        </select>
+        <Icono
+          nombre="abajo"
+          className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-tinta-2"
+        />
+      </span>
+      {ayuda ? <span className="mt-1 block text-sm text-tinta-2">{ayuda}</span> : null}
     </label>
   );
 }
 
 const AVISOS = {
-  error: { caja: "bg-rose-50 text-rose-800 ring-rose-200", icono: "alerta" },
-  bien: { caja: "bg-emerald-50 text-emerald-800 ring-emerald-200", icono: "bien" },
-  info: { caja: "bg-sky-50 text-sky-900 ring-sky-200", icono: "alerta" },
+  error: { caja: "bg-alerta-suave border-alerta", icono: "alerta", color: "text-alerta" },
+  bien: { caja: "bg-bien-suave border-bien", icono: "bien", color: "text-bien" },
+  info: { caja: "bg-info-suave border-info", icono: "alerta", color: "text-info" },
 };
 
 export function Aviso({ tipo = "error", children }: { tipo?: "error" | "bien" | "info"; children: ReactNode }) {
   const estilo = AVISOS[tipo];
   return (
-    <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm ring-1 ${estilo.caja}`}>
-      <Icono nombre={estilo.icono} className="mt-0.5 h-4 w-4 shrink-0" />
+    <div className={`flex items-start gap-3 rounded-lg border-l-4 px-4 py-3 text-base text-tinta ${estilo.caja}`}>
+      <Icono nombre={estilo.icono} className={`mt-1 h-4 w-4 shrink-0 ${estilo.color}`} />
       <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/** Titulo de la pantalla, con su linea de ayuda y las acciones a la derecha. */
+export function Encabezado({
+  titulo,
+  descripcion,
+  acciones,
+  antes,
+}: {
+  titulo: ReactNode;
+  descripcion?: ReactNode;
+  acciones?: ReactNode;
+  antes?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        {antes}
+        <h1 className="titulo-pantalla">{titulo}</h1>
+        {descripcion ? <p className="bajada">{descripcion}</p> : null}
+      </div>
+      {acciones ? <div className="flex flex-wrap items-center gap-2">{acciones}</div> : null}
+    </div>
+  );
+}
+
+/** Bloque verde para el resumen que mas importa en la pantalla. Uno por pantalla. */
+export function Franja({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <section className={`overflow-hidden rounded-xl bg-galpon text-galpon-suave ${className}`}>{children}</section>;
+}
+
+/** Una cifra dentro de la Franja. */
+export function CifraFranja({
+  titulo,
+  valor,
+  detalle,
+  children,
+}: {
+  titulo: string;
+  valor: ReactNode;
+  detalle?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 px-5 py-4 sm:px-6 sm:py-5">
+      <span className="text-base text-galpon-claro">{titulo}</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="cifra text-[2.25rem] leading-none font-bold text-white [font-stretch:118%] sm:text-[2.75rem]">
+          {valor}
+        </span>
+        {children}
+      </div>
+      {detalle ? <span className="text-base text-galpon-suave">{detalle}</span> : null}
     </div>
   );
 }
@@ -104,18 +178,14 @@ export function Tarjeta({
   className?: string;
 }) {
   return (
-    <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/80 ${className}`}>
+    <section className={`rounded-xl border border-linea bg-superficie ${className}`}>
       {(titulo || acciones) && (
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
-          <div className="flex items-center gap-2.5">
-            {icono ? (
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
-                <Icono nombre={icono} className="h-4 w-4" />
-              </span>
-            ) : null}
-            <div>
-              <h2 className="text-sm font-semibold text-slate-800">{titulo}</h2>
-              {descripcion ? <p className="text-xs text-slate-500">{descripcion}</p> : null}
+        <header className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-1">
+          <div className="flex min-w-0 items-start gap-2.5">
+            {icono ? <Icono nombre={icono} className="mt-1 h-5 w-5 shrink-0 text-galpon-2" /> : null}
+            <div className="min-w-0">
+              <h2 className="font-cifra text-lg leading-snug font-bold text-tinta [font-stretch:105%]">{titulo}</h2>
+              {descripcion ? <p className="text-sm text-tinta-2">{descripcion}</p> : null}
             </div>
           </div>
           {acciones}
@@ -127,11 +197,11 @@ export function Tarjeta({
 }
 
 const TONOS_DATO: Record<string, string> = {
-  verde: "bg-emerald-50 text-emerald-700",
-  ambar: "bg-amber-50 text-amber-700",
-  rojo: "bg-rose-50 text-rose-700",
-  azul: "bg-sky-50 text-sky-700",
-  gris: "bg-slate-100 text-slate-600",
+  verde: "text-galpon-2",
+  ambar: "text-yema-honda",
+  rojo: "text-alerta",
+  azul: "text-info",
+  gris: "text-tinta-3",
 };
 
 export function Dato({
@@ -150,16 +220,14 @@ export function Dato({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
+    <div className={`rounded-xl border border-linea bg-superficie p-4 ${tono === "rojo" ? "border-l-4 border-l-alerta" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{titulo}</p>
-          <p className="mt-1 truncate text-2xl font-semibold tracking-tight text-slate-900">{valor}</p>
-          {detalle ? <p className="mt-0.5 text-xs text-slate-500">{detalle}</p> : null}
+          <p className="text-sm font-semibold text-tinta-2">{titulo}</p>
+          <p className="cifra mt-1 truncate text-[1.875rem] leading-tight font-bold text-tinta">{valor}</p>
+          {detalle ? <p className="mt-0.5 text-sm text-tinta-2">{detalle}</p> : null}
         </div>
-        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONOS_DATO[tono]}`}>
-          <Icono nombre={icono} className="h-5 w-5" />
-        </span>
+        <Icono nombre={icono} className={`h-5 w-5 shrink-0 ${TONOS_DATO[tono]}`} />
       </div>
       {children ? <div className="mt-3">{children}</div> : null}
     </div>
@@ -168,18 +236,23 @@ export function Dato({
 
 export function Tabla({ columnas, children }: { columnas: string[]; children: ReactNode }) {
   return (
-    <div className="-mx-5 overflow-x-auto px-5">
-      <table className="w-full text-left text-sm">
+    <div className="-mx-5 overflow-x-auto">
+      <table className="tabla w-full text-left text-base">
         <thead>
-          <tr className="border-b border-slate-200 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <tr className="border-b-2 border-galpon">
             {columnas.map((columna, i) => (
-              <th key={`${columna}-${i}`} className="whitespace-nowrap px-3 py-2.5">
+              <th
+                key={`${columna}-${i}`}
+                className="px-3 py-3 text-sm font-semibold whitespace-nowrap text-tinta-2 first:pl-5 last:pr-5"
+              >
                 {columna}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 text-slate-700">{children}</tbody>
+        <tbody className="divide-y divide-linea-suave text-tinta [&_td:first-child]:pl-5 [&_td:last-child]:pr-5">
+          {children}
+        </tbody>
       </table>
     </div>
   );
@@ -188,20 +261,20 @@ export function Tabla({ columnas, children }: { columnas: string[]; children: Re
 export function Vacio({ children, icono = "alerta" }: { children: ReactNode; icono?: string }) {
   return (
     <div className="flex flex-col items-center gap-2 px-3 py-10 text-center">
-      <span className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-400">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-cal text-tinta-3">
         <Icono nombre={icono} className="h-5 w-5" />
       </span>
-      <p className="text-sm text-slate-500">{children}</p>
+      <p className="max-w-prose text-base text-tinta-2">{children}</p>
     </div>
   );
 }
 
 const TONOS_INSIGNIA: Record<string, string> = {
-  gris: "bg-slate-100 text-slate-600 ring-slate-200",
-  verde: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  rojo: "bg-rose-50 text-rose-700 ring-rose-200",
-  azul: "bg-sky-50 text-sky-700 ring-sky-200",
-  ambar: "bg-amber-50 text-amber-800 ring-amber-200",
+  gris: "bg-cal-honda text-tinta-2",
+  verde: "bg-bien-suave text-bien",
+  rojo: "bg-alerta-suave text-alerta",
+  azul: "bg-info-suave text-info",
+  ambar: "bg-aten-suave text-aten",
 };
 
 export function Insignia({
@@ -215,9 +288,9 @@ export function Insignia({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${TONOS_INSIGNIA[tono]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-semibold whitespace-nowrap ${TONOS_INSIGNIA[tono]}`}
     >
-      {punto ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : null}
+      {punto ? <span className="h-2 w-2 rounded-full bg-current" /> : null}
       {children}
     </span>
   );
@@ -247,20 +320,24 @@ export function Modal({
   if (!abierto) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-galpon-honda/55 p-3 sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onCerrar();
       }}
     >
-      <div role="dialog" aria-modal="true" className={`mt-8 w-full ${ancho} rounded-2xl bg-white shadow-xl ring-1 ring-slate-200`}>
-        <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
-          <h3 className="text-base font-semibold text-slate-800">{titulo}</h3>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`mt-4 w-full sm:mt-10 ${ancho} rounded-xl bg-superficie shadow-[0_20px_50px_-12px_rgb(22_58_44/0.45)]`}
+      >
+        <header className="flex items-center justify-between gap-3 border-b border-linea-suave py-2 pr-2 pl-5">
+          <h3 className="font-cifra text-xl font-bold text-tinta [font-stretch:108%]">{titulo}</h3>
           <button
             onClick={onCerrar}
-            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="grid h-11 w-11 place-items-center rounded-lg text-tinta-2 transition hover:bg-cal hover:text-tinta"
             aria-label="Cerrar"
           >
-            <Icono nombre="cerrar" className="h-4 w-4" />
+            <Icono nombre="cerrar" className="h-5 w-5" />
           </button>
         </header>
         <div className="px-5 py-4">{children}</div>
@@ -271,8 +348,8 @@ export function Modal({
 
 export function Cargando({ texto = "Cargando..." }: { texto?: string }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-8 text-sm text-slate-500">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600" />
+    <div className="flex items-center gap-3 px-3 py-8 text-base text-tinta-2" role="status">
+      <span className="h-5 w-5 animate-spin rounded-full border-[2.5px] border-linea border-t-galpon" />
       {texto}
     </div>
   );
@@ -288,15 +365,16 @@ export function Pestanas({
   onCambiar: (clave: string) => void;
 }) {
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-slate-200">
+    <div className="flex gap-1 overflow-x-auto border-b border-linea">
       {opciones.map((opcion) => (
         <button
           key={opcion.clave}
           onClick={() => onCambiar(opcion.clave)}
-          className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm transition ${
+          aria-pressed={activa === opcion.clave}
+          className={`-mb-px min-h-12 border-b-[3px] px-4 text-base whitespace-nowrap transition ${
             activa === opcion.clave
-              ? "border-emerald-600 font-medium text-emerald-800"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-galpon font-bold text-tinta"
+              : "border-transparent text-tinta-2 hover:border-linea hover:text-tinta"
           }`}
         >
           {opcion.texto}
@@ -346,10 +424,10 @@ export function Paginador({
     else if (numeros[numeros.length - 1] !== "...") numeros.push("...");
   }
 
-  const base = "grid h-8 min-w-8 place-items-center rounded-lg px-2 text-sm transition";
+  const base = "cifra grid h-11 min-w-11 place-items-center rounded-lg px-2 text-base transition";
   return (
-    <nav aria-label="Paginas" className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-slate-100 pt-4 sm:flex-row">
-      <p className="text-xs text-slate-500">
+    <nav aria-label="Paginas" className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-linea-suave pt-4 sm:flex-row">
+      <p className="text-sm text-tinta-2">
         {desde.toLocaleString("es-CO")}–{hasta.toLocaleString("es-CO")} de {total.toLocaleString("es-CO")} {nombre}
       </p>
       <div className="flex items-center gap-1">
@@ -357,13 +435,13 @@ export function Paginador({
           onClick={() => setPagina(pagina - 1)}
           disabled={pagina <= 1}
           aria-label="Pagina anterior"
-          className={`${base} text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent`}
+          className={`${base} text-tinta-2 hover:bg-cal-honda disabled:opacity-30 disabled:hover:bg-transparent`}
         >
-          <Icono nombre="izquierda" className="h-4 w-4" />
+          <Icono nombre="izquierda" className="h-5 w-5" />
         </button>
         {numeros.map((n, i) =>
           n === "..." ? (
-            <span key={`p${i}`} className="px-1 text-sm text-slate-400">
+            <span key={`p${i}`} className="px-1 text-sm text-tinta-3">
               …
             </span>
           ) : (
@@ -371,7 +449,7 @@ export function Paginador({
               key={n}
               onClick={() => setPagina(n)}
               aria-current={n === pagina ? "page" : undefined}
-              className={`${base} ${n === pagina ? "bg-emerald-700 font-medium text-white" : "text-slate-600 hover:bg-slate-100"}`}
+              className={`${base} ${n === pagina ? "bg-galpon font-bold text-white" : "text-tinta-2 hover:bg-cal-honda"}`}
             >
               {n}
             </button>
@@ -381,9 +459,9 @@ export function Paginador({
           onClick={() => setPagina(pagina + 1)}
           disabled={pagina >= paginas}
           aria-label="Pagina siguiente"
-          className={`${base} text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent`}
+          className={`${base} text-tinta-2 hover:bg-cal-honda disabled:opacity-30 disabled:hover:bg-transparent`}
         >
-          <Icono nombre="derecha" className="h-4 w-4" />
+          <Icono nombre="derecha" className="h-5 w-5" />
         </button>
       </div>
     </nav>
@@ -401,14 +479,17 @@ export function Chips<T extends string>({
   onCambiar: (valor: T) => void;
 }) {
   return (
-    <div className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
+    <div className="inline-flex flex-wrap gap-1 rounded-lg bg-cal-honda p-1">
       {opciones.map((opcion) => (
         <button
           key={opcion.clave}
           type="button"
           onClick={() => onCambiar(opcion.clave)}
-          className={`rounded-lg px-3 py-1.5 text-sm transition ${
-            valor === opcion.clave ? "bg-white font-medium text-emerald-800 shadow-sm" : "text-slate-600 hover:text-slate-900"
+          aria-pressed={valor === opcion.clave}
+          className={`min-h-10 rounded-md px-3.5 text-base transition ${
+            valor === opcion.clave
+              ? "bg-superficie font-bold text-tinta shadow-[0_1px_2px_rgb(28_43_37/0.15)]"
+              : "text-tinta-2 hover:text-tinta"
           }`}
         >
           {opcion.texto}

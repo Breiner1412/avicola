@@ -1,30 +1,128 @@
 @import "tailwindcss";
 
+/*
+ * Galpon y yema: el verde del galpon da la estructura (menu, franjas, enlaces) y el
+ * amarillo de la yema se reserva para la accion que termina el trabajo de cada pantalla.
+ * Los estados (bien, atencion, alerta, info) tienen sus propios colores y siempre van
+ * acompanados de texto.
+ */
+@theme {
+  --color-cal: #f3f5f1;
+  --color-cal-honda: #e8ece5;
+  --color-superficie: #ffffff;
+  --color-linea: #d9dfd6;
+  --color-linea-suave: #e9ede6;
+
+  --color-tinta: #1c2b25;
+  --color-tinta-2: #55665e;
+  --color-tinta-3: #7d8c85;
+
+  --color-galpon: #1e4d3a;
+  --color-galpon-2: #2b6650;
+  --color-galpon-honda: #163a2c;
+  --color-galpon-claro: #b9d0c3;
+  --color-galpon-suave: #e4eee8;
+  --color-galpon-barra: #a9c4b4;
+
+  --color-yema: #f2b01e;
+  --color-yema-clara: #f5bd3f;
+  --color-yema-honda: #d9970a;
+  --color-yema-suave: #fdf3d8;
+
+  --color-bien: #2e7d4f;
+  --color-bien-suave: #e3f1e8;
+  --color-bien-borde: #b7dbc4;
+  --color-aten: #8f5400;
+  --color-aten-suave: #fbefd6;
+  --color-aten-borde: #edd39c;
+  --color-alerta: #b3261e;
+  --color-alerta-suave: #fbe6e4;
+  --color-alerta-borde: #e9b8b4;
+  --color-info: #2f5f8a;
+  --color-info-suave: #e4edf5;
+  --color-info-borde: #bcd0e3;
+
+  /* Texto un poco mas grande que el de Tailwind: se lee de pie y con el celular al sol */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+}
+
+@theme inline {
+  --font-sans: var(--fuente-texto), "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-cifra: var(--fuente-cifra), "Arial Narrow", system-ui, sans-serif;
+}
+
 :root {
   color-scheme: light;
 }
 
 body {
-  @apply bg-slate-100 text-slate-800 antialiased;
+  @apply bg-cal font-sans text-base text-tinta antialiased;
 }
 
 /* Deja visible el foco del teclado en toda la aplicacion */
 :focus-visible {
-  @apply outline-2 outline-offset-2 outline-emerald-600;
+  @apply outline-3 outline-offset-2 outline-yema-honda;
+}
+
+@layer components {
+  /* Titulo de cada pantalla, en la letra ancha de las cifras */
+  .titulo-pantalla {
+    @apply font-cifra text-[1.625rem] leading-tight font-bold text-balance text-tinta sm:text-[1.875rem];
+    font-stretch: 110%;
+  }
+
+  /* Linea que acompana al titulo */
+  .bajada {
+    @apply mt-1 text-base text-tinta-2;
+  }
+
+  /* Numeros que se comparan: misma anchura por digito */
+  .cifra {
+    @apply font-cifra tabular-nums;
+    font-stretch: 105%;
+  }
+
+  /* Tablas: filas comodas, la primera columna queda quieta al deslizar en el celular */
+  .tabla tbody tr {
+    @apply bg-superficie transition-colors hover:bg-cal;
+  }
+  .tabla td {
+    @apply h-13;
+  }
+  .tabla th:first-child,
+  .tabla td:first-child {
+    @apply sticky left-0 z-[1];
+    background: inherit;
+  }
+  .tabla thead tr {
+    @apply bg-superficie;
+  }
 }
 
 /* Barra de desplazamiento discreta en el menu */
 .menu-lateral {
   scrollbar-width: thin;
-  scrollbar-color: rgb(6 95 70 / 0.9) transparent;
+  scrollbar-color: rgb(255 255 255 / 0.2) transparent;
 }
 .menu-lateral::-webkit-scrollbar {
   width: 6px;
 }
 .menu-lateral::-webkit-scrollbar-thumb {
-  background: rgb(6 95 70 / 0.9);
+  background: rgb(255 255 255 / 0.2);
   border-radius: 999px;
 }
 .menu-lateral::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

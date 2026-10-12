@@ -27,7 +27,7 @@ export function Barras({
 
   if (!hayDatos) {
     return (
-      <div className={`flex ${alto} items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400`}>
+      <div className={`flex ${alto} items-center justify-center rounded-lg bg-cal text-base text-tinta-2`}>
         Sin datos en este periodo
       </div>
     );
@@ -35,7 +35,7 @@ export function Barras({
 
   return (
     <div>
-      <div className={`relative flex ${alto} items-end gap-[3px]`}>
+      <div className={`relative flex ${alto} items-end gap-[3px] border-b-[1.5px] border-linea`}>
         {datos.map((punto, indice) => {
           const altura = Math.max(punto.valor > 0 ? 4 : 2, Math.round((punto.valor / maximo) * 100));
           const activo = encima === indice;
@@ -47,8 +47,12 @@ export function Barras({
               onMouseLeave={() => setEncima(null)}
             >
               <div
-                className={`w-full rounded-t transition-colors ${
-                  punto.valor === 0 ? "bg-slate-200" : activo ? "bg-emerald-700" : "bg-emerald-600"
+                className={`w-full rounded-t-[3px] transition-colors ${
+                  punto.valor === 0
+                    ? "bg-linea"
+                    : activo || indice === datos.length - 1
+                      ? "bg-galpon"
+                      : "bg-galpon-barra"
                 }`}
                 style={{ height: `${altura}%` }}
                 role="img"
@@ -56,16 +60,16 @@ export function Barras({
                 title={`${dia(punto.fecha)}: ${formato(punto.valor)} ${etiqueta}`}
               />
               {activo ? (
-                <div className="pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-xs text-white shadow-lg">
-                  <span className="font-medium">{formato(punto.valor)}</span>
-                  <span className="ml-1 text-slate-300">{dia(punto.fecha)}</span>
+                <div className="pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-tinta px-2.5 py-1.5 text-sm text-white shadow-lg">
+                  <span className="cifra font-bold">{formato(punto.valor)}</span>
+                  <span className="ml-1.5 text-galpon-claro">{dia(punto.fecha)}</span>
                 </div>
               ) : null}
             </div>
           );
         })}
       </div>
-      <div className="mt-2 flex justify-between text-[11px] text-slate-400">
+      <div className="cifra mt-2 flex justify-between text-sm text-tinta-2">
         <span>{dia(datos[0].fecha)}</span>
         <span>{dia(datos[datos.length - 1].fecha)}</span>
       </div>
@@ -135,7 +139,7 @@ export function LineaTiempo({
 
   if (datos.length < 2) {
     return (
-      <div ref={caja} className="flex items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400" style={{ height: alto }}>
+      <div ref={caja} className="flex items-center justify-center rounded-lg bg-cal text-base text-tinta-2" style={{ height: alto }}>
         No hay suficientes mediciones en este periodo
       </div>
     );
@@ -196,13 +200,13 @@ export function LineaTiempo({
             y={franjaArriba}
             width={w}
             height={Math.max(0, franjaAbajo - franjaArriba)}
-            className="fill-emerald-50"
+            className="fill-galpon-suave"
           />
         ) : null}
         {marcasY.map((v) => (
           <g key={v}>
-            <line x1={margen.izquierda} x2={margen.izquierda + w} y1={y(v)} y2={y(v)} className="stroke-slate-100" />
-            <text x={margen.izquierda - 8} y={y(v)} dy="0.32em" textAnchor="end" className="fill-slate-400 text-[11px]">
+            <line x1={margen.izquierda} x2={margen.izquierda + w} y1={y(v)} y2={y(v)} className="stroke-linea-suave" />
+            <text x={margen.izquierda - 8} y={y(v)} dy="0.32em" textAnchor="end" className="fill-tinta-2 font-cifra text-xs">
               {v.toLocaleString("es-CO")}
             </text>
           </g>
@@ -213,25 +217,25 @@ export function LineaTiempo({
             x={x(t)}
             y={alto - 6}
             textAnchor={i === 0 ? "start" : i === cuantas - 1 ? "end" : "middle"}
-            className="fill-slate-400 text-[11px]"
+            className="fill-tinta-2 font-cifra text-xs"
           >
             {etiquetaX(t)}
           </text>
         ))}
         {maximo != null ? (
-          <line x1={margen.izquierda} x2={margen.izquierda + w} y1={y(maximo)} y2={y(maximo)} className="stroke-emerald-300" strokeDasharray="4 4" />
+          <line x1={margen.izquierda} x2={margen.izquierda + w} y1={y(maximo)} y2={y(maximo)} className="stroke-galpon-claro" strokeDasharray="4 4" />
         ) : null}
         {minimo != null ? (
-          <line x1={margen.izquierda} x2={margen.izquierda + w} y1={y(minimo)} y2={y(minimo)} className="stroke-emerald-300" strokeDasharray="4 4" />
+          <line x1={margen.izquierda} x2={margen.izquierda + w} y1={y(minimo)} y2={y(minimo)} className="stroke-galpon-claro" strokeDasharray="4 4" />
         ) : null}
-        <path d={trazo} fill="none" className="stroke-emerald-700" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={trazo} fill="none" className="stroke-galpon" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {orden.map((d) =>
-          fuera(d.valor) ? <circle key={d.momento} cx={x(d.momento)} cy={y(d.valor)} r={2.5} className="fill-rose-600" /> : null,
+          fuera(d.valor) ? <circle key={d.momento} cx={x(d.momento)} cy={y(d.valor)} r={2.5} className="fill-alerta" /> : null,
         )}
         {punto ? (
           <g>
-            <line x1={x(punto.momento)} x2={x(punto.momento)} y1={margen.arriba} y2={margen.arriba + h} className="stroke-slate-300" />
-            <circle cx={x(punto.momento)} cy={y(punto.valor)} r={4.5} className="fill-white stroke-emerald-700" strokeWidth={2} />
+            <line x1={x(punto.momento)} x2={x(punto.momento)} y1={margen.arriba} y2={margen.arriba + h} className="stroke-tinta-3" />
+            <circle cx={x(punto.momento)} cy={y(punto.valor)} r={4.5} className="fill-superficie stroke-galpon" strokeWidth={2} />
           </g>
         ) : null}
         <rect
@@ -246,13 +250,13 @@ export function LineaTiempo({
       </svg>
       {punto ? (
         <div
-          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs text-white shadow-lg"
+          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-tinta px-2.5 py-1.5 text-sm text-white shadow-lg"
           style={{ left: Math.min(Math.max(x(punto.momento), 70), ancho - 70) }}
         >
           <span className="font-semibold">
             {punto.valor.toLocaleString("es-CO")} {unidad}
           </span>
-          <span className="ml-1.5 text-slate-300">
+          <span className="ml-1.5 text-galpon-claro">
             {new Date(punto.momento).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
           </span>
         </div>
