@@ -144,8 +144,8 @@ export default function Usuarios() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Usuarios</h1>
-          <p className="text-sm text-slate-500">Quien entra al sistema y en que fincas trabaja</p>
+          <h1 className="titulo-pantalla">Usuarios</h1>
+          <p className="bajada">Quien entra al sistema y en que fincas trabaja</p>
         </div>
         {puede("usuarios", "crear") ? <Boton onClick={() => abrir()}>Nuevo usuario</Boton> : null}
       </div>
@@ -160,13 +160,13 @@ export default function Usuarios() {
         ) : (
           <Tabla columnas={["Nombre", "Correo", "Rol", "Fincas", "Estado", ""]}>
             {datos.map((usuario) => (
-              <tr key={usuario.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">
+              <tr key={usuario.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">
                   {usuario.nombres} {usuario.apellidos}
                 </td>
                 <td className="px-3 py-2">{usuario.email}</td>
                 <td className="px-3 py-2">{usuario.rol_nombre}</td>
-                <td className="px-3 py-2 text-xs text-slate-500">
+                <td className="px-3 py-2 text-sm text-tinta-2">
                   {usuario.fincas.length === 0
                     ? "Todas las de la cuenta"
                     : usuario.fincas
@@ -258,21 +258,21 @@ export default function Usuarios() {
           ) : null}
 
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">Fincas donde trabaja</p>
-            <p className="mb-2 text-xs text-slate-500">
+            <p className="mb-2 text-sm font-medium text-tinta">Fincas donde trabaja</p>
+            <p className="mb-2 text-sm text-tinta-2">
               Si no marcas ninguna y el rol es administrador o propietario, vera todas las fincas de la cuenta.
             </p>
-            <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+            <div className="space-y-2 rounded-lg border border-linea p-3">
               {(fincas ?? []).map((finca) => {
                 const asignada = formulario.fincas.find((f) => f.finca_id === finca.id);
                 return (
                   <div key={finca.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <label className="flex items-center gap-2">
+                    <label className="flex min-h-11 items-center gap-2.5">
                       <input type="checkbox" checked={Boolean(asignada)} onChange={() => alternarFinca(finca.id)} />
                       {finca.nombre}
                     </label>
                     {asignada ? (
-                      <label className="flex items-center gap-2 text-xs text-slate-500">
+                      <label className="flex min-h-11 items-center gap-2.5 text-base text-tinta">
                         <input
                           type="checkbox"
                           checked={asignada.solo_lectura}

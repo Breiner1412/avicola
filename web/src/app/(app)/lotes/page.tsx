@@ -74,11 +74,11 @@ export default function Lotes() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Lotes de aves</h1>
-          <p className="text-sm text-slate-500">Cada grupo de aves que entra a un galpon, con su historia</p>
+          <h1 className="titulo-pantalla">Lotes de aves</h1>
+          <p className="bajada">Cada grupo de aves que entra a un galpon, con su historia</p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex min-h-11 items-center gap-2.5 text-base text-tinta">
             <input type="checkbox" checked={soloActivos} onChange={(e) => setSoloActivos(e.target.checked)} />
             Solo activos
           </label>
@@ -94,31 +94,31 @@ export default function Lotes() {
         ) : !datos || datos.length === 0 ? (
           <Vacio>Todavia no hay lotes registrados.</Vacio>
         ) : (
-          <Tabla columnas={["Lote", "Galpon", "Proposito", "Edad", "Aves", "Descarte", "Mortalidad", ""]}>
+          <Tabla columnas={["Lote", "Galpon", "Proposito", "Edad", "Aves", "Descarte", "Mortalidad", ""]} numericas={[4, 5]}>
             {datos.map((lote) => (
-              <tr key={lote.id} className="hover:bg-slate-50">
+              <tr key={lote.id} className="hover:bg-cal">
                 <td className="px-3 py-2">
-                  <span className="font-medium text-slate-700">{lote.codigo}</span>
-                  <span className="block text-xs text-slate-500">{lote.raza_nombre ?? "sin raza"}</span>
+                  <span className="font-medium text-tinta">{lote.codigo}</span>
+                  <span className="block text-sm text-tinta-2">{lote.raza_nombre ?? "sin raza"}</span>
                 </td>
                 <td className="px-3 py-2">{lote.galpon_nombre}</td>
                 <td className="px-3 py-2 capitalize">{lote.proposito}</td>
                 <td className="px-3 py-2">
                   {lote.edad_semanas} sem
-                  <span className="block text-xs text-slate-400">{lote.edad_dias} dias</span>
+                  <span className="block text-sm text-tinta-3">{lote.edad_dias} dias</span>
                 </td>
-                <td className="px-3 py-2">{lote.aves_actuales.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2">{lote.aves_descarte.toLocaleString("es-CO")}</td>
+                <td className="px-3 py-2 cifra text-right">{lote.aves_actuales.toLocaleString("es-CO")}</td>
+                <td className="px-3 py-2 cifra text-right">{lote.aves_descarte.toLocaleString("es-CO")}</td>
                 <td className="px-3 py-2">
                   {lote.mortalidad.toLocaleString("es-CO")}
-                  <span className="block text-xs text-slate-400">{lote.mortalidad_porcentaje}%</span>
+                  <span className="block text-sm text-tinta-3">{lote.mortalidad_porcentaje}%</span>
                 </td>
                 <td className="px-3 py-2 text-right">
                   <div className="flex items-center justify-end gap-2">
                     {lote.estado === "cerrado" ? <Insignia>Cerrado</Insignia> : null}
                     <Link
                       href={`/lotes/${lote.id}`}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                      className="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-tinta ring-[1.5px] ring-linea ring-inset transition hover:bg-cal"
                     >
                       Abrir
                     </Link>

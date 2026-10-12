@@ -90,11 +90,11 @@ export default function Galpones() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Galpones</h1>
-          <p className="text-sm text-slate-500">Galpones de {sesion?.finca_activa?.nombre}</p>
+          <h1 className="titulo-pantalla">Galpones</h1>
+          <p className="bajada">Galpones de {sesion?.finca_activa?.nombre}</p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex min-h-11 items-center gap-2.5 text-base text-tinta">
             <input type="checkbox" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} />
             Ver inactivos
           </label>
@@ -110,14 +110,14 @@ export default function Galpones() {
         ) : !datos || datos.length === 0 ? (
           <Vacio>Todavia no hay galpones registrados.</Vacio>
         ) : (
-          <Tabla columnas={["Codigo", "Nombre", "Tipo", "Capacidad", "Aves", "Estado", ""]}>
+          <Tabla columnas={["Codigo", "Nombre", "Tipo", "Capacidad", "Aves", "Estado", ""]} numericas={[3, 4]}>
             {datos.map((galpon) => (
-              <tr key={galpon.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">{galpon.codigo}</td>
+              <tr key={galpon.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">{galpon.codigo}</td>
                 <td className="px-3 py-2">{galpon.nombre}</td>
                 <td className="px-3 py-2 capitalize">{galpon.tipo}</td>
-                <td className="px-3 py-2">{galpon.capacidad.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2">{galpon.aves_actuales.toLocaleString("es-CO")}</td>
+                <td className="px-3 py-2 cifra text-right">{galpon.capacidad.toLocaleString("es-CO")}</td>
+                <td className="px-3 py-2 cifra text-right">{galpon.aves_actuales.toLocaleString("es-CO")}</td>
                 <td className="px-3 py-2">
                   {galpon.activo ? <Insignia tono="verde">Activo</Insignia> : <Insignia tono="gris">Inactivo</Insignia>}
                 </td>

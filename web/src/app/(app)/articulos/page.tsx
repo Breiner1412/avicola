@@ -123,8 +123,8 @@ export default function Articulos() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Articulos</h1>
-          <p className="text-sm text-slate-500">Alimento, vacunas, medicamentos, herramientas, repuestos e insumos</p>
+          <h1 className="titulo-pantalla">Articulos</h1>
+          <p className="bajada">Alimento, vacunas, medicamentos, herramientas, repuestos e insumos</p>
         </div>
         {puede("articulos", "crear") ? <Boton onClick={() => abrir()}>Nuevo articulo</Boton> : null}
       </div>
@@ -146,7 +146,7 @@ export default function Articulos() {
               </option>
             ))}
           </Lista>
-          <label className="flex items-end gap-2 pb-2 text-sm text-slate-600">
+          <label className="flex min-h-11 items-center gap-2.5 text-base text-tinta">
             <input type="checkbox" checked={soloBajos} onChange={(e) => setSoloBajos(e.target.checked)} />
             Solo los que estan bajo el minimo
           </label>
@@ -157,11 +157,11 @@ export default function Articulos() {
         ) : !datos || datos.length === 0 ? (
           <Vacio>No hay articulos con esos filtros.</Vacio>
         ) : (
-          <Tabla columnas={["Codigo", "Articulo", "Categoria", "Unidad", "Existencia", "Minimo", ""]}>
+          <Tabla columnas={["Codigo", "Articulo", "Categoria", "Unidad", "Existencia", "Minimo", ""]} numericas={[4, 5]}>
             {datos.map((articulo) => (
-              <tr key={articulo.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 text-slate-500">{articulo.codigo}</td>
-                <td className="px-3 py-2 font-medium text-slate-700">
+              <tr key={articulo.id} className="hover:bg-cal">
+                <td className="px-3 py-2 text-tinta-2">{articulo.codigo}</td>
+                <td className="px-3 py-2 font-medium text-tinta">
                   {articulo.nombre}
                   {articulo.bajo_minimo ? (
                     <span className="ml-2">
@@ -174,8 +174,8 @@ export default function Articulos() {
                   {articulo.unidad}
                   {articulo.kg_por_bulto ? ` · bulto de ${articulo.kg_por_bulto} kg` : ""}
                 </td>
-                <td className="px-3 py-2">{articulo.existencia_total.toLocaleString("es-CO")}</td>
-                <td className="px-3 py-2 text-slate-500">{articulo.stock_minimo.toLocaleString("es-CO")}</td>
+                <td className="px-3 py-2 cifra text-right">{articulo.existencia_total.toLocaleString("es-CO")}</td>
+                <td className="px-3 py-2 text-tinta-2 cifra text-right">{articulo.stock_minimo.toLocaleString("es-CO")}</td>
                 <td className="px-3 py-2 text-right">
                   <div className="flex justify-end gap-2">
                     {puede("articulos", "editar") ? (
@@ -259,7 +259,7 @@ export default function Articulos() {
           />
 
           {puede("articulos", "crear") ? (
-            <div className="flex items-end gap-2 rounded-lg border border-dashed border-slate-300 p-3">
+            <div className="flex items-end gap-2 rounded-lg border border-dashed border-linea p-3">
               <Campo
                 etiqueta="Agregar una categoria nueva"
                 value={nuevaCategoria}

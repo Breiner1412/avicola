@@ -42,13 +42,17 @@ export default function Login() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-emerald-800 to-emerald-950 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-emerald-800">Avícola</h1>
-          <p className="mt-1 text-sm text-slate-500">Gestion de granjas avicolas</p>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-galpon px-4 py-10">
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="block h-12 w-10 rounded-[50%_50%_46%_46%/58%_58%_42%_42%] bg-yema" />
+        <div>
+          <h1 className="font-cifra text-[2.25rem] leading-none font-bold text-white [font-stretch:118%]">Avícola</h1>
+          <p className="mt-1 text-base text-galpon-claro">Gestion de granjas avicolas</p>
         </div>
+      </div>
 
+      <div className="w-full max-w-sm rounded-xl bg-superficie p-6 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.45)] sm:p-8">
+        <h2 className="mb-5 font-cifra text-xl font-bold text-tinta [font-stretch:108%]">Entrar</h2>
         <form onSubmit={enviar} className="space-y-4">
           <Campo
             etiqueta="Correo"
@@ -71,12 +75,12 @@ export default function Login() {
 
           {error ? <Aviso>{error}</Aviso> : null}
 
-          <Boton type="submit" disabled={enviando} className="w-full">
+          <Boton type="submit" tamano="grande" disabled={enviando} className="w-full">
             {enviando ? "Entrando..." : "Entrar"}
           </Boton>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-6 text-center text-sm text-tinta-2">
           Si olvidaste tu contrasena, pidele al administrador que te asigne una nueva.
         </p>
       </div>

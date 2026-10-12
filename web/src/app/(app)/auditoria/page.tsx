@@ -26,8 +26,8 @@ export default function Auditoria() {
   return (
     <>
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Registro de cambios</h1>
-        <p className="text-sm text-slate-500">Quien hizo que y cuando. No se puede editar ni borrar.</p>
+        <h1 className="titulo-pantalla">Registro de cambios</h1>
+        <p className="bajada">Quien hizo que y cuando. No se puede editar ni borrar.</p>
       </div>
 
       {error ? <Aviso>{error}</Aviso> : null}
@@ -60,12 +60,12 @@ export default function Auditoria() {
           <>
             <Tabla columnas={["Fecha", "Usuario", "Accion", "Tipo", "Detalle"]}>
               {datos.datos.map((linea) => (
-                <tr key={linea.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-500">{fechaHora(linea.creado_en)}</td>
+                <tr key={linea.id} className="hover:bg-cal">
+                  <td className="whitespace-nowrap px-3 py-2 text-tinta-2">{fechaHora(linea.creado_en)}</td>
                   <td className="px-3 py-2">{linea.usuario_nombre ?? "-"}</td>
                   <td className="px-3 py-2 capitalize">{linea.accion.replace("_", " ")}</td>
                   <td className="px-3 py-2">{linea.entidad}</td>
-                  <td className="px-3 py-2 text-slate-600">{linea.descripcion ?? "-"}</td>
+                  <td className="px-3 py-2 text-tinta-2">{linea.descripcion ?? "-"}</td>
                 </tr>
               ))}
             </Tabla>

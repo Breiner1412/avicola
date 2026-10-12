@@ -56,7 +56,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (cargando || !sesion) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50">
+      <main className="flex min-h-screen items-center justify-center bg-cal">
         <Cargando />
       </main>
     );
@@ -65,7 +65,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // En la demo no se pueden cambiar claves: no se obliga a hacerlo
   if (sesion.usuario.debe_cambiar_clave && !sesion.demo) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <main className="flex min-h-screen items-center justify-center bg-cal px-4">
         <div className="w-full max-w-md">
           <Tarjeta titulo="Cambia tu contrasena" icono="llave">
             <CambiarClave obligatorio />
@@ -77,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!sesion.finca_activa) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <main className="flex min-h-screen items-center justify-center bg-cal px-4">
         <div className="w-full max-w-md space-y-4">
           <Tarjeta titulo="Elige la finca" descripcion="Donde vas a trabajar hoy" icono="finca">
             {sesion.fincas.length === 0 ? (
@@ -88,15 +88,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <li key={finca.id}>
                     <button
                       onClick={() => elegirFinca(finca.id)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left ring-1 ring-slate-200 transition hover:bg-emerald-50 hover:ring-emerald-600"
+                      className="flex min-h-16 w-full items-center justify-between gap-3 rounded-lg border-[1.5px] border-linea bg-superficie px-4 py-3 text-left transition hover:border-galpon hover:bg-cal"
                     >
                       <span className="flex items-center gap-3">
-                        <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
-                          <Icono nombre="finca" className="h-4 w-4" />
+                        <span className="grid h-10 w-10 place-items-center rounded-lg bg-cal text-galpon">
+                          <Icono nombre="finca" className="h-5 w-5" />
                         </span>
                         <span>
-                          <span className="block font-medium text-slate-800">{finca.nombre}</span>
-                          <span className="block text-xs text-slate-500">
+                          <span className="block font-semibold text-tinta">{finca.nombre}</span>
+                          <span className="block text-sm text-tinta-2">
                             {finca.codigo}
                             {finca.municipio ? ` · ${finca.municipio}` : ""}
                           </span>
@@ -139,35 +139,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-cal">
       {/* Fondo oscuro detras del menu cuando esta abierto encima de la pagina */}
       <div
         aria-hidden="true"
         onClick={() => setMenuAbierto(false)}
-        className={`fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-[1px] transition-opacity duration-200 ${
+        className={`fixed inset-0 z-30 bg-galpon-honda/55 transition-opacity duration-200 ${
           menuAbierto ? "opacity-100" : "pointer-events-none opacity-0"
         } ${menuFijo ? "lg:hidden" : ""}`}
       />
 
       <aside
         aria-label="Menu principal"
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-emerald-950 text-emerald-50 transition-transform duration-200 ease-out ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-galpon text-galpon-suave transition-transform duration-200 ease-out ${
           menuAbierto ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         } ${menuFijo ? "lg:translate-x-0 lg:shadow-none" : ""}`}
       >
         <div className="flex h-16 shrink-0 items-center justify-between gap-2 px-4">
           <Link href="/panel" className="flex items-center gap-2.5 pl-1" onClick={() => setMenuAbierto(false)}>
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-300">
-              <Icono nombre="huevo" className="h-5 w-5" />
-            </span>
-            <span className="text-lg font-semibold tracking-tight">Avícola</span>
+            <span aria-hidden="true" className="block h-8 w-[26px] rounded-[50%_50%_46%_46%/58%_58%_42%_42%] bg-yema" />
+            <span className="font-cifra text-xl font-bold text-white [font-stretch:115%]">Avícola</span>
           </Link>
           <div className="flex items-center gap-1">
             <button
               onClick={() => fijarMenu(!menuFijo)}
               aria-label={menuFijo ? "Soltar el menu" : "Dejar el menu fijo"}
               title={menuFijo ? "Ocultar el menu" : "Dejar el menu fijo al lado"}
-              className="hidden rounded-lg p-1.5 text-emerald-300 transition hover:bg-emerald-900 hover:text-white lg:block"
+              className="hidden h-10 w-10 place-items-center rounded-lg text-galpon-claro transition hover:bg-white/10 hover:text-white lg:grid"
             >
               <Icono nombre={menuFijo ? "izquierda" : "fijar"} className="h-4 w-4" />
             </button>
@@ -175,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setMenuAbierto(false)}
               aria-label="Cerrar el menu"
               title="Cerrar"
-              className={`rounded-lg p-1.5 text-emerald-300 transition hover:bg-emerald-900 hover:text-white ${menuFijo ? "lg:hidden" : ""}`}
+              className={`grid h-10 w-10 place-items-center rounded-lg text-galpon-claro transition hover:bg-white/10 hover:text-white ${menuFijo ? "lg:hidden" : ""}`}
             >
               <Icono nombre="cerrar" className="h-4 w-4" />
             </button>
@@ -184,26 +182,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <MenuLateral grupos={grupos} ruta={ruta} alNavegar={() => setMenuAbierto(false)} />
 
-        <div className="shrink-0 border-t border-emerald-900 px-5 py-3 text-[11px] text-emerald-300/70">
+        <div className="shrink-0 border-t border-white/10 px-5 py-3 text-sm text-galpon-claro">
           {sesion.usuario.cuenta_nombre ?? "Plataforma"}
         </div>
       </aside>
 
       <div className={`flex min-h-screen min-w-0 flex-col transition-[padding] duration-200 ${menuFijo ? "lg:pl-64" : ""}`}>
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-linea bg-superficie px-3 sm:px-4 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
-              className={`rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 ${menuFijo ? "lg:hidden" : ""}`}
+              className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg text-tinta transition hover:bg-cal-honda ${menuFijo ? "lg:hidden" : ""}`}
               onClick={() => setMenuAbierto(true)}
               aria-label="Menu"
               aria-expanded={menuAbierto}
               title="Abrir el menu"
             >
-              <Icono nombre="menu" className="h-5 w-5" />
+              <Icono nombre="menu" className="h-6 w-6" />
             </button>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-800">{sesion.finca_activa.nombre}</p>
-              <p className="truncate text-xs text-slate-500">
+            {/* En el celular, si hay varias fincas, ya la muestra la lista de la derecha */}
+            <div className={`min-w-0 ${sesion.fincas.length > 1 ? "hidden sm:block" : ""}`}>
+              <p className="truncate font-cifra text-base font-bold text-tinta [font-stretch:105%]">{sesion.finca_activa.nombre}</p>
+              <p className="truncate text-sm text-tinta-2">
                 {sesion.usuario.rol_nombre}
                 {sesion.finca_activa.solo_lectura ? " · solo consulta" : ""}
               </p>
@@ -223,7 +222,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     setCambiandoFinca(false);
                   }
                 }}
-                className="max-w-[9rem] rounded-xl border-0 bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-300 focus:ring-2 focus:ring-emerald-600 sm:max-w-none"
+                aria-label="Cambiar de finca"
+                className="min-h-11 max-w-[9rem] rounded-lg border-[1.5px] border-linea bg-superficie px-3 text-sm text-tinta focus:border-galpon focus:ring-3 focus:ring-galpon/15 focus:outline-none sm:max-w-none"
               >
                 {sesion.fincas.map((finca) => (
                   <option key={finca.id} value={finca.id}>
@@ -239,42 +239,42 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="relative" ref={cajaUsuario}>
               <button
                 onClick={() => setUsuarioAbierto((v) => !v)}
-                className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-slate-100"
+                className="flex min-h-11 items-center gap-2 rounded-lg p-1.5 transition hover:bg-cal-honda"
                 aria-label="Mi cuenta"
               >
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-700 text-xs font-semibold text-white">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-galpon font-cifra text-sm font-bold text-white">
                   {iniciales || "AV"}
                 </span>
-                <span className="hidden text-sm text-slate-700 sm:block">{sesion.usuario.nombres}</span>
+                <span className="hidden text-base text-tinta sm:block">{sesion.usuario.nombres}</span>
               </button>
 
               {usuarioAbierto ? (
-                <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200">
-                  <div className="border-b border-slate-100 px-4 py-3">
-                    <p className="text-sm font-medium text-slate-800">
+                <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl border border-linea bg-superficie shadow-[0_16px_40px_-12px_rgb(22_58_44/0.35)]">
+                  <div className="border-b border-linea-suave px-4 py-3">
+                    <p className="font-semibold text-tinta">
                       {sesion.usuario.nombres} {sesion.usuario.apellidos}
                     </p>
-                    <p className="truncate text-xs text-slate-500">{sesion.usuario.email}</p>
+                    <p className="truncate text-sm text-tinta-2">{sesion.usuario.email}</p>
                   </div>
                   <Link
                     href="/mi-cuenta"
                     onClick={() => setUsuarioAbierto(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex min-h-12 items-center gap-3 px-4 text-base text-tinta hover:bg-cal"
                   >
-                    <Icono nombre="usuario" className="h-4 w-4 text-slate-400" />
+                    <Icono nombre="usuario" className="h-4 w-4 text-tinta-3" />
                     Mi cuenta
                   </Link>
                   <Link
                     href="/alertas"
                     onClick={() => setUsuarioAbierto(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex min-h-12 items-center gap-3 px-4 text-base text-tinta hover:bg-cal"
                   >
-                    <Icono nombre="campana" className="h-4 w-4 text-slate-400" />
+                    <Icono nombre="campana" className="h-4 w-4 text-tinta-3" />
                     Avisos
                   </Link>
                   <button
                     onClick={() => salir()}
-                    className="flex w-full items-center gap-2.5 border-t border-slate-100 px-4 py-2.5 text-left text-sm text-rose-700 hover:bg-rose-50"
+                    className="flex min-h-12 w-full items-center gap-3 border-t border-linea-suave px-4 text-left text-base text-alerta hover:bg-alerta-suave"
                   >
                     <Icono nombre="salir" className="h-4 w-4" />
                     Cerrar sesion
@@ -285,7 +285,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 space-y-5 p-4 pb-16 lg:p-6">
+        <main className="mx-auto w-full max-w-[1400px] flex-1 space-y-6 px-4 pt-5 pb-16 lg:px-8 lg:pt-7">
           {sesion.demo ? (
             <Aviso tipo="info">
               Estas en la demo: puedes probar todo, pero no cambiar contrasenas, correos, permisos ni

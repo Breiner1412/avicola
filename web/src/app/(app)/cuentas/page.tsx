@@ -65,8 +65,8 @@ export default function Cuentas() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Cuentas</h1>
-          <p className="text-sm text-slate-500">Empresas o personas que usan el sistema</p>
+          <h1 className="titulo-pantalla">Cuentas</h1>
+          <p className="bajada">Empresas o personas que usan el sistema</p>
         </div>
         {puede("cuentas", "crear") ? <Boton onClick={() => abrir()}>Nueva cuenta</Boton> : null}
       </div>
@@ -81,8 +81,8 @@ export default function Cuentas() {
         ) : (
           <Tabla columnas={["Nombre", "Tipo", "Documento", "Contacto", "Estado", ""]}>
             {datos.map((cuenta) => (
-              <tr key={cuenta.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">{cuenta.nombre}</td>
+              <tr key={cuenta.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">{cuenta.nombre}</td>
                 <td className="px-3 py-2 capitalize">{cuenta.tipo}</td>
                 <td className="px-3 py-2">{cuenta.documento ?? "-"}</td>
                 <td className="px-3 py-2">{cuenta.email_contacto ?? cuenta.telefono ?? "-"}</td>

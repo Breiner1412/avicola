@@ -101,8 +101,8 @@ export default function Bodegas() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Bodegas</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="titulo-pantalla">Bodegas</h1>
+          <p className="bajada">
             La bodega central sirve a toda la cuenta; las demas pertenecen a una finca.
           </p>
         </div>
@@ -119,8 +119,8 @@ export default function Bodegas() {
         ) : (
           <Tabla columnas={["Codigo", "Nombre", "Donde", "Ubicacion", "Estado", ""]}>
             {datos.map((bodega) => (
-              <tr key={bodega.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 font-medium text-slate-700">{bodega.codigo}</td>
+              <tr key={bodega.id} className="hover:bg-cal">
+                <td className="px-3 py-2 font-medium text-tinta">{bodega.codigo}</td>
                 <td className="px-3 py-2">{bodega.nombre}</td>
                 <td className="px-3 py-2">
                   {bodega.es_central ? (
@@ -129,7 +129,7 @@ export default function Bodegas() {
                     <Insignia>{sesion?.fincas.find((f) => f.id === bodega.finca_id)?.nombre ?? "Finca"}</Insignia>
                   )}
                 </td>
-                <td className="px-3 py-2 text-slate-500">{bodega.ubicacion ?? "-"}</td>
+                <td className="px-3 py-2 text-tinta-2">{bodega.ubicacion ?? "-"}</td>
                 <td className="px-3 py-2">
                   {bodega.activo ? <Insignia tono="verde">Activa</Insignia> : <Insignia>Inactiva</Insignia>}
                 </td>
@@ -159,7 +159,7 @@ export default function Bodegas() {
           <select
             value={bodegaVista}
             onChange={(e) => setBodegaVista(e.target.value === "" ? "" : Number(e.target.value))}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm"
+            className="min-h-11 rounded-lg border-[1.5px] border-linea bg-superficie px-3 text-base text-tinta focus:border-galpon focus:ring-3 focus:ring-galpon/15 focus:outline-none"
           >
             <option value="">Todas</option>
             {(datos ?? []).map((bodega) => (
@@ -176,16 +176,16 @@ export default function Bodegas() {
           <Vacio>No hay existencias registradas.</Vacio>
         ) : (
           <>
-            <Tabla columnas={["Bodega", "Codigo", "Articulo", "Cantidad", "Costo promedio", ""]}>
+            <Tabla columnas={["Bodega", "Codigo", "Articulo", "Cantidad", "Costo promedio", ""]} numericas={[3, 4]}>
               {pagExistencias.visibles.map((fila) => (
-                <tr key={`${fila.bodega_id}-${fila.articulo_id}`} className="hover:bg-slate-50">
-                  <td className="px-3 py-2 text-slate-500">{fila.bodega_nombre}</td>
+                <tr key={`${fila.bodega_id}-${fila.articulo_id}`} className="hover:bg-cal">
+                  <td className="px-3 py-2 text-tinta-2">{fila.bodega_nombre}</td>
                   <td className="px-3 py-2">{fila.articulo_codigo}</td>
-                  <td className="px-3 py-2 font-medium text-slate-700">{fila.articulo_nombre}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 font-medium text-tinta">{fila.articulo_nombre}</td>
+                  <td className="cifra px-3 py-2 text-right">
                     {fila.cantidad.toLocaleString("es-CO")} {fila.unidad}
                   </td>
-                  <td className="px-3 py-2">${fila.costo_promedio.toLocaleString("es-CO")}</td>
+                  <td className="cifra px-3 py-2 text-right">${fila.costo_promedio.toLocaleString("es-CO")}</td>
                   <td className="px-3 py-2">
                     {fila.bajo_minimo ? <Insignia tono="rojo">Bajo minimo</Insignia> : null}
                   </td>

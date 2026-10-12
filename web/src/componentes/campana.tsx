@@ -8,9 +8,9 @@ import { Icono } from "./iconos";
 import { rutaInterna } from "@/lib/menu";
 
 const TONO: Record<string, string> = {
-  critico: "bg-rose-100 text-rose-700",
-  aviso: "bg-amber-100 text-amber-700",
-  info: "bg-sky-100 text-sky-700",
+  critico: "bg-alerta-suave text-alerta",
+  aviso: "bg-aten-suave text-aten",
+  info: "bg-info-suave text-info",
 };
 
 export function Campana({ fincaId }: { fincaId: number | null }) {
@@ -57,14 +57,14 @@ export function Campana({ fincaId }: { fincaId: number | null }) {
     <div className="relative" ref={caja}>
       <button
         onClick={() => setAbierta((v) => !v)}
-        className="relative rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+        className="relative grid h-11 w-11 place-items-center rounded-lg text-tinta transition hover:bg-cal-honda"
         aria-label={`Avisos${sinLeer ? `: ${sinLeer} sin leer` : ""}`}
       >
-        <Icono nombre="campana" className="h-5 w-5" />
+        <Icono nombre="campana" className="h-6 w-6" />
         {sinLeer > 0 ? (
           <span
-            className={`absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold text-white ${
-              criticas ? "bg-rose-600" : "bg-amber-500"
+            className={`absolute top-0.5 right-0.5 grid h-5 min-w-5 place-items-center rounded-full px-1 font-cifra text-xs font-bold ring-2 ring-superficie ${
+              criticas ? "bg-alerta text-white" : "bg-yema text-tinta"
             }`}
           >
             {sinLeer > 9 ? "9+" : sinLeer}
@@ -73,11 +73,11 @@ export function Campana({ fincaId }: { fincaId: number | null }) {
       </button>
 
       {abierta ? (
-        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <p className="text-sm font-semibold text-slate-800">Avisos</p>
+        <div className="fixed inset-x-3 top-16 z-50 mt-1 overflow-hidden rounded-xl border border-linea bg-superficie shadow-[0_16px_40px_-12px_rgb(22_58_44/0.35)] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-96">
+          <div className="flex items-center justify-between border-b border-linea-suave px-4 py-3">
+            <p className="font-cifra text-lg font-bold text-tinta">Avisos</p>
             {sinLeer > 0 ? (
-              <button onClick={marcarTodas} className="text-xs text-emerald-700 hover:underline">
+              <button onClick={marcarTodas} className="min-h-10 px-2 text-sm font-semibold text-galpon hover:underline">
                 Marcar como vistos
               </button>
             ) : null}
@@ -85,23 +85,23 @@ export function Campana({ fincaId }: { fincaId: number | null }) {
 
           <div className="max-h-96 overflow-y-auto">
             {!datos || datos.alertas.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-slate-500">Todo en orden por ahora.</p>
+              <p className="px-4 py-8 text-center text-base text-tinta-2">Todo en orden por ahora.</p>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-linea-suave">
                 {datos.alertas.slice(0, 12).map((alerta) => (
                   <li key={alerta.id}>
                     <Link
                       href={rutaInterna(alerta.ruta)}
                       onClick={() => setAbierta(false)}
-                      className={`flex gap-3 px-4 py-3 transition hover:bg-slate-50 ${alerta.leida ? "opacity-70" : ""}`}
+                      className={`flex gap-3 px-4 py-3 transition hover:bg-cal ${alerta.leida ? "opacity-70" : ""}`}
                     >
                       <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${TONO[alerta.nivel]}`}>
                         <Icono nombre={alerta.nivel === "critico" ? "alerta" : "campana"} className="h-4 w-4" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-sm font-medium text-slate-800">{alerta.titulo}</span>
+                        <span className="block text-base font-semibold text-tinta">{alerta.titulo}</span>
                         {alerta.detalle ? (
-                          <span className="block text-xs text-slate-500">{alerta.detalle}</span>
+                          <span className="block text-sm text-tinta-2">{alerta.detalle}</span>
                         ) : null}
                       </span>
                     </Link>
@@ -114,7 +114,7 @@ export function Campana({ fincaId }: { fincaId: number | null }) {
           <Link
             href="/alertas"
             onClick={() => setAbierta(false)}
-            className="block border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-emerald-700 hover:bg-slate-50"
+            className="flex min-h-12 items-center justify-center border-t border-linea-suave px-4 text-base font-semibold text-galpon hover:bg-cal"
           >
             Ver todos los avisos
           </Link>
