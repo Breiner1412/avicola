@@ -15,7 +15,7 @@ los reportes, para una o varias fincas y para varias empresas a la vez.
 
 ![Panel principal de Avícola: huevos disponibles, aves, ventas y lo que pide atención](docs/capturas/panel-escritorio.png)
 
-📘 **[Manual de usuario completo](docs/manual/MANUAL_DE_USUARIO.md)** — cómo usar cada pantalla, paso a paso.
+📘 **[Manual de usuario](docs/manual-usuario.md)**: qué puede hacer el dueño, el supervisor, el cajero y el operario, paso a paso y con capturas.
 
 ---
 
@@ -102,7 +102,7 @@ En el celular, el panel pone primero los accesos del operario y la caja deja el 
 |---|---|---|
 | <img src="docs/capturas/panel-celular.png" width="240" alt="Panel en el celular"> | <img src="docs/capturas/caja-celular.png" width="240" alt="Caja en el celular"> | <img src="docs/capturas/login-celular.png" width="240" alt="Pantalla para entrar en el celular"> |
 
-Todas las pantallas están en el [manual de usuario](docs/manual/MANUAL_DE_USUARIO.md).
+Más pantallas, y cómo se usa cada una, en el [manual de usuario](docs/manual-usuario.md).
 
 ---
 
@@ -394,7 +394,8 @@ avicola/
 ├── db/inicio/                   # crea el usuario de la aplicación en MySQL
 ├── scripts/                     # respaldo y demo (reinicio nocturno)
 ├── docs/
-│   ├── manual/                  # manual de usuario con capturas
+│   ├── manual-usuario.md        # manual de usuario por rol, con preguntas frecuentes
+│   ├── capturas/                # capturas de la web (escritorio y celular)
 │   └── DISENO_V2.md             # diseño del sistema
 ├── api/
 │   ├── app/
