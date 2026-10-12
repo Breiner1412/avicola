@@ -146,8 +146,8 @@ export default function Importar() {
   return (
     <>
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Importar desde Excel</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="titulo-pantalla">Importar desde Excel</h1>
+        <p className="bajada">
           Sube tu archivo tal como lo manejas. El sistema lee sus columnas y tu indicas cual es cual; antes de guardar
           te muestra que quedaria bien y que no.
         </p>
@@ -173,18 +173,18 @@ export default function Importar() {
                 ))}
               </Lista>
               <label className="block text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Archivo (.xlsx o .csv)</span>
+                <span className="mb-1.5 block font-semibold text-tinta">Archivo (.xlsx o .csv)</span>
                 <input
                   type="file"
                   accept=".xlsx,.xlsm,.csv,.txt"
                   onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-emerald-700 file:px-3 file:py-1 file:text-white"
+                  className="min-h-12 w-full rounded-lg border-[1.5px] border-linea bg-superficie px-1.5 py-1.5 text-base text-tinta-2"
                 />
               </label>
             </div>
 
             {definicion ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-tinta-2">
                 Datos que se pueden cargar: {definicion.campos.map((c) => c.etiqueta + (c.obligatorio ? "*" : "")).join(", ")}.
                 Los marcados con * son obligatorios.
               </p>
@@ -207,7 +207,7 @@ export default function Importar() {
               </Boton>
             }
           >
-            <p className="mb-3 text-sm text-slate-500">
+            <p className="mb-3 text-sm text-tinta-2">
               {analisis.filas_totales} fila(s) leidas{analisis.hoja ? ` de la hoja "${analisis.hoja}"` : ""}. Lo que
               pudimos reconocer ya viene marcado.
             </p>
@@ -250,7 +250,7 @@ export default function Importar() {
             </div>
 
             {analisis.tipo === "entrada_inventario" ? (
-              <div className="mt-4 grid gap-3 rounded-lg border border-dashed border-slate-300 p-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 rounded-lg border border-dashed border-linea p-3 sm:grid-cols-2">
                 <Lista etiqueta="A que bodega entra" value={bodegaId} onChange={(e) => setBodegaId(e.target.value)}>
                   <option value="">Elige la bodega</option>
                   {(bodegas ?? []).map((b) => (
@@ -259,7 +259,7 @@ export default function Importar() {
                     </option>
                   ))}
                 </Lista>
-                <label className="flex items-end gap-2 pb-2 text-sm text-slate-600">
+                <label className="flex min-h-11 items-center gap-2.5 text-base text-tinta">
                   <input
                     type="checkbox"
                     checked={crearArticulos}
@@ -271,22 +271,22 @@ export default function Importar() {
             ) : null}
 
             <div className="mt-4 overflow-x-auto">
-              <p className="mb-2 text-sm font-medium text-slate-700">Asi viene el archivo</p>
-              <table className="w-full text-left text-xs">
+              <p className="mb-2 text-sm font-semibold text-tinta">Asi viene el archivo</p>
+              <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
+                  <tr className="border-b-2 border-galpon text-tinta-2">
                     {analisis.columnas.map((columna) => (
-                      <th key={columna} className="whitespace-nowrap px-2 py-1">
+                      <th key={columna} className="whitespace-nowrap px-2 py-2 font-semibold">
                         {columna}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-linea-suave">
                   {analisis.vista_previa.map((fila, indice) => (
                     <tr key={indice}>
                       {analisis.columnas.map((columna) => (
-                        <td key={columna} className="whitespace-nowrap px-2 py-1 text-slate-600">
+                        <td key={columna} className="whitespace-nowrap px-2 py-2 text-tinta-2">
                           {String(fila[columna] ?? "")}
                         </td>
                       ))}
@@ -319,31 +319,31 @@ export default function Importar() {
           {validacion ? (
             <Tarjeta titulo="3. Revision">
               <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs uppercase text-slate-500">Filas leidas</p>
-                  <p className="text-xl font-semibold">{validacion.filas_totales}</p>
+                <div className="rounded-lg border border-linea p-3">
+                  <p className="text-sm font-semibold text-tinta-2">Filas leidas</p>
+                  <p className="cifra text-2xl font-bold">{validacion.filas_totales}</p>
                 </div>
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-xs uppercase text-emerald-700">Listas para guardar</p>
-                  <p className="text-xl font-semibold text-emerald-800">{validacion.filas_ok}</p>
+                <div className="rounded-lg border border-bien-borde bg-bien-suave p-3">
+                  <p className="text-sm font-semibold text-bien">Listas para guardar</p>
+                  <p className="cifra text-2xl font-bold text-bien">{validacion.filas_ok}</p>
                 </div>
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                  <p className="text-xs uppercase text-red-700">Con problemas</p>
-                  <p className="text-xl font-semibold text-red-800">{validacion.filas_error}</p>
+                <div className="rounded-lg border border-alerta-borde bg-alerta-suave p-3">
+                  <p className="text-sm font-semibold text-alerta">Con problemas</p>
+                  <p className="cifra text-2xl font-bold text-alerta">{validacion.filas_error}</p>
                 </div>
               </div>
 
               {validacion.errores.length > 0 ? (
                 <div className="mt-4">
-                  <p className="mb-2 text-sm font-medium text-slate-700">Que hay que corregir</p>
-                  <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-red-700">
+                  <p className="mb-2 text-sm font-semibold text-tinta">Que hay que corregir</p>
+                  <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-alerta">
                     {validacion.errores.map((error) => (
                       <li key={error.numero}>
                         Fila {error.numero}: {error.error}
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-sm text-tinta-2">
                     Las filas con problemas no se guardan; puedes corregirlas en el archivo y volver a subirlo.
                   </p>
                 </div>
@@ -367,12 +367,12 @@ export default function Importar() {
         ) : (
           <Tabla columnas={["Fecha", "Archivo", "Que contenia", "Guardadas", "Con problemas", "Estado", ""]}>
             {historial.map((fila) => (
-              <tr key={fila.id} className="hover:bg-slate-50">
-                <td className="whitespace-nowrap px-3 py-2 text-slate-500">
+              <tr key={fila.id} className="hover:bg-cal">
+                <td className="whitespace-nowrap px-3 py-2 text-tinta-2">
                   {fechaHora(fila.creado_en)}
                 </td>
-                <td className="px-3 py-2 font-medium text-slate-700">{fila.archivo}</td>
-                <td className="px-3 py-2 text-xs">{fila.etiqueta_tipo}</td>
+                <td className="px-3 py-2 font-semibold text-tinta">{fila.archivo}</td>
+                <td className="px-3 py-2 text-sm">{fila.etiqueta_tipo}</td>
                 <td className="px-3 py-2">{fila.filas_ok}</td>
                 <td className="px-3 py-2">{fila.filas_error}</td>
                 <td className="px-3 py-2">
